@@ -1,20 +1,18 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use std::str::FromStr;
-
-use bluetooth_serial_port::BtAddr;
+use bluer::Address;
 use chrono::NaiveDateTime;
 use clap::{Parser, Subcommand};
 use env_logger::{Builder, Env};
 use log::{debug, info};
 
-use Command::{Convert, DebugImage, ListDevices, Send};
+use Command::{Convert, DebugImage, ListDevices, ListPairedDevices, Send};
 
 use divoom_ditoo_pro_controller::divoom_file_format::animation::Animation;
 use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
-  list_devices, send_alarm, send_divoom_animation, send_set_datetime
+  list_devices, list_paired_devices, send_alarm, send_divoom_animation, send_set_datetime
 };
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
@@ -30,9 +28,10 @@ enum Command {
   /// Lists all available bluetooth devices and tries to find a Divoom
   ListDevices,
 
+  /// Lists paired Divoom Ditoo Pro devices
+  ListPairedDevices,
+
   /// Connects to a Divoom via it's MAC address and sends a command
-  // BtAddr uses FromStr -> Err<()>, which doesn't work with clap:
-  // https://github.com/clap-rs/clap/issues/5360
   Send {
     mac_address: String,
     #[command(subcommand)]
@@ -83,35 +82,28 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   match args.command {
     ListDevices => list_devices().await?,
-    Send { mac_address, send } => match send {
-      SendCommand::Alarm { enable } => {
-        match enable {
-          true => info!("Enabling alarm.."),
-          false => info!("Disabling alarm..")
+    ListPairedDevices => list_paired_devices().await?,
+    Send { mac_address, send } => {
+      let mac_address: Address = mac_address
+        .parse()
+        .map_err(|_| format!("Invalid MAC address: '{}'", mac_address))?;
+      match send {
+        SendCommand::Alarm { enable } => {
+          match enable {
+            true => info!("Enabling alarm.."),
+            false => info!("Disabling alarm..")
+          }
+          send_alarm(mac_address).await?
         }
-        send_alarm(
-          BtAddr::from_str(&mac_address)
-            .map_err(|_| format!("Invalid MAC address: '{}'", mac_address))?
-        )
-        .await?
+        SendCommand::Animation { filename } => {
+          let mut file = File::open(filename)?;
+          send_divoom_animation(mac_address, &mut file).await?;
+        }
+        SendCommand::SetDateTime { datetime } => {
+          send_set_datetime(mac_address, datetime).await?
+        }
       }
-      SendCommand::Animation { filename } => {
-        let mut file = File::open(filename)?;
-        send_divoom_animation(
-          BtAddr::from_str(&mac_address)
-            .map_err(|_| format!("Invalid MAC address: '{}'", mac_address))?,
-          &mut file
-        )?;
-      }
-      SendCommand::SetDateTime { datetime } => {
-        send_set_datetime(
-          BtAddr::from_str(&mac_address)
-            .map_err(|_| format!("Invalid MAC address: '{}'", mac_address))?,
-          datetime
-        )
-        .await?
-      }
-    },
+    }
     Convert { convert } => match convert {
       ConvertCommand::ToGif {
         input_filename,
