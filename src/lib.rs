@@ -50,12 +50,13 @@ pub async fn list_devices() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
-pub async fn list_paired_devices() -> Result<(), Box<dyn Error>> {
+pub async fn find_paired_ditoo_pro_devices() -> Result<Vec<Address>, Box<dyn Error>> {
   let session = bluer::Session::new().await?;
   let adapter = session.default_adapter().await?;
 
   let addresses = adapter.device_addresses().await?;
 
+  let mut result = Vec::new();
   for addr in addresses {
     let device = adapter.device(addr)?;
     let is_paired = device.is_paired().await?;
@@ -68,6 +69,19 @@ pub async fn list_paired_devices() -> Result<(), Box<dyn Error>> {
       continue;
     }
 
+    result.push(addr);
+  }
+
+  Ok(result)
+}
+
+pub async fn list_paired_devices() -> Result<(), Box<dyn Error>> {
+  let session = bluer::Session::new().await?;
+  let adapter = session.default_adapter().await?;
+
+  for addr in find_paired_ditoo_pro_devices().await? {
+    let device = adapter.device(addr)?;
+    let name = device.name().await?.unwrap_or_default();
     let is_connected = device.is_connected().await?;
     info!(
       "{} ({}) - connected: {}",

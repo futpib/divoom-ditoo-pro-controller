@@ -12,7 +12,8 @@ use Command::{Convert, DebugImage, ListDevices, ListPairedDevices, Send};
 use divoom_ditoo_pro_controller::divoom_file_format::animation::Animation;
 use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
-  list_devices, list_paired_devices, send_alarm, send_divoom_animation, send_set_datetime
+  find_paired_ditoo_pro_devices, list_devices, list_paired_devices, send_alarm,
+  send_divoom_animation, send_set_datetime
 };
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
@@ -33,7 +34,7 @@ enum Command {
 
   /// Connects to a Divoom via it's MAC address and sends a command
   Send {
-    mac_address: String,
+    mac_address: Option<String>,
     #[command(subcommand)]
     send: SendCommand
   },
@@ -84,9 +85,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
     ListDevices => list_devices().await?,
     ListPairedDevices => list_paired_devices().await?,
     Send { mac_address, send } => {
-      let mac_address: Address = mac_address
-        .parse()
-        .map_err(|_| format!("Invalid MAC address: '{}'", mac_address))?;
+      let mac_address: Address = match mac_address {
+        Some(addr) => addr
+          .parse()
+          .map_err(|_| format!("Invalid MAC address: '{}'", addr))?,
+        None => {
+          let devices = find_paired_ditoo_pro_devices().await?;
+          match devices.len() {
+            0 => return Err("No paired Ditoo Pro devices found. Specify a MAC address.".into()),
+            1 => devices[0],
+            _ => {
+              let list = devices
+                .iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+              return Err(format!(
+                "Multiple paired Ditoo Pro devices found: {}. Specify a MAC address.",
+                list
+              ).into());
+            }
+          }
+        }
+      };
       match send {
         SendCommand::Alarm { enable } => {
           match enable {
