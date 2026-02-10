@@ -13,7 +13,8 @@ use divoom_ditoo_pro_controller::divoom_file_format::animation::Animation;
 use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
   find_paired_ditoo_pro_devices, list_devices, list_paired_devices, send_alarm,
-  send_divoom_animation, send_keyboard_backlight, send_set_brightness, send_set_datetime
+  send_divoom_animation, send_image, send_keyboard_backlight, send_set_brightness,
+  send_set_datetime
 };
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
@@ -56,6 +57,9 @@ enum SendCommand {
     enable: bool
   },
   Animation {
+    filename: String
+  },
+  Image {
     filename: String
   },
   SetDateTime {
@@ -132,8 +136,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
           send_alarm(mac_address).await?
         }
         SendCommand::Animation { filename } => {
-          let mut file = File::open(filename)?;
+          let mut file = File::open(&filename)?;
           send_divoom_animation(mac_address, &mut file).await?;
+        }
+        SendCommand::Image { filename } => {
+          info!("Sending image {}", filename);
+          send_image(mac_address, &filename).await?;
         }
         SendCommand::SetDateTime { datetime } => {
           send_set_datetime(mac_address, datetime).await?
@@ -165,7 +173,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         input_filename,
         output_filename
       } => {
-        let animation = Animation::from_gif(&mut BufReader::new(File::open(input_filename)?))?;
+        let animation = if input_filename.ends_with(".gif") || input_filename.ends_with(".GIF") {
+          Animation::from_gif(&mut BufReader::new(File::open(&input_filename)?))?
+        } else {
+          Animation::from_image(image::open(&input_filename)?)?
+        };
         animation.save_to_divoom_format(&mut BufWriter::new(File::create(output_filename)?))?;
       }
     },

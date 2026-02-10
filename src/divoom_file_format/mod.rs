@@ -5,6 +5,10 @@ pub mod animation;
 pub mod frame;
 pub mod frame_header;
 
+pub(crate) fn prepare_image(image: &DynamicImage) -> DynamicImage {
+  image.resize_exact(16, 16, image::imageops::FilterType::Lanczos3)
+}
+
 fn get_palette_from_images(images: &[DynamicImage]) -> IndexSet<Rgb<u8>> {
   images
     .iter()

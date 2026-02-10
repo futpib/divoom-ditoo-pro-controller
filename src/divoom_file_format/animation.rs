@@ -7,7 +7,7 @@ use image::{AnimationDecoder, Delay, DynamicImage};
 
 use super::frame::Frame;
 use super::frame_header::FrameHeader;
-use super::get_palette_from_images;
+use super::{get_palette_from_images, prepare_image};
 
 #[derive(Debug)]
 pub struct Animation {
@@ -41,14 +41,13 @@ impl Animation {
   pub fn from_gif<R: BufRead + Read + Seek>(reader: &mut R) -> Result<Animation, Box<dyn Error>> {
     let decoder = GifDecoder::new(reader)?;
     let frames = decoder.into_frames().collect_frames()?;
-    let palette = get_palette_from_images(
-      &frames
-        .iter()
-        .map(|frame| frame.buffer().clone().into())
-        .collect::<Vec<_>>()
-    )
-    .into_iter()
-    .collect::<Vec<_>>();
+    let images: Vec<DynamicImage> = frames
+      .iter()
+      .map(|frame| prepare_image(&DynamicImage::from(frame.buffer().clone())))
+      .collect();
+    let palette = get_palette_from_images(&images)
+      .into_iter()
+      .collect::<Vec<_>>();
 
     if palette.len() >= 256 {
       return Err(
@@ -64,8 +63,9 @@ impl Animation {
     Ok(Animation {
       frames: frames
         .iter()
+        .zip(images)
         .enumerate()
-        .map(|(index, frame)| {
+        .map(|(index, (frame, image))| {
           let numer_denom_ms = frame.delay().numer_denom_ms();
           let time_in_milliseconds = (numer_denom_ms.0 as f64 / numer_denom_ms.1 as f64) as u16;
           let header = if index == 0 {
@@ -90,10 +90,41 @@ impl Animation {
             } else {
               Vec::new()
             },
-            image: DynamicImage::from(frame.buffer().clone())
+            image
           }
         })
         .collect::<Vec<_>>()
+    })
+  }
+
+  pub fn from_image(image: DynamicImage) -> Result<Animation, Box<dyn Error>> {
+    let image = prepare_image(&image);
+    let palette = get_palette_from_images(std::slice::from_ref(&image))
+      .into_iter()
+      .collect::<Vec<_>>();
+
+    if palette.len() >= 256 {
+      return Err(
+        format!(
+          "Too many colors in the image, a maximum of {} is supported, but {} found",
+          256,
+          palette.len()
+        )
+        .into()
+      );
+    }
+
+    Ok(Animation {
+      frames: vec![Frame {
+        header: FrameHeader {
+          time_in_milliseconds: 0,
+          reuse_palette: false,
+          color_count: palette.len() as u8
+        },
+        palette: palette.clone(),
+        local_palette: palette,
+        image
+      }]
     })
   }
 

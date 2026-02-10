@@ -1,4 +1,6 @@
 use std::error::Error;
+use std::fs::File;
+use std::io::BufReader;
 use std::time::Duration;
 
 use bluer::Address;
@@ -6,6 +8,8 @@ use chrono::{NaiveDateTime, NaiveTime};
 use futures::StreamExt;
 use log::{debug, info};
 use tokio::io::AsyncWriteExt;
+
+use crate::divoom_file_format::animation::Animation as DivoomAnimation;
 
 pub mod divoom_file_format;
 pub mod protocol;
@@ -258,4 +262,19 @@ pub async fn send_keyboard_backlight(
     payload: protocol::keyboard_backlight::serialize(mode)
   };
   send(mac_address, &[packet]).await
+}
+
+pub async fn send_image(
+  mac_address: Address,
+  filename: &str
+) -> Result<(), Box<dyn Error>> {
+  let animation = if filename.ends_with(".gif") || filename.ends_with(".GIF") {
+    DivoomAnimation::from_gif(&mut BufReader::new(File::open(filename)?))?
+  } else {
+    DivoomAnimation::from_image(image::open(filename)?)?
+  };
+  let mut buf = Vec::new();
+  animation.save_to_divoom_format(&mut buf)?;
+  let packets = create_network_packets_from(&buf)?;
+  send(mac_address, &packets).await
 }
