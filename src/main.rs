@@ -63,7 +63,8 @@ enum SendCommand {
     filename: String
   },
   SetDateTime {
-    datetime: NaiveDateTime
+    /// Date and time to set (e.g. "2025-01-15T12:30:00"). Defaults to current local time.
+    datetime: Option<NaiveDateTime>
   },
   Brightness {
     #[arg(value_parser = clap::value_parser!(u8).range(0..=100))]
@@ -144,6 +145,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
           send_image(mac_address, &filename).await?;
         }
         SendCommand::SetDateTime { datetime } => {
+          let datetime = datetime.unwrap_or_else(|| chrono::Local::now().naive_local());
+          info!("Setting date/time to {}", datetime);
           send_set_datetime(mac_address, datetime).await?
         }
         SendCommand::Brightness { level } => {
