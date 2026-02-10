@@ -203,3 +203,14 @@ pub async fn send_set_datetime(
   };
   send(mac_address, &[packet]).await
 }
+
+pub async fn send_keyboard_backlight(
+  mac_address: Address,
+  mode: u8
+) -> Result<(), Box<dyn Error>> {
+  let packet = Packet {
+    command: Command::LightArrowSwitch,
+    payload: protocol::keyboard_backlight::serialize(mode)
+  };
+  send(mac_address, &[packet]).await
+}
