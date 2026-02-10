@@ -84,5 +84,6 @@
 - [ ] Switch between Bluetooth / FM Radio / Line-in / SD Card / USB Audio modes
 
 ### Protocol
+- [x] Read and validate device responses (ACK/NAK)
 - [ ] JSON-based command protocol (SPP_JSON)
 - [ ] Configurable Bluetooth adapter selection

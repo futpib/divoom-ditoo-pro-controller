@@ -7,7 +7,7 @@ use bluer::Address;
 use chrono::{NaiveDateTime, NaiveTime};
 use futures::StreamExt;
 use log::{debug, info};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::divoom_file_format::animation::Animation as DivoomAnimation;
 
@@ -18,7 +18,7 @@ use crate::protocol::alarm::Alarm;
 use crate::protocol::animation::{Animation, ControlWord};
 use crate::protocol::command::Command;
 use crate::protocol::datetime::DateTime;
-use crate::protocol::packet::Packet;
+use crate::protocol::packet::{Packet, Response};
 
 
 pub async fn list_devices() -> Result<(), Box<dyn Error>> {
@@ -96,7 +96,34 @@ pub async fn list_paired_devices() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
-async fn try_connect(mac_address: Address, packets: &[Packet]) -> Result<bluer::rfcomm::Stream, Box<dyn Error>> {
+async fn read_response(stream: &mut bluer::rfcomm::Stream) -> Result<Response, Box<dyn Error>> {
+  let result = tokio::time::timeout(Duration::from_secs(5), async {
+    let start = stream.read_u8().await?;
+    if start != 0x01 {
+      return Err(format!("Expected start byte 0x01, got 0x{:02x}", start).into());
+    }
+
+    let mut len_bytes = [0u8; 2];
+    stream.read_exact(&mut len_bytes).await?;
+    let length = u16::from_le_bytes(len_bytes) as usize;
+
+    // Read: payload (length - 2 for checksum) + checksum (2) + end byte (1) = length + 1
+    let mut remaining = vec![0u8; length + 1];
+    stream.read_exact(&mut remaining).await?;
+
+    let mut frame = vec![0x01];
+    frame.extend_from_slice(&len_bytes);
+    frame.extend_from_slice(&remaining);
+
+    debug!("Received response: {}", hex::encode(&frame));
+
+    Response::deserialize(&frame)
+  }).await?;
+
+  result
+}
+
+async fn try_connect(mac_address: Address, packets: &[Packet]) -> Result<(bluer::rfcomm::Stream, Response), Box<dyn Error>> {
   for channel in [2u8].into_iter().chain((1..=30).filter(|&c| c != 2)) {
     let socket = bluer::rfcomm::Socket::new()?;
     let addr = bluer::rfcomm::SocketAddr::new(mac_address, channel);
@@ -117,10 +144,21 @@ async fn try_connect(mac_address: Address, packets: &[Packet]) -> Result<bluer::
     match s.write_all(&first_serialized).await {
       Ok(()) => {
         info!("  Wrote {} bytes", first_serialized.len());
-        return Ok(s);
       }
       Err(e) => {
         debug!("Channel {} write failed: {}", channel, e);
+        continue;
+      }
+    }
+
+    match read_response(&mut s).await {
+      Ok(response) => {
+        debug!("  Response: {:?}", response);
+        return Ok((s, response));
+      }
+      Err(e) => {
+        debug!("Channel {} read response failed: {}", channel, e);
+        continue;
       }
     }
   }
@@ -129,10 +167,10 @@ async fn try_connect(mac_address: Address, packets: &[Packet]) -> Result<bluer::
 
 const MAX_CONNECT_ATTEMPTS: u32 = 3;
 
-async fn send(mac_address: Address, packets: &[Packet]) -> Result<(), Box<dyn Error>> {
+async fn send(mac_address: Address, packets: &[Packet]) -> Result<Vec<Response>, Box<dyn Error>> {
   info!("Connecting to device with MAC address {}", mac_address);
 
-  let mut stream = None;
+  let mut result = None;
   for attempt in 1..=MAX_CONNECT_ATTEMPTS {
     if attempt > 1 {
       info!("Retrying connection (attempt {}/{})..", attempt, MAX_CONNECT_ATTEMPTS);
@@ -140,7 +178,7 @@ async fn send(mac_address: Address, packets: &[Packet]) -> Result<(), Box<dyn Er
     }
     match try_connect(mac_address, packets).await {
       Ok(s) => {
-        stream = Some(s);
+        result = Some(s);
         break;
       }
       Err(e) => {
@@ -148,7 +186,17 @@ async fn send(mac_address: Address, packets: &[Packet]) -> Result<(), Box<dyn Er
       }
     }
   }
-  let mut stream = stream.ok_or("Failed to connect on any RFCOMM channel")?;
+  let (mut stream, first_response) = result.ok_or("Failed to connect on any RFCOMM channel")?;
+
+  let mut responses = Vec::new();
+
+  if !first_response.ack {
+    return Err(format!(
+      "Device NAK'd command 0x{:02x}",
+      first_response.original_command
+    ).into());
+  }
+  responses.push(first_response);
 
   for (index, packet) in packets.iter().enumerate().skip(1) {
     info!("Sending packet {}/{}..", index + 1, packets.len());
@@ -160,10 +208,22 @@ async fn send(mac_address: Address, packets: &[Packet]) -> Result<(), Box<dyn Er
       "  Wrote {} bytes",
       serialized.len()
     );
+
+    let response = read_response(&mut stream).await?;
+    debug!("  Response: {:?}", response);
+
+    if !response.ack {
+      return Err(format!(
+        "Device NAK'd command 0x{:02x}",
+        response.original_command
+      ).into());
+    }
+    responses.push(response);
+
     tokio::time::sleep(Duration::from_millis(200)).await;
   }
 
-  Ok(())
+  Ok(responses)
 }
 
 fn create_network_packets_from(animation: &[u8]) -> Result<Vec<Packet>, Box<dyn Error>> {
@@ -215,7 +275,8 @@ pub async fn send_alarm(mac_address: Address) -> Result<(), Box<dyn Error>> {
     command: Command::Alarm,
     payload: alarm.serialize()?
   };
-  send(mac_address, &[packet]).await
+  send(mac_address, &[packet]).await?;
+  Ok(())
 }
 
 pub async fn send_divoom_animation(
@@ -239,7 +300,8 @@ pub async fn send_set_datetime(
     command: Command::SetDateTime,
     payload: payload.serialize()?
   };
-  send(mac_address, &[packet]).await
+  send(mac_address, &[packet]).await?;
+  Ok(())
 }
 
 pub async fn send_set_brightness(
@@ -250,7 +312,8 @@ pub async fn send_set_brightness(
     command: Command::SetBrightness,
     payload: vec![brightness]
   };
-  send(mac_address, &[packet]).await
+  send(mac_address, &[packet]).await?;
+  Ok(())
 }
 
 pub async fn send_keyboard_backlight(
@@ -261,7 +324,8 @@ pub async fn send_keyboard_backlight(
     command: Command::LightArrowSwitch,
     payload: protocol::keyboard_backlight::serialize(mode)
   };
-  send(mac_address, &[packet]).await
+  send(mac_address, &[packet]).await?;
+  Ok(())
 }
 
 pub async fn send_image(
@@ -276,5 +340,6 @@ pub async fn send_image(
   let mut buf = Vec::new();
   animation.save_to_divoom_format(&mut buf)?;
   let packets = create_network_packets_from(&buf)?;
-  send(mac_address, &packets).await
+  send(mac_address, &packets).await?;
+  Ok(())
 }
