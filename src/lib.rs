@@ -204,6 +204,17 @@ pub async fn send_set_datetime(
   send(mac_address, &[packet]).await
 }
 
+pub async fn send_set_brightness(
+  mac_address: Address,
+  brightness: u8
+) -> Result<(), Box<dyn Error>> {
+  let packet = Packet {
+    command: Command::SetBrightness,
+    payload: vec![brightness]
+  };
+  send(mac_address, &[packet]).await
+}
+
 pub async fn send_keyboard_backlight(
   mac_address: Address,
   mode: u8

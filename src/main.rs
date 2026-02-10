@@ -13,7 +13,7 @@ use divoom_ditoo_pro_controller::divoom_file_format::animation::Animation;
 use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
   find_paired_ditoo_pro_devices, list_devices, list_paired_devices, send_alarm,
-  send_divoom_animation, send_keyboard_backlight, send_set_datetime
+  send_divoom_animation, send_keyboard_backlight, send_set_brightness, send_set_datetime
 };
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
@@ -60,6 +60,10 @@ enum SendCommand {
   },
   SetDateTime {
     datetime: NaiveDateTime
+  },
+  Brightness {
+    #[arg(value_parser = clap::value_parser!(u8).range(0..=100))]
+    level: u8
   },
   KeyboardBacklight {
     #[command(subcommand)]
@@ -133,6 +137,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         SendCommand::SetDateTime { datetime } => {
           send_set_datetime(mac_address, datetime).await?
+        }
+        SendCommand::Brightness { level } => {
+          info!("Setting brightness to {}", level);
+          send_set_brightness(mac_address, level).await?
         }
         SendCommand::KeyboardBacklight { action } => {
           let mode = match action {
