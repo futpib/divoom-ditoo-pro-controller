@@ -92,27 +92,61 @@ pub async fn list_paired_devices() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
+async fn try_connect(mac_address: Address, packets: &[Packet]) -> Result<bluer::rfcomm::Stream, Box<dyn Error>> {
+  for channel in [2u8].into_iter().chain((1..=30).filter(|&c| c != 2)) {
+    let socket = bluer::rfcomm::Socket::new()?;
+    let addr = bluer::rfcomm::SocketAddr::new(mac_address, channel);
+    let mut s = match socket.connect(addr).await {
+      Ok(s) => {
+        info!("Connected on RFCOMM channel {}", channel);
+        s
+      }
+      Err(e) => {
+        debug!("Channel {} connect failed: {}", channel, e);
+        continue;
+      }
+    };
+
+    let first_serialized = packets[0].serialize()?;
+    info!("Sending packet 1/{}..", packets.len());
+    debug!("  {}", hex::encode(&first_serialized));
+    match s.write_all(&first_serialized).await {
+      Ok(()) => {
+        info!("  Wrote {} bytes", first_serialized.len());
+        return Ok(s);
+      }
+      Err(e) => {
+        debug!("Channel {} write failed: {}", channel, e);
+      }
+    }
+  }
+  Err("Failed to connect on any RFCOMM channel".into())
+}
+
+const MAX_CONNECT_ATTEMPTS: u32 = 3;
+
 async fn send(mac_address: Address, packets: &[Packet]) -> Result<(), Box<dyn Error>> {
   info!("Connecting to device with MAC address {}", mac_address);
 
   let mut stream = None;
-  for channel in 1..=30u8 {
-    let socket = bluer::rfcomm::Socket::new()?;
-    let addr = bluer::rfcomm::SocketAddr::new(mac_address, channel);
-    match socket.connect(addr).await {
+  for attempt in 1..=MAX_CONNECT_ATTEMPTS {
+    if attempt > 1 {
+      info!("Retrying connection (attempt {}/{})..", attempt, MAX_CONNECT_ATTEMPTS);
+      tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+    match try_connect(mac_address, packets).await {
       Ok(s) => {
-        info!("Connected on RFCOMM channel {}", channel);
         stream = Some(s);
         break;
       }
       Err(e) => {
-        debug!("Channel {} failed: {}", channel, e);
+        debug!("Connection attempt {} failed: {}", attempt, e);
       }
     }
   }
   let mut stream = stream.ok_or("Failed to connect on any RFCOMM channel")?;
 
-  for (index, packet) in packets.iter().enumerate() {
+  for (index, packet) in packets.iter().enumerate().skip(1) {
     info!("Sending packet {}/{}..", index + 1, packets.len());
     let serialized = packet.serialize()?;
     debug!("  {}", hex::encode(&serialized));
