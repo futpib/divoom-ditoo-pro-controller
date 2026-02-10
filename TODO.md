@@ -9,6 +9,8 @@
 - [x] Convert GIF to Divoom 16x16 format
 - [x] Convert Divoom 16x16 format to GIF
 - [x] Debug/inspect Divoom format images
+- [x] Keyboard backlight control (next/prev/toggle)
+- [x] Screen brightness control
 
 ## Not Implemented
 
@@ -52,7 +54,6 @@
 - [ ] Sleep color
 
 ### Device Settings
-- [ ] Brightness control
 - [ ] Set device name
 - [ ] Set language
 - [ ] Set temperature unit (C/F)
