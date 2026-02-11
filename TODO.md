@@ -46,7 +46,7 @@
 
 ### Device Settings
 - [ ] Set device name
-- [ ] Set language
+- [x] Set language
 - [ ] Auto power-off timer
 - [ ] Energy control
 - [ ] Get device info

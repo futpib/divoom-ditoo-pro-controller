@@ -15,9 +15,10 @@ use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
   find_paired_ditoo_pro_devices, list_devices, list_paired_devices, send_alarm,
   send_divoom_animation, send_get_volume, send_image, send_keyboard_backlight,
-  send_scrolling_text, send_set_brightness, send_set_datetime, send_set_play_status,
-  send_set_volume
+  send_scrolling_text, send_set_brightness, send_set_datetime, send_set_language,
+  send_set_play_status, send_set_volume
 };
+use divoom_ditoo_pro_controller::protocol::extended_command;
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
 #[derive(Parser, Debug)]
@@ -79,6 +80,10 @@ enum SendCommand {
   GetVolume,
   Play,
   Pause,
+  SetLanguage {
+    /// Language code (en, zh-hans, zh-hant, ja, th, fr, it, he, es, de, ru, pt, ko, nl, uk, ms)
+    language: String
+  },
   KeyboardBacklight {
     #[command(subcommand)]
     action: KeyboardBacklightAction
@@ -219,6 +224,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
         SendCommand::Pause => {
           info!("Pausing");
           send_set_play_status(mac_address, false).await?
+        }
+        SendCommand::SetLanguage { language } => {
+          let lang_index = extended_command::language_index(&language)
+            .ok_or_else(|| format!(
+              "Unknown language '{}'. Supported: {}",
+              language,
+              extended_command::SUPPORTED_LANGUAGES.join(", ")
+            ))?;
+          info!("Setting language to {} (index {})", language, lang_index);
+          send_set_language(mac_address, lang_index).await?
         }
         SendCommand::KeyboardBacklight { action } => {
           let mode = match action {

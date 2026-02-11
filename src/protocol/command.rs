@@ -11,7 +11,8 @@ pub enum Command {
   DrawingEncodeMoviePlay,
   DrawingCtrlMoviePlay,
   LedUpdateFontInfo,
-  LedWordCmd
+  LedWordCmd,
+  ExtendedCommand
 }
 
 impl Command {
@@ -28,7 +29,8 @@ impl Command {
       Command::SetBrightness => 0x74,
       Command::LedUpdateFontInfo => 0x7c,
       Command::LedWordCmd => 0x86,
-      Command::Animation => 0x8b
+      Command::Animation => 0x8b,
+      Command::ExtendedCommand => 0xbd
     }
   }
 }

@@ -396,6 +396,20 @@ pub async fn send_get_volume(
   Ok(*volume)
 }
 
+pub async fn send_set_language(
+  mac_address: Address,
+  lang_index: u8
+) -> Result<(), Box<dyn Error>> {
+  let packet = protocol::extended_command::build_packet(
+    protocol::extended_command::SET_LANGUAGE,
+    &[lang_index],
+  );
+  let mut conn = DeviceConnection::connect(mac_address).await?;
+  conn.fire_and_forget(&packet).await?;
+  conn.disconnect().await?;
+  Ok(())
+}
+
 pub async fn send_keyboard_backlight(
   mac_address: Address,
   mode: u8
