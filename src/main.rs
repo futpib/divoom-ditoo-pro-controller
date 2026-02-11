@@ -18,6 +18,7 @@ use divoom_ditoo_pro_controller::{
   send_set_play_status, send_set_volume, send_static_text
 };
 use divoom_ditoo_pro_controller::protocol::extended_command;
+use divoom_ditoo_pro_controller::protocol::scrolling_text::{HAlign, VAlign};
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
 #[derive(Parser, Debug)]
@@ -54,7 +55,7 @@ enum Command {
   /// Send an animation to the display
   Animation { filename: String },
 
-  /// Display scrolling text
+  /// Display scrolling text (supports \n for multiline)
   ScrollingText {
     text: String,
     #[arg(long)]
@@ -67,9 +68,15 @@ enum Command {
     /// Background color (e.g. green, #001100, rgb(0,17,0))
     #[arg(long, default_value = "black")]
     bg_color: String,
+    /// Horizontal text alignment
+    #[arg(long, default_value = "center", value_enum)]
+    align: HAlign,
+    /// Vertical text alignment
+    #[arg(long, default_value = "center", value_enum)]
+    valign: VAlign,
   },
 
-  /// Display static text (centered on the 16x16 display)
+  /// Display static text on the 16x16 display (supports \n for multiline)
   StaticText {
     text: String,
     #[arg(long)]
@@ -82,6 +89,12 @@ enum Command {
     /// Background color (e.g. green, #001100, rgb(0,17,0))
     #[arg(long, default_value = "black")]
     bg_color: String,
+    /// Horizontal text alignment
+    #[arg(long, default_value = "center", value_enum)]
+    align: HAlign,
+    /// Vertical text alignment
+    #[arg(long, default_value = "center", value_enum)]
+    valign: VAlign,
   },
 
   /// Set screen brightness (0-100)
@@ -342,21 +355,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
       let mut file = File::open(&filename)?;
       send_divoom_animation(mac, &mut file).await?;
     }
-    Command::ScrollingText { text, font, font_size, color, bg_color } => {
+    Command::ScrollingText { text, font, font_size, color, bg_color, align, valign } => {
       let mac = resolve_device(args.device).await?;
       let font_path = resolve_font(font.as_deref())?;
       let fg_color = parse_color(&color)?;
       let bg_color_rgb = parse_color(&bg_color)?;
       info!("Sending scrolling text: {:?} (font: {:?}, size: {}, color: {}, bg: {})", text, font_path, font_size, color, bg_color);
-      send_scrolling_text(mac, &font_path, &text, font_size, fg_color, bg_color_rgb).await?
+      send_scrolling_text(mac, &font_path, &text, font_size, fg_color, bg_color_rgb, align, valign).await?
     }
-    Command::StaticText { text, font, font_size, color, bg_color } => {
+    Command::StaticText { text, font, font_size, color, bg_color, align, valign } => {
       let mac = resolve_device(args.device).await?;
       let font_path = resolve_font(font.as_deref())?;
       let fg_color = parse_color(&color)?;
       let bg_color_rgb = parse_color(&bg_color)?;
       info!("Sending static text: {:?} (font: {:?}, size: {}, color: {}, bg: {})", text, font_path, font_size, color, bg_color);
-      send_static_text(mac, &font_path, &text, font_size, fg_color, bg_color_rgb).await?
+      send_static_text(mac, &font_path, &text, font_size, fg_color, bg_color_rgb, align, valign).await?
     }
     Command::Brightness { level } => {
       let mac = resolve_device(args.device).await?;

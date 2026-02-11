@@ -485,8 +485,10 @@ pub async fn send_scrolling_text(
   font_size: f32,
   fg_color: [u8; 3],
   bg_color: [u8; 3],
+  halign: protocol::scrolling_text::HAlign,
+  valign: protocol::scrolling_text::VAlign,
 ) -> Result<(), Box<dyn Error>> {
-  let scrolling_text = protocol::scrolling_text::build_scrolling_text_frames(font_path, text, font_size, fg_color, bg_color)?;
+  let scrolling_text = protocol::scrolling_text::build_scrolling_text_frames(font_path, text, font_size, fg_color, bg_color, halign, valign)?;
   let mut conn = DeviceConnection::connect(mac_address).await?;
 
   conn.fire_and_forget(&Packet {
@@ -537,8 +539,10 @@ pub async fn send_static_text(
   font_size: f32,
   fg_color: [u8; 3],
   bg_color: [u8; 3],
+  halign: protocol::scrolling_text::HAlign,
+  valign: protocol::scrolling_text::VAlign,
 ) -> Result<(), Box<dyn Error>> {
-  let image = protocol::static_text::build_static_text_image(font_path, text, font_size, fg_color, bg_color)?;
+  let image = protocol::static_text::build_static_text_image(font_path, text, font_size, fg_color, bg_color, halign, valign)?;
   let animation = DivoomAnimation::from_image(image)?;
   let mut buf = Vec::new();
   animation.save_to_divoom_format(&mut buf)?;
