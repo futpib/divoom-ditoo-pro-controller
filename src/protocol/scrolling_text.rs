@@ -51,9 +51,7 @@ fn rasterize_glyph(font: &Font, ch: char, px: f32) -> RasterizedGlyph {
     RasterizedGlyph { columns }
 }
 
-fn render_frame(wide_bitmap: &[[u8; 2]], scroll_offset: i32) -> [[u8; 3]; 256] {
-    let fg = [0xFF, 0xFF, 0xFF];
-    let bg = [0x00, 0x00, 0x00];
+fn render_frame(wide_bitmap: &[[u8; 2]], scroll_offset: i32, fg: [u8; 3], bg: [u8; 3]) -> [[u8; 3]; 256] {
     let mut pixels = [bg; 256];
 
     for screen_col in 0..16i32 {
@@ -84,6 +82,8 @@ pub fn build_scrolling_text_frames(
     font_path: &Path,
     text: &str,
     font_size: f32,
+    fg_color: [u8; 3],
+    bg_color: [u8; 3],
 ) -> Result<ScrollingText, Box<dyn Error>> {
     let chars: Vec<char> = text.chars().collect();
 
@@ -107,7 +107,7 @@ pub fn build_scrolling_text_frames(
     let mut encoded_frames = Vec::new();
 
     for offset in -16..total_width {
-        let pixels = render_frame(&wide_bitmap, offset);
+        let pixels = render_frame(&wide_bitmap, offset, fg_color, bg_color);
 
         let mut palette = IndexSet::new();
         let mut image = RgbImage::new(16, 16);

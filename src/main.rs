@@ -81,6 +81,12 @@ enum SendCommand {
     font: Option<String>,
     #[arg(long, default_value_t = 16.0)]
     font_size: f32,
+    /// Foreground color as hex RGB (e.g. FF0000 for red)
+    #[arg(long, default_value = "FFFFFF")]
+    color: String,
+    /// Background color as hex RGB (e.g. 001100 for dark green)
+    #[arg(long, default_value = "000000")]
+    bg_color: String,
   }
 }
 
@@ -101,6 +107,17 @@ enum ConvertCommand {
     input_filename: String,
     output_filename: String
   }
+}
+
+fn parse_hex_color(s: &str) -> Result<[u8; 3], Box<dyn Error>> {
+  let s = s.strip_prefix('#').unwrap_or(s);
+  if s.len() != 6 {
+    return Err(format!("Invalid hex color '{}': expected 6 hex digits", s).into());
+  }
+  let r = u8::from_str_radix(&s[0..2], 16).map_err(|_| format!("Invalid hex color '{}'", s))?;
+  let g = u8::from_str_radix(&s[2..4], 16).map_err(|_| format!("Invalid hex color '{}'", s))?;
+  let b = u8::from_str_radix(&s[4..6], 16).map_err(|_| format!("Invalid hex color '{}'", s))?;
+  Ok([r, g, b])
 }
 
 fn resolve_font(font: Option<&str>) -> Result<PathBuf, Box<dyn Error>> {
@@ -193,10 +210,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
           info!("Keyboard backlight: {:?}", action);
           send_keyboard_backlight(mac_address, mode).await?
         }
-        SendCommand::ScrollingText { text, font, font_size } => {
+        SendCommand::ScrollingText { text, font, font_size, color, bg_color } => {
           let font_path = resolve_font(font.as_deref())?;
-          info!("Sending scrolling text: {:?} (font: {:?}, size: {})", text, font_path, font_size);
-          send_scrolling_text(mac_address, &font_path, &text, font_size).await?
+          let fg_color = parse_hex_color(&color)?;
+          let bg_color_rgb = parse_hex_color(&bg_color)?;
+          info!("Sending scrolling text: {:?} (font: {:?}, size: {}, color: {}, bg: {})", text, font_path, font_size, color, bg_color);
+          send_scrolling_text(mac_address, &font_path, &text, font_size, fg_color, bg_color_rgb).await?
         }
       }
     }

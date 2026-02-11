@@ -359,8 +359,10 @@ pub async fn send_scrolling_text(
   font_path: &Path,
   text: &str,
   font_size: f32,
+  fg_color: [u8; 3],
+  bg_color: [u8; 3],
 ) -> Result<(), Box<dyn Error>> {
-  let scrolling_text = protocol::scrolling_text::build_scrolling_text_frames(font_path, text, font_size)?;
+  let scrolling_text = protocol::scrolling_text::build_scrolling_text_frames(font_path, text, font_size, fg_color, bg_color)?;
   let mut conn = DeviceConnection::connect(mac_address).await?;
 
   conn.fire_and_forget(&Packet {
