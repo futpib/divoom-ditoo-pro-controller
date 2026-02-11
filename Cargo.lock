@@ -540,6 +540,7 @@ dependencies = [
  "spectral",
  "time",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

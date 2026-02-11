@@ -122,13 +122,14 @@ async fn read_response(reader: &mut bluer::rfcomm::stream::OwnedReadHalf) -> Res
 }
 
 const MAX_CONNECT_ATTEMPTS: u32 = 3;
-const RESPONSE_TIMEOUT: Duration = Duration::from_secs(5);
 const INTER_PACKET_DELAY: Duration = Duration::from_millis(40);
 
 struct DeviceConnection {
   writer: bluer::rfcomm::stream::OwnedWriteHalf,
   _reader_handle: tokio::task::JoinHandle<()>,
   _response_rx: mpsc::UnboundedReceiver<Response>,
+  _session: bluer::Session,
+  _profile_handle: bluer::rfcomm::ProfileHandle,
 }
 
 impl DeviceConnection {
@@ -149,84 +150,77 @@ impl DeviceConnection {
       }
     }
 
-    Err("Failed to connect on any RFCOMM channel".into())
+    Err("Failed to connect to device".into())
   }
 
   async fn try_connect(mac_address: Address) -> Result<Self, Box<dyn Error>> {
-    for channel in [2u8].into_iter().chain((1..=30).filter(|&c| c != 2)) {
-      let socket = bluer::rfcomm::Socket::new()?;
-      let addr = bluer::rfcomm::SocketAddr::new(mac_address, channel);
-      let stream = match socket.connect(addr).await {
-        Ok(s) => {
-          info!("Connected on RFCOMM channel {}", channel);
-          s
-        }
-        Err(e) => {
-          debug!("Channel {} connect failed: {}", channel, e);
-          continue;
-        }
-      };
+    let session = bluer::Session::new().await?;
+    let adapter = session.default_adapter().await?;
+    adapter.set_powered(true).await?;
 
-      let (reader, mut writer) = stream.into_split();
-      let (tx, mut rx) = mpsc::unbounded_channel();
+    let spp_uuid = uuid::Uuid::from_u128(0x00001101_0000_1000_8000_00805f9b34fb);
 
-      // Send a ping packet to validate the channel
-      let ping = Packet {
-        command: Command::SetBrightness,
-        payload: vec![0xFF], // query sentinel
-      };
-      let serialized = ping.serialize()?;
-      debug!("Sending validation ping: {}", hex::encode(&serialized));
-      match writer.write_all(&serialized).await {
-        Ok(()) => {
-          debug!("  Wrote {} bytes", serialized.len());
-        }
-        Err(e) => {
-          debug!("Channel {} write failed: {}", channel, e);
-          continue;
-        }
+    let profile = bluer::rfcomm::Profile {
+      uuid: spp_uuid,
+      name: Some("divoom-controller".to_string()),
+      role: Some(bluer::rfcomm::Role::Client),
+      require_authentication: Some(false),
+      require_authorization: Some(false),
+      auto_connect: Some(true),
+      ..Default::default()
+    };
+
+    let mut profile_handle = session.register_profile(profile).await?;
+    let device = adapter.device(mac_address)?;
+
+    if !device.is_connected().await? {
+      debug!("Device not connected, connecting...");
+      device.connect().await?;
+    }
+
+    match device.connect_profile(&spp_uuid).await {
+      Ok(()) => debug!("connect_profile succeeded"),
+      Err(e) => debug!("connect_profile: {} (waiting for profile handle)", e),
+    }
+
+    let stream = loop {
+      let req = profile_handle.next().await.ok_or("ProfileHandle stream closed")?;
+      if req.device() == mac_address {
+        break req.accept()?;
       }
+    };
 
-      // Spawn background reader task
-      let reader_handle = tokio::spawn(async move {
-        let mut reader = reader;
-        loop {
-          match read_response(&mut reader).await {
-            Ok(response) => {
-              debug!("Background reader got response: {:?}", response);
-              if tx.send(response).is_err() {
-                debug!("Response channel closed, stopping reader");
-                break;
-              }
-            }
-            Err(e) => {
-              debug!("Background reader error: {}", e);
+    info!("Connected via SDP profile");
+    let (reader, writer) = stream.into_split();
+    let (tx, rx) = mpsc::unbounded_channel();
+
+    // Spawn background reader task
+    let reader_handle = tokio::spawn(async move {
+      let mut reader = reader;
+      loop {
+        match read_response(&mut reader).await {
+          Ok(response) => {
+            debug!("Background reader got response: {:?}", response);
+            if tx.send(response).is_err() {
+              debug!("Response channel closed, stopping reader");
               break;
             }
           }
-        }
-      });
-
-      // Wait for any response to validate bidirectional communication
-      match tokio::time::timeout(RESPONSE_TIMEOUT, rx.recv()).await {
-        Ok(Some(response)) => {
-          debug!("Validation response: {:?}", response);
-          return Ok(DeviceConnection { writer, _reader_handle: reader_handle, _response_rx: rx });
-        }
-        Ok(None) => {
-          debug!("Channel {} reader closed during validation", channel);
-          reader_handle.abort();
-          continue;
-        }
-        Err(_) => {
-          debug!("Channel {} validation timed out", channel);
-          reader_handle.abort();
-          continue;
+          Err(e) => {
+            debug!("Background reader error: {}", e);
+            break;
+          }
         }
       }
-    }
+    });
 
-    Err("Failed to connect on any RFCOMM channel".into())
+    Ok(DeviceConnection {
+      writer,
+      _reader_handle: reader_handle,
+      _response_rx: rx,
+      _session: session,
+      _profile_handle: profile_handle,
+    })
   }
 
   async fn fire_and_forget(&mut self, packet: &Packet) -> Result<(), Box<dyn Error>> {
