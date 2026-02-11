@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::path::Path;
 
+use bdf_parser::{BdfFont, Property};
 use fontdue::{Font, FontSettings};
 use image::{DynamicImage, Rgb, RgbImage};
 use indexmap::IndexSet;
@@ -10,6 +11,46 @@ use crate::divoom_file_format::frame_header::FrameHeader;
 
 struct RasterizedGlyph {
     columns: Vec<u16>,
+}
+
+fn rasterize_glyph_bdf(font: &BdfFont, ch: char) -> RasterizedGlyph {
+    let glyph = match font.glyphs.get(ch) {
+        Some(g) => g,
+        None => {
+            return RasterizedGlyph {
+                columns: vec![0u16; 1],
+            };
+        }
+    };
+
+    let font_ascent: i32 = font
+        .properties
+        .try_get::<i32>(Property::FontAscent)
+        .unwrap_or(font.metadata.bounding_box.size.y);
+
+    let bb = &glyph.bounding_box;
+    let glyph_width = bb.size.x;
+    let glyph_height = bb.size.y;
+    let x_off = bb.offset.x;
+    let y_off = bb.offset.y;
+
+    let advance = glyph.device_width.x;
+    let width = advance.max(1) as usize;
+
+    let mut columns = vec![0u16; width];
+    for (col_idx, word) in columns.iter_mut().enumerate() {
+        let col = col_idx as i32;
+        for row in 0..16i32 {
+            let pixel_x = col - x_off;
+            let pixel_y = y_off + glyph_height - font_ascent + row;
+            if pixel_x >= 0 && pixel_x < glyph_width && pixel_y >= 0 && pixel_y < glyph_height {
+                if glyph.pixel(pixel_x as usize, pixel_y as usize) {
+                    *word |= 1 << row;
+                }
+            }
+        }
+    }
+    RasterizedGlyph { columns }
 }
 
 fn rasterize_glyph(font: &Font, ch: char, px: f32) -> RasterizedGlyph {
@@ -92,14 +133,28 @@ pub fn build_scrolling_text_frames(
     }
 
     let font_data = std::fs::read(font_path)?;
-    let font = Font::from_bytes(font_data, FontSettings::default())
-        .map_err(|e| format!("Failed to load font: {}", e))?;
+    let is_bdf = font_path
+        .extension()
+        .map_or(false, |ext| ext.eq_ignore_ascii_case("bdf"));
 
     let mut wide_bitmap: Vec<[u8; 2]> = Vec::new();
-    for &ch in &chars {
-        let glyph = rasterize_glyph(&font, ch, font_size);
-        for &col_data in &glyph.columns {
-            wide_bitmap.push(col_data.to_le_bytes());
+    if is_bdf {
+        let bdf_font = BdfFont::parse(&font_data)
+            .map_err(|e| format!("Failed to parse BDF font: {:?}", e))?;
+        for &ch in &chars {
+            let glyph = rasterize_glyph_bdf(&bdf_font, ch);
+            for &col_data in &glyph.columns {
+                wide_bitmap.push(col_data.to_le_bytes());
+            }
+        }
+    } else {
+        let font = Font::from_bytes(font_data, FontSettings::default())
+            .map_err(|e| format!("Failed to load font: {}", e))?;
+        for &ch in &chars {
+            let glyph = rasterize_glyph(&font, ch, font_size);
+            for &col_data in &glyph.columns {
+                wide_bitmap.push(col_data.to_le_bytes());
+            }
         }
     }
 
