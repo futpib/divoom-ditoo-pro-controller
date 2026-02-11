@@ -235,6 +235,18 @@ fn parse_color(s: &str) -> Result<[u8; 3], Box<dyn Error>> {
   Ok([r, g, b])
 }
 
+fn find_bitmap_monospace_font() -> Option<PathBuf> {
+  let output = std::process::Command::new("fc-match")
+    .args(["monospace:scalable=false", "--format=%{file}"])
+    .output()
+    .ok()?;
+  if !output.status.success() {
+    return None;
+  }
+  let path = PathBuf::from(String::from_utf8(output.stdout).ok()?.trim().to_string());
+  if path.exists() { Some(path) } else { None }
+}
+
 fn resolve_font(font: Option<&str>) -> Result<PathBuf, Box<dyn Error>> {
   match font {
     Some(name_or_path) => {
@@ -249,6 +261,9 @@ fn resolve_font(font: Option<&str>) -> Result<PathBuf, Box<dyn Error>> {
       Ok(font.path.clone())
     }
     None => {
+      if let Some(path) = find_bitmap_monospace_font() {
+        return Ok(path);
+      }
       let fc = fontconfig::Fontconfig::new()
         .ok_or("Failed to initialize fontconfig")?;
       let font = fc.find("monospace", None)
