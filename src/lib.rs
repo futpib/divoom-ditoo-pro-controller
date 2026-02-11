@@ -127,6 +127,8 @@ const INTER_PACKET_DELAY: Duration = Duration::from_millis(40);
 
 struct DeviceConnection {
   writer: bluer::rfcomm::stream::OwnedWriteHalf,
+  _reader_handle: tokio::task::JoinHandle<()>,
+  _response_rx: mpsc::UnboundedReceiver<Response>,
 }
 
 impl DeviceConnection {
@@ -209,7 +211,7 @@ impl DeviceConnection {
       match tokio::time::timeout(RESPONSE_TIMEOUT, rx.recv()).await {
         Ok(Some(response)) => {
           debug!("Validation response: {:?}", response);
-          return Ok(DeviceConnection { writer });
+          return Ok(DeviceConnection { writer, _reader_handle: reader_handle, _response_rx: rx });
         }
         Ok(None) => {
           debug!("Channel {} reader closed during validation", channel);
@@ -235,6 +237,12 @@ impl DeviceConnection {
     Ok(())
   }
 
+  async fn disconnect(mut self) -> Result<(), Box<dyn Error>> {
+    info!("Disconnecting from device");
+    self._reader_handle.abort();
+    self.writer.shutdown().await?;
+    Ok(())
+  }
 }
 
 fn create_network_packets_from(animation: &[u8]) -> Result<Vec<Packet>, Box<dyn Error>> {
@@ -288,6 +296,7 @@ pub async fn send_alarm(mac_address: Address) -> Result<(), Box<dyn Error>> {
   };
   let mut conn = DeviceConnection::connect(mac_address).await?;
   conn.fire_and_forget(&packet).await?;
+  conn.disconnect().await?;
   Ok(())
 }
 
@@ -304,6 +313,7 @@ pub async fn send_divoom_animation(
     info!("Sending packet {}/{}..", index + 1, packets.len());
     conn.fire_and_forget(packet).await?;
   }
+  conn.disconnect().await?;
   Ok(())
 }
 
@@ -318,6 +328,7 @@ pub async fn send_set_datetime(
   };
   let mut conn = DeviceConnection::connect(mac_address).await?;
   conn.fire_and_forget(&packet).await?;
+  conn.disconnect().await?;
   Ok(())
 }
 
@@ -331,6 +342,7 @@ pub async fn send_set_brightness(
   };
   let mut conn = DeviceConnection::connect(mac_address).await?;
   conn.fire_and_forget(&packet).await?;
+  conn.disconnect().await?;
   Ok(())
 }
 
@@ -344,6 +356,7 @@ pub async fn send_keyboard_backlight(
   };
   let mut conn = DeviceConnection::connect(mac_address).await?;
   conn.fire_and_forget(&packet).await?;
+  conn.disconnect().await?;
   Ok(())
 }
 
@@ -391,6 +404,7 @@ pub async fn send_scrolling_text(
     payload: vec![0x00],
   }).await?;
 
+  conn.disconnect().await?;
   Ok(())
 }
 
@@ -412,5 +426,6 @@ pub async fn send_image(
     info!("Sending packet {}/{}..", index + 1, packets.len());
     conn.fire_and_forget(packet).await?;
   }
+  conn.disconnect().await?;
   Ok(())
 }
