@@ -19,6 +19,8 @@ bitstream-io = "2.6.0"
 chrono = "0.4.40"
 indexmap = "2.7.1"
 bluer = { version = "0.17.4", features = ["rfcomm", "bluetoothd"] }
+fontdue = "0.9.3"
+fontconfig = "0.10.0"
 
 [dev-dependencies]
 spectral = "0.6.0"

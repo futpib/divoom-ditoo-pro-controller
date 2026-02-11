@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
+use std::path::PathBuf;
 use bluer::Address;
 use chrono::NaiveDateTime;
 use clap::{Parser, Subcommand};
@@ -13,8 +14,8 @@ use divoom_ditoo_pro_controller::divoom_file_format::animation::Animation;
 use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
   find_paired_ditoo_pro_devices, list_devices, list_paired_devices, send_alarm,
-  send_divoom_animation, send_image, send_keyboard_backlight, send_set_brightness,
-  send_set_datetime
+  send_divoom_animation, send_image, send_keyboard_backlight, send_scrolling_text,
+  send_set_brightness, send_set_datetime
 };
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
@@ -73,6 +74,11 @@ enum SendCommand {
   KeyboardBacklight {
     #[command(subcommand)]
     action: KeyboardBacklightAction
+  },
+  ScrollingText {
+    text: String,
+    #[arg(long)]
+    font: Option<String>
   }
 }
 
@@ -92,6 +98,19 @@ enum ConvertCommand {
   ToDivoom16 {
     input_filename: String,
     output_filename: String
+  }
+}
+
+fn resolve_font(font: Option<&str>) -> Result<PathBuf, Box<dyn Error>> {
+  match font {
+    Some(path) => Ok(PathBuf::from(path)),
+    None => {
+      let fc = fontconfig::Fontconfig::new()
+        .ok_or("Failed to initialize fontconfig")?;
+      let font = fc.find("monospace", None)
+        .ok_or("No monospace font found; use --font")?;
+      Ok(font.path.clone())
+    }
   }
 }
 
@@ -161,6 +180,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
           };
           info!("Keyboard backlight: {:?}", action);
           send_keyboard_backlight(mac_address, mode).await?
+        }
+        SendCommand::ScrollingText { text, font } => {
+          let font_path = resolve_font(font.as_deref())?;
+          info!("Sending scrolling text: {:?} (font: {:?})", text, font_path);
+          send_scrolling_text(mac_address, &font_path, &text).await?
         }
       }
     }

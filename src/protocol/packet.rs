@@ -56,7 +56,7 @@ pub struct Response {
 }
 
 impl Response {
-  pub fn deserialize(bytes: &[u8]) -> Result<Self, Box<dyn Error>> {
+  pub fn deserialize(bytes: &[u8]) -> Result<Self, Box<dyn Error + Send + Sync>> {
     if bytes.len() < 7 {
       return Err("Response too short".into());
     }

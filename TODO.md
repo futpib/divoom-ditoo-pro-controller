@@ -15,7 +15,7 @@
 ## Not Implemented
 
 ### Display & Images
-- [ ] Scrolling text
+- [x] Scrolling text
 - [ ] 64-pixel custom images
 - [ ] Drawing pad control
 - [ ] Sand painting mode
