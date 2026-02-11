@@ -11,6 +11,22 @@ The protocol however is basic Bluetooth, which can be reverse-engineered.
 Bluetooth Speaker with 16x16 Display (Divoom Ditoo Pro):
 <https://andreas-mausch.de/blog/2023-08-14-divoom-ditoo-pro/>
 
+# Install
+
+## Arch Linux (AUR)
+
+```bash
+yay -S divoom-ditoo-pro-controller-git
+```
+
+https://aur.archlinux.org/packages/divoom-ditoo-pro-controller-git
+
+## From source
+
+```bash
+cargo install --path .
+```
+
 # How to run
 
 ## Find your device
