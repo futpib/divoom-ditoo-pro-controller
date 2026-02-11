@@ -15,7 +15,8 @@ use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
   find_paired_ditoo_pro_devices, list_devices, list_paired_devices, send_alarm,
   send_divoom_animation, send_get_volume, send_image, send_keyboard_backlight,
-  send_scrolling_text, send_set_brightness, send_set_datetime, send_set_volume
+  send_scrolling_text, send_set_brightness, send_set_datetime, send_set_play_status,
+  send_set_volume
 };
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
@@ -76,6 +77,8 @@ enum SendCommand {
     volume: u8
   },
   GetVolume,
+  Play,
+  Pause,
   KeyboardBacklight {
     #[command(subcommand)]
     action: KeyboardBacklightAction
@@ -208,6 +211,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         SendCommand::GetVolume => {
           let volume = send_get_volume(mac_address).await?;
           println!("{}", volume);
+        }
+        SendCommand::Play => {
+          info!("Playing");
+          send_set_play_status(mac_address, true).await?
+        }
+        SendCommand::Pause => {
+          info!("Pausing");
+          send_set_play_status(mac_address, false).await?
         }
         SendCommand::KeyboardBacklight { action } => {
           let mode = match action {

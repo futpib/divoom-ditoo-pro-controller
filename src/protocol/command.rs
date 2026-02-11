@@ -4,6 +4,7 @@ pub enum Command {
   Animation,
   SetVolume,
   GetVolume,
+  SetPlayStatus,
   SetDateTime,
   LightArrowSwitch,
   SetBrightness,
@@ -18,6 +19,7 @@ impl Command {
     match *self {
       Command::SetVolume => 0x08,
       Command::GetVolume => 0x09,
+      Command::SetPlayStatus => 0x0a,
       Command::SetDateTime => 0x18,
       Command::LightArrowSwitch => 0x23,
       Command::Alarm => 0x43,

@@ -367,6 +367,20 @@ pub async fn send_set_volume(
   Ok(())
 }
 
+pub async fn send_set_play_status(
+  mac_address: Address,
+  playing: bool
+) -> Result<(), Box<dyn Error>> {
+  let packet = Packet {
+    command: Command::SetPlayStatus,
+    payload: vec![if playing { 1 } else { 0 }]
+  };
+  let mut conn = DeviceConnection::connect(mac_address).await?;
+  conn.fire_and_forget(&packet).await?;
+  conn.disconnect().await?;
+  Ok(())
+}
+
 pub async fn send_get_volume(
   mac_address: Address,
 ) -> Result<u8, Box<dyn Error>> {

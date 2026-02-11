@@ -30,7 +30,7 @@
 - [ ] Microphone on/off
 - [ ] SD card music playback (list, play by ID, next/prev, play mode)
 - [ ] Mix music mode
-- [ ] Play/pause/stop control
+- [x] Play/pause control
 - [ ] Power-on voice control / volume
 
 ### Alarms (extended)
