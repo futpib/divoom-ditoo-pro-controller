@@ -357,9 +357,10 @@ pub async fn send_keyboard_backlight(
 pub async fn send_scrolling_text(
   mac_address: Address,
   font_path: &Path,
-  text: &str
+  text: &str,
+  font_size: f32,
 ) -> Result<(), Box<dyn Error>> {
-  let scrolling_text = protocol::scrolling_text::build_scrolling_text_frames(font_path, text)?;
+  let scrolling_text = protocol::scrolling_text::build_scrolling_text_frames(font_path, text, font_size)?;
   let mut conn = DeviceConnection::connect(mac_address).await?;
 
   conn.fire_and_forget(&Packet {

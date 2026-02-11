@@ -12,8 +12,7 @@ struct RasterizedGlyph {
     columns: Vec<u16>,
 }
 
-fn rasterize_glyph(font: &Font, ch: char) -> RasterizedGlyph {
-    let px = 16.0;
+fn rasterize_glyph(font: &Font, ch: char, px: f32) -> RasterizedGlyph {
     let (metrics, bitmap) = font.rasterize(ch, px);
 
     let line_metrics = font.horizontal_line_metrics(px);
@@ -84,6 +83,7 @@ pub struct ScrollingText {
 pub fn build_scrolling_text_frames(
     font_path: &Path,
     text: &str,
+    font_size: f32,
 ) -> Result<ScrollingText, Box<dyn Error>> {
     let chars: Vec<char> = text.chars().collect();
 
@@ -97,7 +97,7 @@ pub fn build_scrolling_text_frames(
 
     let mut wide_bitmap: Vec<[u8; 2]> = Vec::new();
     for &ch in &chars {
-        let glyph = rasterize_glyph(&font, ch);
+        let glyph = rasterize_glyph(&font, ch, font_size);
         for &col_data in &glyph.columns {
             wide_bitmap.push(col_data.to_le_bytes());
         }

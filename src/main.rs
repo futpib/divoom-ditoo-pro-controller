@@ -78,7 +78,9 @@ enum SendCommand {
   ScrollingText {
     text: String,
     #[arg(long)]
-    font: Option<String>
+    font: Option<String>,
+    #[arg(long, default_value_t = 16.0)]
+    font_size: f32,
   }
 }
 
@@ -181,10 +183,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
           info!("Keyboard backlight: {:?}", action);
           send_keyboard_backlight(mac_address, mode).await?
         }
-        SendCommand::ScrollingText { text, font } => {
+        SendCommand::ScrollingText { text, font, font_size } => {
           let font_path = resolve_font(font.as_deref())?;
-          info!("Sending scrolling text: {:?} (font: {:?})", text, font_path);
-          send_scrolling_text(mac_address, &font_path, &text).await?
+          info!("Sending scrolling text: {:?} (font: {:?}, size: {})", text, font_path, font_size);
+          send_scrolling_text(mac_address, &font_path, &text, font_size).await?
         }
       }
     }
