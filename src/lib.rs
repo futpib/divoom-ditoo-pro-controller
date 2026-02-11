@@ -23,7 +23,7 @@ use crate::protocol::datetime::DateTime;
 use crate::protocol::packet::{Packet, Response};
 
 
-pub async fn list_devices() -> Result<(), Box<dyn Error>> {
+pub async fn scan_devices() -> Result<(), Box<dyn Error>> {
   let session = bluer::Session::new().await?;
   let adapter = session.default_adapter().await?;
   adapter.set_powered(true).await?;

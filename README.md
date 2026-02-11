@@ -16,7 +16,7 @@ Bluetooth Speaker with 16x16 Display (Divoom Ditoo Pro):
 ## Find your device
 
 ```shell-session
-$ cargo run list-devices
+$ cargo run scan
 [2025-02-24T17:00:00Z INFO  divoom_ditoo_pro_controller] Scanning bluetooth devices for 20s
 // ...
 [2025-02-24T17:01:01Z INFO  divoom_ditoo_pro_controller] Found bluetooth devices [BtDevice { name: "DitooPro-Audio", addr: 11:22:33:44:55:66 }]
@@ -25,30 +25,35 @@ $ cargo run list-devices
 
 Look for a line containing `DitooPro-Light` or `DitooPro-Audio` and remember the MAC address.
 
-## Send commads
+## Send commands
 
-Then, run the second command:
+If only one Ditoo Pro is paired, the device is auto-detected. Otherwise, pass `--device`:
 
 ```shell-session
-$ cargo run send 11:22:33:44:55:66 alarm off
-[2025-02-24T17:20:00Z INFO  divoom_ditoo_pro_controller] Disabling alarm..
-[2025-02-24T17:20:00Z INFO  divoom_ditoo_pro_controller] Connecting to device with MAC address 11:22:33:44:55:66
-[2025-02-24T17:20:00Z INFO  divoom_ditoo_pro_controller] Connection successful, socket over RFCOMM/SPP acquired
-[2025-02-24T17:20:00Z INFO  divoom_ditoo_pro_controller] Sending packet 1/1..
-[2025-02-24T17:20:00Z DEBUG divoom_ditoo_pro_controller]   010d004300000d25000000000064e60002
-[2025-02-24T17:20:00Z INFO  divoom_ditoo_pro_controller]   Wrote 17/17 bytes (100%)
+$ cargo run -- --device 11:22:33:44:55:66 alarm off
 ```
-
-Replace the MAC address by the one from the command above.
 
 More examples:
 
 ```bash
-cargo run debug-image ./images/witch.divoom16
-cargo run send 11:22:33:44:55:66 animation ./images/witch.divoom16
-cargo run send 11:22:33:44:55:66 set-date-time 2025-03-25T21:22:59
-cargo run convert to-gif ./images/witch.divoom16 ./out.gif
-cargo run convert to-divoom16 ./images/witch.gif ./out.divoom16
+cargo run -- brightness 50
+cargo run -- volume set 8
+cargo run -- volume get
+cargo run -- play
+cargo run -- pause
+cargo run -- clock get
+cargo run -- clock set 123
+cargo run -- mode light 2 --color red --brightness 80
+cargo run -- mode hot
+cargo run -- language en
+cargo run -- set-datetime 2025-03-25T21:22:59
+cargo run -- image ./images/witch.png
+cargo run -- animation ./images/witch.divoom16
+cargo run -- scrolling-text "Hello world" --color yellow
+cargo run -- keyboard-backlight toggle
+cargo run -- debug-image ./images/witch.divoom16
+cargo run -- convert to-gif ./images/witch.divoom16 ./out.gif
+cargo run -- convert to-divoom16 ./images/witch.gif ./out.divoom16
 ```
 
 # Bluetooth adapter

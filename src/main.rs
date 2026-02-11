@@ -8,12 +8,10 @@ use clap::{Parser, Subcommand};
 use env_logger::{Builder, Env};
 use log::{debug, info};
 
-use Command::{Convert, DebugImage, ListDevices, ListPairedDevices, Send};
-
 use divoom_ditoo_pro_controller::divoom_file_format::animation::Animation;
 use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
-  find_paired_ditoo_pro_devices, list_devices, list_paired_devices, send_alarm,
+  find_paired_ditoo_pro_devices, scan_devices, list_paired_devices, send_alarm,
   send_divoom_animation, send_get_clock_face, send_get_volume, send_image,
   send_keyboard_backlight, send_scrolling_text, send_set_brightness,
   send_set_box_mode, send_set_clock_face, send_set_datetime, send_set_language,
@@ -25,79 +23,38 @@ use divoom_ditoo_pro_controller::protocol::extended_command;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+  /// Device MAC address (auto-detected if only one paired Ditoo Pro exists)
+  #[arg(long)]
+  device: Option<String>,
+
   #[command(subcommand)]
   command: Command
 }
 
 #[derive(Subcommand, Debug)]
 enum Command {
-  /// Lists all available bluetooth devices and tries to find a Divoom
-  ListDevices,
+  /// Scan for available bluetooth devices
+  Scan,
 
-  /// Lists paired Divoom Ditoo Pro devices
-  ListPairedDevices,
+  /// List paired Divoom Ditoo Pro devices
+  Devices,
 
-  /// Connects to a Divoom via it's MAC address and sends a command
-  Send {
-    mac_address: Option<String>,
-    #[command(subcommand)]
-    send: SendCommand
-  },
-
-  /// Converts a Divoom animation to GIF and vice versa
+  /// Convert between Divoom and GIF formats
   Convert {
     #[command(subcommand)]
     convert: ConvertCommand
   },
 
   /// Show detailed information about an image in Divoom file format
-  DebugImage { filename: String }
-}
+  DebugImage { filename: String },
 
-#[derive(Subcommand, Debug)]
-enum SendCommand {
-  Alarm {
-    #[arg(required = true, number_of_values = 1, value_parser = clap::builder::BoolishValueParser::new())]
-    enable: bool
-  },
-  Animation {
-    filename: String
-  },
-  Image {
-    filename: String
-  },
-  SetDateTime {
-    /// Date and time to set (e.g. "2025-01-15T12:30:00"). Defaults to current local time.
-    datetime: Option<NaiveDateTime>
-  },
-  Brightness {
-    #[arg(value_parser = clap::value_parser!(u8).range(0..=100))]
-    level: u8
-  },
-  SetVolume {
-    #[arg(value_parser = clap::value_parser!(u8).range(0..=16))]
-    volume: u8
-  },
-  GetVolume,
-  Play,
-  Pause,
-  SetLanguage {
-    /// Language code (en, zh-hans, zh-hant, ja, th, fr, it, he, es, de, ru, pt, ko, nl, uk, ms)
-    language: String
-  },
-  SetBoxMode {
-    #[command(subcommand)]
-    mode: BoxMode
-  },
-  SetClockFace {
-    /// Clock face ID
-    clock_id: u16
-  },
-  GetClockFace,
-  KeyboardBacklight {
-    #[command(subcommand)]
-    action: KeyboardBacklightAction
-  },
+  /// Send a static image to the display
+  Image { filename: String },
+
+  /// Send an animation to the display
+  Animation { filename: String },
+
+  /// Display scrolling text
   ScrollingText {
     text: String,
     #[arg(long)]
@@ -110,7 +67,83 @@ enum SendCommand {
     /// Background color (e.g. green, #001100, rgb(0,17,0))
     #[arg(long, default_value = "black")]
     bg_color: String,
-  }
+  },
+
+  /// Set screen brightness (0-100)
+  Brightness {
+    #[arg(value_parser = clap::value_parser!(u8).range(0..=100))]
+    level: u8
+  },
+
+  /// Get or set the clock face
+  Clock {
+    #[command(subcommand)]
+    action: ClockCommand
+  },
+
+  /// Set the display mode
+  Mode {
+    #[command(subcommand)]
+    mode: BoxMode
+  },
+
+  /// Get or set the volume
+  Volume {
+    #[command(subcommand)]
+    action: VolumeCommand
+  },
+
+  /// Start playback
+  Play,
+
+  /// Pause playback
+  Pause,
+
+  /// Set the device date and time
+  SetDatetime {
+    /// Date and time to set (e.g. "2025-01-15T12:30:00"). Defaults to current local time.
+    datetime: Option<NaiveDateTime>
+  },
+
+  /// Set the device language
+  Language {
+    /// Language code (en, zh-hans, zh-hant, ja, th, fr, it, he, es, de, ru, pt, ko, nl, uk, ms)
+    language: String
+  },
+
+  /// Control the keyboard backlight
+  KeyboardBacklight {
+    #[command(subcommand)]
+    action: KeyboardBacklightAction
+  },
+
+  /// Toggle the alarm
+  Alarm {
+    #[arg(required = true, number_of_values = 1, value_parser = clap::builder::BoolishValueParser::new())]
+    enable: bool
+  },
+}
+
+#[derive(Subcommand, Debug)]
+enum VolumeCommand {
+  /// Get the current volume
+  Get,
+  /// Set the volume (0-16)
+  Set {
+    #[arg(value_parser = clap::value_parser!(u8).range(0..=16))]
+    volume: u8
+  },
+}
+
+#[derive(Subcommand, Debug)]
+enum ClockCommand {
+  /// Get the current clock face ID
+  Get,
+  /// Set the clock face by ID
+  Set {
+    /// Clock face ID
+    clock_id: u16
+  },
 }
 
 #[derive(Subcommand, Debug)]
@@ -197,6 +230,32 @@ fn resolve_font(font: Option<&str>) -> Result<PathBuf, Box<dyn Error>> {
   }
 }
 
+async fn resolve_device(device: Option<String>) -> Result<Address, Box<dyn Error>> {
+  match device {
+    Some(addr) => addr
+      .parse()
+      .map_err(|_| format!("Invalid MAC address: '{}'", addr).into()),
+    None => {
+      let devices = find_paired_ditoo_pro_devices().await?;
+      match devices.len() {
+        0 => Err("No paired Ditoo Pro devices found. Specify a MAC address with --device.".into()),
+        1 => Ok(devices[0]),
+        _ => {
+          let list = devices
+            .iter()
+            .map(|d| d.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+          Err(format!(
+            "Multiple paired Ditoo Pro devices found: {}. Specify a MAC address with --device.",
+            list
+          ).into())
+        }
+      }
+    }
+  }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
   Builder::from_env(Env::default().default_filter_or("debug")).init();
@@ -204,139 +263,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
   let args = Args::parse();
 
   match args.command {
-    ListDevices => list_devices().await?,
-    ListPairedDevices => list_paired_devices().await?,
-    Send { mac_address, send } => {
-      let mac_address: Address = match mac_address {
-        Some(addr) => addr
-          .parse()
-          .map_err(|_| format!("Invalid MAC address: '{}'", addr))?,
-        None => {
-          let devices = find_paired_ditoo_pro_devices().await?;
-          match devices.len() {
-            0 => return Err("No paired Ditoo Pro devices found. Specify a MAC address.".into()),
-            1 => devices[0],
-            _ => {
-              let list = devices
-                .iter()
-                .map(|d| d.to_string())
-                .collect::<Vec<_>>()
-                .join(", ");
-              return Err(format!(
-                "Multiple paired Ditoo Pro devices found: {}. Specify a MAC address.",
-                list
-              ).into());
-            }
-          }
-        }
-      };
-      match send {
-        SendCommand::Alarm { enable } => {
-          match enable {
-            true => info!("Enabling alarm.."),
-            false => info!("Disabling alarm..")
-          }
-          send_alarm(mac_address).await?
-        }
-        SendCommand::Animation { filename } => {
-          let mut file = File::open(&filename)?;
-          send_divoom_animation(mac_address, &mut file).await?;
-        }
-        SendCommand::Image { filename } => {
-          info!("Sending image {}", filename);
-          send_image(mac_address, &filename).await?;
-        }
-        SendCommand::SetDateTime { datetime } => {
-          let datetime = datetime.unwrap_or_else(|| chrono::Local::now().naive_local());
-          info!("Setting date/time to {}", datetime);
-          send_set_datetime(mac_address, datetime).await?
-        }
-        SendCommand::Brightness { level } => {
-          info!("Setting brightness to {}", level);
-          send_set_brightness(mac_address, level).await?
-        }
-        SendCommand::SetVolume { volume } => {
-          info!("Setting volume to {}", volume);
-          send_set_volume(mac_address, volume).await?
-        }
-        SendCommand::GetVolume => {
-          let volume = send_get_volume(mac_address).await?;
-          println!("{}", volume);
-        }
-        SendCommand::Play => {
-          info!("Playing");
-          send_set_play_status(mac_address, true).await?
-        }
-        SendCommand::Pause => {
-          info!("Pausing");
-          send_set_play_status(mac_address, false).await?
-        }
-        SendCommand::SetLanguage { language } => {
-          let lang_index = extended_command::language_index(&language)
-            .ok_or_else(|| format!(
-              "Unknown language '{}'. Supported: {}",
-              language,
-              extended_command::SUPPORTED_LANGUAGES.join(", ")
-            ))?;
-          info!("Setting language to {} (index {})", language, lang_index);
-          send_set_language(mac_address, lang_index).await?
-        }
-        SendCommand::SetBoxMode { mode } => {
-          let payload = match mode {
-            BoxMode::Light { sub_mode, color, brightness, on } => {
-              let [r, g, b] = parse_color(&color)?;
-              info!("Setting light mode (sub={}, color=#{:02X}{:02X}{:02X}, brightness={}, on={})", sub_mode, r, g, b, brightness, on);
-              vec![0x01, sub_mode, r, g, b, brightness, on as u8, 0, 0, 0]
-            }
-            BoxMode::Hot => {
-              info!("Setting hot/trending mode");
-              vec![0x02]
-            }
-            BoxMode::Special { sub_type } => {
-              info!("Setting special mode (sub_type={})", sub_type);
-              vec![0x03, sub_type]
-            }
-            BoxMode::Music { sub_type } => {
-              info!("Setting music visualizer mode (sub_type={})", sub_type);
-              vec![0x04, sub_type, 0, 0, 0, 0, 0, 0, 0, 0]
-            }
-            BoxMode::Raw { payload_hex } => {
-              let bytes: Vec<u8> = payload_hex.iter()
-                .map(|s| u8::from_str_radix(s, 16).map_err(|_| format!("Invalid hex byte: '{}'", s)))
-                .collect::<Result<_, _>>()?;
-              info!("Setting box mode with raw payload: {}", hex::encode(&bytes));
-              bytes
-            }
-          };
-          send_set_box_mode(mac_address, payload).await?
-        }
-        SendCommand::SetClockFace { clock_id } => {
-          info!("Setting clock face to {}", clock_id);
-          send_set_clock_face(mac_address, clock_id).await?
-        }
-        SendCommand::GetClockFace => {
-          let clock_id = send_get_clock_face(mac_address).await?;
-          println!("{}", clock_id);
-        }
-        SendCommand::KeyboardBacklight { action } => {
-          let mode = match action {
-            KeyboardBacklightAction::Next => 0,
-            KeyboardBacklightAction::Prev => 1,
-            KeyboardBacklightAction::Toggle => 2
-          };
-          info!("Keyboard backlight: {:?}", action);
-          send_keyboard_backlight(mac_address, mode).await?
-        }
-        SendCommand::ScrollingText { text, font, font_size, color, bg_color } => {
-          let font_path = resolve_font(font.as_deref())?;
-          let fg_color = parse_color(&color)?;
-          let bg_color_rgb = parse_color(&bg_color)?;
-          info!("Sending scrolling text: {:?} (font: {:?}, size: {}, color: {}, bg: {})", text, font_path, font_size, color, bg_color);
-          send_scrolling_text(mac_address, &font_path, &text, font_size, fg_color, bg_color_rgb).await?
-        }
-      }
-    }
-    Convert { convert } => match convert {
+    Command::Scan => scan_devices().await?,
+    Command::Devices => list_paired_devices().await?,
+    Command::Convert { convert } => match convert {
       ConvertCommand::ToGif {
         input_filename,
         output_filename
@@ -356,7 +285,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         animation.save_to_divoom_format(&mut BufWriter::new(File::create(output_filename)?))?;
       }
     },
-    DebugImage { filename } => {
+    Command::DebugImage { filename } => {
       let animation = Animation::from_16x16(&mut BufReader::new(File::open(filename)?))?;
       animation
         .frames
@@ -387,6 +316,130 @@ async fn main() -> Result<(), Box<dyn Error>> {
               .collect::<Vec<_>>()
           );
         })
+    }
+    Command::Image { filename } => {
+      let mac = resolve_device(args.device).await?;
+      info!("Sending image {}", filename);
+      send_image(mac, &filename).await?;
+    }
+    Command::Animation { filename } => {
+      let mac = resolve_device(args.device).await?;
+      let mut file = File::open(&filename)?;
+      send_divoom_animation(mac, &mut file).await?;
+    }
+    Command::ScrollingText { text, font, font_size, color, bg_color } => {
+      let mac = resolve_device(args.device).await?;
+      let font_path = resolve_font(font.as_deref())?;
+      let fg_color = parse_color(&color)?;
+      let bg_color_rgb = parse_color(&bg_color)?;
+      info!("Sending scrolling text: {:?} (font: {:?}, size: {}, color: {}, bg: {})", text, font_path, font_size, color, bg_color);
+      send_scrolling_text(mac, &font_path, &text, font_size, fg_color, bg_color_rgb).await?
+    }
+    Command::Brightness { level } => {
+      let mac = resolve_device(args.device).await?;
+      info!("Setting brightness to {}", level);
+      send_set_brightness(mac, level).await?
+    }
+    Command::Clock { action } => {
+      let mac = resolve_device(args.device).await?;
+      match action {
+        ClockCommand::Get => {
+          let clock_id = send_get_clock_face(mac).await?;
+          println!("{}", clock_id);
+        }
+        ClockCommand::Set { clock_id } => {
+          info!("Setting clock face to {}", clock_id);
+          send_set_clock_face(mac, clock_id).await?
+        }
+      }
+    }
+    Command::Mode { mode } => {
+      let mac = resolve_device(args.device).await?;
+      let payload = match mode {
+        BoxMode::Light { sub_mode, color, brightness, on } => {
+          let [r, g, b] = parse_color(&color)?;
+          info!("Setting light mode (sub={}, color=#{:02X}{:02X}{:02X}, brightness={}, on={})", sub_mode, r, g, b, brightness, on);
+          vec![0x01, sub_mode, r, g, b, brightness, on as u8, 0, 0, 0]
+        }
+        BoxMode::Hot => {
+          info!("Setting hot/trending mode");
+          vec![0x02]
+        }
+        BoxMode::Special { sub_type } => {
+          info!("Setting special mode (sub_type={})", sub_type);
+          vec![0x03, sub_type]
+        }
+        BoxMode::Music { sub_type } => {
+          info!("Setting music visualizer mode (sub_type={})", sub_type);
+          vec![0x04, sub_type, 0, 0, 0, 0, 0, 0, 0, 0]
+        }
+        BoxMode::Raw { payload_hex } => {
+          let bytes: Vec<u8> = payload_hex.iter()
+            .map(|s| u8::from_str_radix(s, 16).map_err(|_| format!("Invalid hex byte: '{}'", s)))
+            .collect::<Result<_, _>>()?;
+          info!("Setting box mode with raw payload: {}", hex::encode(&bytes));
+          bytes
+        }
+      };
+      send_set_box_mode(mac, payload).await?
+    }
+    Command::Volume { action } => {
+      let mac = resolve_device(args.device).await?;
+      match action {
+        VolumeCommand::Get => {
+          let volume = send_get_volume(mac).await?;
+          println!("{}", volume);
+        }
+        VolumeCommand::Set { volume } => {
+          info!("Setting volume to {}", volume);
+          send_set_volume(mac, volume).await?
+        }
+      }
+    }
+    Command::Play => {
+      let mac = resolve_device(args.device).await?;
+      info!("Playing");
+      send_set_play_status(mac, true).await?
+    }
+    Command::Pause => {
+      let mac = resolve_device(args.device).await?;
+      info!("Pausing");
+      send_set_play_status(mac, false).await?
+    }
+    Command::SetDatetime { datetime } => {
+      let mac = resolve_device(args.device).await?;
+      let datetime = datetime.unwrap_or_else(|| chrono::Local::now().naive_local());
+      info!("Setting date/time to {}", datetime);
+      send_set_datetime(mac, datetime).await?
+    }
+    Command::Language { language } => {
+      let mac = resolve_device(args.device).await?;
+      let lang_index = extended_command::language_index(&language)
+        .ok_or_else(|| format!(
+          "Unknown language '{}'. Supported: {}",
+          language,
+          extended_command::SUPPORTED_LANGUAGES.join(", ")
+        ))?;
+      info!("Setting language to {} (index {})", language, lang_index);
+      send_set_language(mac, lang_index).await?
+    }
+    Command::KeyboardBacklight { action } => {
+      let mac = resolve_device(args.device).await?;
+      let mode = match action {
+        KeyboardBacklightAction::Next => 0,
+        KeyboardBacklightAction::Prev => 1,
+        KeyboardBacklightAction::Toggle => 2
+      };
+      info!("Keyboard backlight: {:?}", action);
+      send_keyboard_backlight(mac, mode).await?
+    }
+    Command::Alarm { enable } => {
+      let mac = resolve_device(args.device).await?;
+      match enable {
+        true => info!("Enabling alarm.."),
+        false => info!("Disabling alarm..")
+      }
+      send_alarm(mac).await?
     }
   }
 
