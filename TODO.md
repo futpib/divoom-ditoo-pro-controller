@@ -25,7 +25,7 @@
 - [ ] Clock face selection
 
 ### Audio & Music
-- [ ] Get/set volume
+- [x] Get/set volume
 - [ ] EQ control
 - [ ] Microphone on/off
 - [ ] SD card music playback (list, play by ID, next/prev, play mode)

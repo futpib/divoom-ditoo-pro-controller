@@ -127,7 +127,7 @@ const INTER_PACKET_DELAY: Duration = Duration::from_millis(40);
 struct DeviceConnection {
   writer: bluer::rfcomm::stream::OwnedWriteHalf,
   _reader_handle: tokio::task::JoinHandle<()>,
-  _response_rx: mpsc::UnboundedReceiver<Response>,
+  response_rx: mpsc::UnboundedReceiver<Response>,
   _session: bluer::Session,
   _profile_handle: bluer::rfcomm::ProfileHandle,
 }
@@ -217,10 +217,23 @@ impl DeviceConnection {
     Ok(DeviceConnection {
       writer,
       _reader_handle: reader_handle,
-      _response_rx: rx,
+      response_rx: rx,
       _session: session,
       _profile_handle: profile_handle,
     })
+  }
+
+  async fn send_and_receive(&mut self, packet: &Packet) -> Result<Response, Box<dyn Error>> {
+    let serialized = packet.serialize()?;
+    debug!("send_and_receive 0x{:02x}: {}", packet.command.value(), hex::encode(&serialized));
+    self.writer.write_all(&serialized).await?;
+    tokio::time::sleep(INTER_PACKET_DELAY).await;
+    let response = self.response_rx.recv().await
+      .ok_or("Response channel closed")?;
+    if !response.ack {
+      return Err(format!("Device NAK'd command 0x{:02x}", packet.command.value()).into());
+    }
+    Ok(response)
   }
 
   async fn fire_and_forget(&mut self, packet: &Packet) -> Result<(), Box<dyn Error>> {
@@ -338,6 +351,35 @@ pub async fn send_set_brightness(
   conn.fire_and_forget(&packet).await?;
   conn.disconnect().await?;
   Ok(())
+}
+
+pub async fn send_set_volume(
+  mac_address: Address,
+  volume: u8
+) -> Result<(), Box<dyn Error>> {
+  let packet = Packet {
+    command: Command::SetVolume,
+    payload: vec![volume]
+  };
+  let mut conn = DeviceConnection::connect(mac_address).await?;
+  conn.fire_and_forget(&packet).await?;
+  conn.disconnect().await?;
+  Ok(())
+}
+
+pub async fn send_get_volume(
+  mac_address: Address,
+) -> Result<u8, Box<dyn Error>> {
+  let packet = Packet {
+    command: Command::GetVolume,
+    payload: vec![]
+  };
+  let mut conn = DeviceConnection::connect(mac_address).await?;
+  let response = conn.send_and_receive(&packet).await?;
+  conn.disconnect().await?;
+  let volume = response.data.first()
+    .ok_or("GetVolume response contained no data")?;
+  Ok(*volume)
 }
 
 pub async fn send_keyboard_backlight(

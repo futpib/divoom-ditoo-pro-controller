@@ -14,8 +14,8 @@ use divoom_ditoo_pro_controller::divoom_file_format::animation::Animation;
 use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
   find_paired_ditoo_pro_devices, list_devices, list_paired_devices, send_alarm,
-  send_divoom_animation, send_image, send_keyboard_backlight,
-  send_scrolling_text, send_set_brightness, send_set_datetime
+  send_divoom_animation, send_get_volume, send_image, send_keyboard_backlight,
+  send_scrolling_text, send_set_brightness, send_set_datetime, send_set_volume
 };
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
@@ -71,6 +71,11 @@ enum SendCommand {
     #[arg(value_parser = clap::value_parser!(u8).range(0..=100))]
     level: u8
   },
+  SetVolume {
+    #[arg(value_parser = clap::value_parser!(u8).range(0..=16))]
+    volume: u8
+  },
+  GetVolume,
   KeyboardBacklight {
     #[command(subcommand)]
     action: KeyboardBacklightAction
@@ -81,11 +86,11 @@ enum SendCommand {
     font: Option<String>,
     #[arg(long, default_value_t = 16.0)]
     font_size: f32,
-    /// Foreground color as hex RGB (e.g. FF0000 for red)
-    #[arg(long, default_value = "FFFFFF")]
+    /// Foreground color (e.g. red, #FF0000, rgb(255,0,0))
+    #[arg(long, default_value = "white")]
     color: String,
-    /// Background color as hex RGB (e.g. 001100 for dark green)
-    #[arg(long, default_value = "000000")]
+    /// Background color (e.g. green, #001100, rgb(0,17,0))
+    #[arg(long, default_value = "black")]
     bg_color: String,
   }
 }
@@ -109,14 +114,9 @@ enum ConvertCommand {
   }
 }
 
-fn parse_hex_color(s: &str) -> Result<[u8; 3], Box<dyn Error>> {
-  let s = s.strip_prefix('#').unwrap_or(s);
-  if s.len() != 6 {
-    return Err(format!("Invalid hex color '{}': expected 6 hex digits", s).into());
-  }
-  let r = u8::from_str_radix(&s[0..2], 16).map_err(|_| format!("Invalid hex color '{}'", s))?;
-  let g = u8::from_str_radix(&s[2..4], 16).map_err(|_| format!("Invalid hex color '{}'", s))?;
-  let b = u8::from_str_radix(&s[4..6], 16).map_err(|_| format!("Invalid hex color '{}'", s))?;
+fn parse_color(s: &str) -> Result<[u8; 3], Box<dyn Error>> {
+  let c = csscolorparser::parse(s).map_err(|e| format!("Invalid color '{}': {}", s, e))?;
+  let [r, g, b, _] = c.to_rgba8();
   Ok([r, g, b])
 }
 
@@ -201,6 +201,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
           info!("Setting brightness to {}", level);
           send_set_brightness(mac_address, level).await?
         }
+        SendCommand::SetVolume { volume } => {
+          info!("Setting volume to {}", volume);
+          send_set_volume(mac_address, volume).await?
+        }
+        SendCommand::GetVolume => {
+          let volume = send_get_volume(mac_address).await?;
+          println!("{}", volume);
+        }
         SendCommand::KeyboardBacklight { action } => {
           let mode = match action {
             KeyboardBacklightAction::Next => 0,
@@ -212,8 +220,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         SendCommand::ScrollingText { text, font, font_size, color, bg_color } => {
           let font_path = resolve_font(font.as_deref())?;
-          let fg_color = parse_hex_color(&color)?;
-          let bg_color_rgb = parse_hex_color(&bg_color)?;
+          let fg_color = parse_color(&color)?;
+          let bg_color_rgb = parse_color(&bg_color)?;
           info!("Sending scrolling text: {:?} (font: {:?}, size: {}, color: {}, bg: {})", text, font_path, font_size, color, bg_color);
           send_scrolling_text(mac_address, &font_path, &text, font_size, fg_color, bg_color_rgb).await?
         }
