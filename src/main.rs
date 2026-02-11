@@ -14,8 +14,8 @@ use divoom_ditoo_pro_controller::divoom_file_format::animation::Animation;
 use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
   find_paired_ditoo_pro_devices, list_devices, list_paired_devices, send_alarm,
-  send_divoom_animation, send_image, send_keyboard_backlight, send_scrolling_text,
-  send_set_brightness, send_set_datetime
+  send_divoom_animation, send_image, send_keyboard_backlight,
+  send_scrolling_text, send_set_brightness, send_set_datetime
 };
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro

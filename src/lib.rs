@@ -394,6 +394,7 @@ pub async fn send_scrolling_text(
   Ok(())
 }
 
+
 pub async fn send_image(
   mac_address: Address,
   filename: &str

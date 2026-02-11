@@ -16,12 +16,10 @@
 
 ### Display & Images
 - [x] Scrolling text
-- [ ] 64-pixel custom images
 - [ ] Drawing pad control
 - [ ] Sand painting mode
 - [ ] GIF speed control
 - [ ] Screen direction configuration
-- [ ] Screen mirror configuration
 - [ ] Light mode selection (ambient, music-reactive, watch face, score, user-defined, etc.)
 - [ ] Set box color / sleep color
 - [ ] Clock face selection
@@ -34,13 +32,6 @@
 - [ ] Mix music mode
 - [ ] Play/pause/stop control
 - [ ] Power-on voice control / volume
-
-### FM Radio
-- [ ] Set FM region
-- [ ] Tune to frequency
-- [ ] Auto-search stations
-- [ ] Save favorites
-- [ ] Get current frequency
 
 ### Alarms (extended)
 - [ ] Alarm with custom scene/GIF
@@ -59,8 +50,7 @@
 - [ ] Set temperature unit (C/F)
 - [ ] Auto power-off timer
 - [ ] Energy control
-- [ ] Eye guard mode
-- [ ] Get device info / temperature
+- [ ] Get device info
 
 ### Notifications
 - [ ] Android notification forwarding (ANCS)
@@ -69,11 +59,6 @@
 ### Games
 - [ ] Game control
 - [ ] Game key input
-
-### Multi-Device
-- [ ] Multi-device discovery and grouping
-- [ ] Synchronized display across devices
-- [ ] Mirror / fit modes
 
 ### File Management & Updates
 - [ ] Firmware update over Bluetooth
