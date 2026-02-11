@@ -11,26 +11,30 @@
 - [x] Debug/inspect Divoom format images
 - [x] Keyboard backlight control (next/prev/toggle)
 - [x] Screen brightness control
+- [x] Scrolling text
+- [x] Clock face selection
+- [x] Get/set volume
+- [x] Play/pause control
+- [x] Set language
+- [x] Light mode selection (light, hot, special, music via 0x45)
+- [x] Read and validate device responses (ACK/NAK)
 
 ## Not Implemented
 
 ### Display & Images
-- [x] Scrolling text
 - [ ] Drawing pad control
 - [ ] Sand painting mode
 - [ ] GIF speed control
 - [ ] Screen direction configuration
-- [ ] Light mode selection (ambient, music-reactive, watch face, score, user-defined, etc.)
+- [ ] Watch face mode (ext cmd 0x14 / JSON)
+- [ ] Score mode (JSON)
 - [ ] Set box color / sleep color
-- [x] Clock face selection
 
 ### Audio & Music
-- [x] Get/set volume
 - [ ] EQ control
 - [ ] Microphone on/off
 - [ ] SD card music playback (list, play by ID, next/prev, play mode)
 - [ ] Mix music mode
-- [x] Play/pause control
 - [ ] Power-on voice control / volume
 
 ### Alarms (extended)
@@ -46,7 +50,6 @@
 
 ### Device Settings
 - [ ] Set device name
-- [x] Set language
 - [ ] Auto power-off timer
 - [ ] Energy control
 
@@ -67,6 +70,5 @@
 - [ ] Switch between Bluetooth / Line-in / SD Card / USB Audio modes
 
 ### Protocol
-- [x] Read and validate device responses (ACK/NAK)
 - [ ] JSON-based command protocol (SPP_JSON)
 - [ ] Configurable Bluetooth adapter selection

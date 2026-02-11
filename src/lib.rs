@@ -225,15 +225,24 @@ impl DeviceConnection {
 
   async fn send_and_receive(&mut self, packet: &Packet) -> Result<Response, Box<dyn Error>> {
     let serialized = packet.serialize()?;
-    debug!("send_and_receive 0x{:02x}: {}", packet.command.value(), hex::encode(&serialized));
+    let expected_command = packet.command.value();
+    debug!("send_and_receive 0x{:02x}: {}", expected_command, hex::encode(&serialized));
     self.writer.write_all(&serialized).await?;
     tokio::time::sleep(INTER_PACKET_DELAY).await;
-    let response = self.response_rx.recv().await
-      .ok_or("Response channel closed")?;
-    if !response.ack {
-      return Err(format!("Device NAK'd command 0x{:02x}", packet.command.value()).into());
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    loop {
+      let response = tokio::time::timeout_at(deadline, self.response_rx.recv()).await
+        .map_err(|_| format!("Timed out waiting for response to command 0x{:02x}", expected_command))?
+        .ok_or("Response channel closed")?;
+      if response.original_command != expected_command {
+        debug!("Skipping unsolicited response for command 0x{:02x}", response.original_command);
+        continue;
+      }
+      if !response.ack {
+        return Err(format!("Device NAK'd command 0x{:02x}", expected_command).into());
+      }
+      return Ok(response);
     }
-    Ok(response)
   }
 
   async fn fire_and_forget(&mut self, packet: &Packet) -> Result<(), Box<dyn Error>> {
