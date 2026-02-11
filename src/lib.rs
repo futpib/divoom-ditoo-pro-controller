@@ -530,6 +530,28 @@ pub async fn send_scrolling_text(
 }
 
 
+pub async fn send_static_text(
+  mac_address: Address,
+  font_path: &Path,
+  text: &str,
+  font_size: f32,
+  fg_color: [u8; 3],
+  bg_color: [u8; 3],
+) -> Result<(), Box<dyn Error>> {
+  let image = protocol::static_text::build_static_text_image(font_path, text, font_size, fg_color, bg_color)?;
+  let animation = DivoomAnimation::from_image(image)?;
+  let mut buf = Vec::new();
+  animation.save_to_divoom_format(&mut buf)?;
+  let packets = create_network_packets_from(&buf)?;
+  let mut conn = DeviceConnection::connect(mac_address).await?;
+  for (index, packet) in packets.iter().enumerate() {
+    info!("Sending packet {}/{}..", index + 1, packets.len());
+    conn.fire_and_forget(packet).await?;
+  }
+  conn.disconnect().await?;
+  Ok(())
+}
+
 pub async fn send_image(
   mac_address: Address,
   filename: &str

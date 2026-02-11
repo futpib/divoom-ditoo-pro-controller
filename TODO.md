@@ -12,6 +12,7 @@
 - [x] Keyboard backlight control (next/prev/toggle)
 - [x] Screen brightness control
 - [x] Scrolling text
+- [x] Static text
 - [x] Clock face selection
 - [x] Get/set volume
 - [x] Play/pause control

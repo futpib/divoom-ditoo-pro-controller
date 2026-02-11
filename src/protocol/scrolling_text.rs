@@ -9,11 +9,11 @@ use indexmap::IndexSet;
 use crate::divoom_file_format::frame::Frame;
 use crate::divoom_file_format::frame_header::FrameHeader;
 
-struct RasterizedGlyph {
-    columns: Vec<u16>,
+pub(crate) struct RasterizedGlyph {
+    pub(crate) columns: Vec<u16>,
 }
 
-fn rasterize_glyph_bdf(font: &BdfFont, ch: char) -> RasterizedGlyph {
+pub(crate) fn rasterize_glyph_bdf(font: &BdfFont, ch: char) -> RasterizedGlyph {
     let glyph = match font.glyphs.get(ch) {
         Some(g) => g,
         None => {
@@ -53,7 +53,7 @@ fn rasterize_glyph_bdf(font: &BdfFont, ch: char) -> RasterizedGlyph {
     RasterizedGlyph { columns }
 }
 
-fn rasterize_glyph(font: &Font, ch: char, px: f32) -> RasterizedGlyph {
+pub(crate) fn rasterize_glyph(font: &Font, ch: char, px: f32) -> RasterizedGlyph {
     let (metrics, bitmap) = font.rasterize(ch, px);
 
     let line_metrics = font.horizontal_line_metrics(px);
@@ -92,7 +92,7 @@ fn rasterize_glyph(font: &Font, ch: char, px: f32) -> RasterizedGlyph {
     RasterizedGlyph { columns }
 }
 
-fn render_frame(wide_bitmap: &[[u8; 2]], scroll_offset: i32, fg: [u8; 3], bg: [u8; 3]) -> [[u8; 3]; 256] {
+pub(crate) fn render_frame(wide_bitmap: &[[u8; 2]], scroll_offset: i32, fg: [u8; 3], bg: [u8; 3]) -> [[u8; 3]; 256] {
     let mut pixels = [bg; 256];
 
     for screen_col in 0..16i32 {

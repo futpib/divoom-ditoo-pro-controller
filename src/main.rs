@@ -15,7 +15,7 @@ use divoom_ditoo_pro_controller::{
   send_divoom_animation, send_get_clock_face, send_get_volume, send_image,
   send_keyboard_backlight, send_scrolling_text, send_set_brightness,
   send_set_box_mode, send_set_clock_face, send_set_datetime, send_set_language,
-  send_set_play_status, send_set_volume
+  send_set_play_status, send_set_volume, send_static_text
 };
 use divoom_ditoo_pro_controller::protocol::extended_command;
 
@@ -56,6 +56,21 @@ enum Command {
 
   /// Display scrolling text
   ScrollingText {
+    text: String,
+    #[arg(long)]
+    font: Option<String>,
+    #[arg(long, default_value_t = 16.0)]
+    font_size: f32,
+    /// Foreground color (e.g. red, #FF0000, rgb(255,0,0))
+    #[arg(long, default_value = "white")]
+    color: String,
+    /// Background color (e.g. green, #001100, rgb(0,17,0))
+    #[arg(long, default_value = "black")]
+    bg_color: String,
+  },
+
+  /// Display static text (centered on the 16x16 display)
+  StaticText {
     text: String,
     #[arg(long)]
     font: Option<String>,
@@ -334,6 +349,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
       let bg_color_rgb = parse_color(&bg_color)?;
       info!("Sending scrolling text: {:?} (font: {:?}, size: {}, color: {}, bg: {})", text, font_path, font_size, color, bg_color);
       send_scrolling_text(mac, &font_path, &text, font_size, fg_color, bg_color_rgb).await?
+    }
+    Command::StaticText { text, font, font_size, color, bg_color } => {
+      let mac = resolve_device(args.device).await?;
+      let font_path = resolve_font(font.as_deref())?;
+      let fg_color = parse_color(&color)?;
+      let bg_color_rgb = parse_color(&bg_color)?;
+      info!("Sending static text: {:?} (font: {:?}, size: {}, color: {}, bg: {})", text, font_path, font_size, color, bg_color);
+      send_static_text(mac, &font_path, &text, font_size, fg_color, bg_color_rgb).await?
     }
     Command::Brightness { level } => {
       let mac = resolve_device(args.device).await?;
