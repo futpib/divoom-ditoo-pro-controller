@@ -105,7 +105,17 @@ enum ConvertCommand {
 
 fn resolve_font(font: Option<&str>) -> Result<PathBuf, Box<dyn Error>> {
   match font {
-    Some(path) => Ok(PathBuf::from(path)),
+    Some(name_or_path) => {
+      let path = PathBuf::from(name_or_path);
+      if path.exists() {
+        return Ok(path);
+      }
+      let fc = fontconfig::Fontconfig::new()
+        .ok_or("Failed to initialize fontconfig")?;
+      let font = fc.find(name_or_path, None)
+        .ok_or_else(|| format!("Font {:?} not found", name_or_path))?;
+      Ok(font.path.clone())
+    }
     None => {
       let fc = fontconfig::Fontconfig::new()
         .ok_or("Failed to initialize fontconfig")?;

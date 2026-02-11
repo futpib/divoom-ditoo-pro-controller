@@ -47,7 +47,6 @@
 ### Device Settings
 - [ ] Set device name
 - [ ] Set language
-- [ ] Set temperature unit (C/F)
 - [ ] Auto power-off timer
 - [ ] Energy control
 - [ ] Get device info
@@ -66,7 +65,7 @@
 - [ ] SD/TF card management
 
 ### Work Modes
-- [ ] Switch between Bluetooth / FM Radio / Line-in / SD Card / USB Audio modes
+- [ ] Switch between Bluetooth / Line-in / SD Card / USB Audio modes
 
 ### Protocol
 - [x] Read and validate device responses (ACK/NAK)
