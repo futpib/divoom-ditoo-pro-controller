@@ -8,7 +8,11 @@ use indexmap::IndexSet;
 use crate::divoom_file_format::frame::Frame;
 use crate::divoom_file_format::frame_header::FrameHeader;
 
-fn rasterize_glyph(font: &Font, ch: char) -> [u8; 32] {
+struct RasterizedGlyph {
+    columns: Vec<u16>,
+}
+
+fn rasterize_glyph(font: &Font, ch: char) -> RasterizedGlyph {
     let px = 16.0;
     let (metrics, bitmap) = font.rasterize(ch, px);
 
@@ -28,23 +32,24 @@ fn rasterize_glyph(font: &Font, ch: char) -> [u8; 32] {
     let y_offset = scaled_ascent - metrics.height as i32 - metrics.ymin;
     let x_offset = metrics.xmin;
 
-    let mut result = [0u8; 32];
-    for col in 0..16i32 {
-        let mut word: u16 = 0;
+    let advance = metrics.advance_width.round() as i32;
+    let width = advance.max(1) as usize;
+
+    let mut columns = vec![0u16; width];
+    for (col_idx, word) in columns.iter_mut().enumerate() {
+        let col = col_idx as i32;
         for row in 0..16i32 {
             let bx = col - x_offset;
             let by = row - y_offset;
             if bx >= 0 && bx < metrics.width as i32 && by >= 0 && by < metrics.height as i32 {
                 let alpha = bitmap[by as usize * metrics.width + bx as usize];
                 if alpha >= 128 {
-                    word |= 1 << row;
+                    *word |= 1 << row;
                 }
             }
         }
-        result[col as usize * 2] = (word & 0xFF) as u8;
-        result[col as usize * 2 + 1] = (word >> 8) as u8;
     }
-    result
+    RasterizedGlyph { columns }
 }
 
 fn render_frame(wide_bitmap: &[[u8; 2]], scroll_offset: i32) -> [[u8; 3]; 256] {
@@ -93,8 +98,8 @@ pub fn build_scrolling_text_frames(
     let mut wide_bitmap: Vec<[u8; 2]> = Vec::new();
     for &ch in &chars {
         let glyph = rasterize_glyph(&font, ch);
-        for col in 0..16 {
-            wide_bitmap.push([glyph[col * 2], glyph[col * 2 + 1]]);
+        for &col_data in &glyph.columns {
+            wide_bitmap.push(col_data.to_le_bytes());
         }
     }
 
