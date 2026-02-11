@@ -396,6 +396,51 @@ pub async fn send_get_volume(
   Ok(*volume)
 }
 
+pub async fn send_set_box_mode(
+  mac_address: Address,
+  payload: Vec<u8>
+) -> Result<(), Box<dyn Error>> {
+  let packet = Packet {
+    command: Command::SetBoxMode,
+    payload
+  };
+  let mut conn = DeviceConnection::connect(mac_address).await?;
+  conn.fire_and_forget(&packet).await?;
+  conn.disconnect().await?;
+  Ok(())
+}
+
+pub async fn send_set_clock_face(
+  mac_address: Address,
+  clock_id: u16
+) -> Result<(), Box<dyn Error>> {
+  let packet = protocol::extended_command::build_packet(
+    protocol::extended_command::SET_USER_DEFINE_TIME,
+    &clock_id.to_le_bytes(),
+  );
+  let mut conn = DeviceConnection::connect(mac_address).await?;
+  conn.fire_and_forget(&packet).await?;
+  conn.disconnect().await?;
+  Ok(())
+}
+
+pub async fn send_get_clock_face(
+  mac_address: Address,
+) -> Result<u16, Box<dyn Error>> {
+  let packet = protocol::extended_command::build_packet(
+    protocol::extended_command::GET_USER_DEFINE_TIME,
+    &[],
+  );
+  let mut conn = DeviceConnection::connect(mac_address).await?;
+  let response = conn.send_and_receive(&packet).await?;
+  conn.disconnect().await?;
+  if response.data.len() < 3 {
+    return Err("GetClockFace response too short".into());
+  }
+  let clock_id = u16::from_le_bytes([response.data[1], response.data[2]]);
+  Ok(clock_id)
+}
+
 pub async fn send_set_language(
   mac_address: Address,
   lang_index: u8

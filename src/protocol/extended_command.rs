@@ -10,6 +10,8 @@ pub fn build_packet(ext_cmd_type: u8, params: &[u8]) -> Packet {
   }
 }
 
+pub const SET_USER_DEFINE_TIME: u8 = 0x14;
+pub const GET_USER_DEFINE_TIME: u8 = 0x15;
 pub const SET_LANGUAGE: u8 = 0x26;
 
 pub fn language_index(lang: &str) -> Option<u8> {

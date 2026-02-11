@@ -22,7 +22,7 @@
 - [ ] Screen direction configuration
 - [ ] Light mode selection (ambient, music-reactive, watch face, score, user-defined, etc.)
 - [ ] Set box color / sleep color
-- [ ] Clock face selection
+- [x] Clock face selection
 
 ### Audio & Music
 - [x] Get/set volume
@@ -49,7 +49,6 @@
 - [x] Set language
 - [ ] Auto power-off timer
 - [ ] Energy control
-- [ ] Get device info
 
 ### Notifications
 - [ ] Android notification forwarding (ANCS)

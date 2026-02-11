@@ -14,8 +14,9 @@ use divoom_ditoo_pro_controller::divoom_file_format::animation::Animation;
 use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
   find_paired_ditoo_pro_devices, list_devices, list_paired_devices, send_alarm,
-  send_divoom_animation, send_get_volume, send_image, send_keyboard_backlight,
-  send_scrolling_text, send_set_brightness, send_set_datetime, send_set_language,
+  send_divoom_animation, send_get_clock_face, send_get_volume, send_image,
+  send_keyboard_backlight, send_scrolling_text, send_set_brightness,
+  send_set_box_mode, send_set_clock_face, send_set_datetime, send_set_language,
   send_set_play_status, send_set_volume
 };
 use divoom_ditoo_pro_controller::protocol::extended_command;
@@ -84,6 +85,15 @@ enum SendCommand {
     /// Language code (en, zh-hans, zh-hant, ja, th, fr, it, he, es, de, ru, pt, ko, nl, uk, ms)
     language: String
   },
+  SetBoxMode {
+    #[command(subcommand)]
+    mode: BoxMode
+  },
+  SetClockFace {
+    /// Clock face ID
+    clock_id: u16
+  },
+  GetClockFace,
   KeyboardBacklight {
     #[command(subcommand)]
     action: KeyboardBacklightAction
@@ -108,6 +118,42 @@ enum KeyboardBacklightAction {
   Next,
   Prev,
   Toggle
+}
+
+#[derive(Subcommand, Debug)]
+enum BoxMode {
+  /// Light mode: color, clock overlay, temperature, sound-reactive, etc.
+  Light {
+    /// Sub-mode: 0=clock, 1=temp, 2=color, 3=special, 4=sound, 5=sound-user, 6=music
+    #[arg(value_parser = clap::value_parser!(u8).range(0..=6))]
+    sub_mode: u8,
+    /// Color (e.g. red, #FF0000)
+    #[arg(long, default_value = "red")]
+    color: String,
+    /// Brightness (0-100)
+    #[arg(long, default_value_t = 100)]
+    brightness: u8,
+    /// On/off
+    #[arg(long, default_value_t = true)]
+    on: bool,
+  },
+  /// Trending/hot animations
+  Hot,
+  /// Special effects
+  Special {
+    /// Effect sub-type index
+    sub_type: u8
+  },
+  /// Music visualizer
+  Music {
+    /// Visualizer sub-type index
+    sub_type: u8
+  },
+  /// Raw payload (for experimentation)
+  Raw {
+    /// Payload bytes as hex (e.g. "06 00 00")
+    payload_hex: Vec<String>
+  },
 }
 
 #[derive(Subcommand, Debug)]
@@ -234,6 +280,43 @@ async fn main() -> Result<(), Box<dyn Error>> {
             ))?;
           info!("Setting language to {} (index {})", language, lang_index);
           send_set_language(mac_address, lang_index).await?
+        }
+        SendCommand::SetBoxMode { mode } => {
+          let payload = match mode {
+            BoxMode::Light { sub_mode, color, brightness, on } => {
+              let [r, g, b] = parse_color(&color)?;
+              info!("Setting light mode (sub={}, color=#{:02X}{:02X}{:02X}, brightness={}, on={})", sub_mode, r, g, b, brightness, on);
+              vec![0x01, sub_mode, r, g, b, brightness, on as u8, 0, 0, 0]
+            }
+            BoxMode::Hot => {
+              info!("Setting hot/trending mode");
+              vec![0x02]
+            }
+            BoxMode::Special { sub_type } => {
+              info!("Setting special mode (sub_type={})", sub_type);
+              vec![0x03, sub_type]
+            }
+            BoxMode::Music { sub_type } => {
+              info!("Setting music visualizer mode (sub_type={})", sub_type);
+              vec![0x04, sub_type, 0, 0, 0, 0, 0, 0, 0, 0]
+            }
+            BoxMode::Raw { payload_hex } => {
+              let bytes: Vec<u8> = payload_hex.iter()
+                .map(|s| u8::from_str_radix(s, 16).map_err(|_| format!("Invalid hex byte: '{}'", s)))
+                .collect::<Result<_, _>>()?;
+              info!("Setting box mode with raw payload: {}", hex::encode(&bytes));
+              bytes
+            }
+          };
+          send_set_box_mode(mac_address, payload).await?
+        }
+        SendCommand::SetClockFace { clock_id } => {
+          info!("Setting clock face to {}", clock_id);
+          send_set_clock_face(mac_address, clock_id).await?
+        }
+        SendCommand::GetClockFace => {
+          let clock_id = send_get_clock_face(mac_address).await?;
+          println!("{}", clock_id);
         }
         SendCommand::KeyboardBacklight { action } => {
           let mode = match action {
