@@ -45,52 +45,27 @@ impl Animation {
       .iter()
       .map(|frame| prepare_image(&DynamicImage::from(frame.buffer().clone())))
       .collect();
-    let palette = get_palette_from_images(&images)
-      .into_iter()
-      .collect::<Vec<_>>();
-
-    if palette.len() >= 256 {
-      return Err(
-        format!(
-          "Too many colors in the .gif, a maximum of {} is supported, but {} found",
-          256,
-          palette.len()
-        )
-        .into()
-      );
-    }
 
     Ok(Animation {
       frames: frames
         .iter()
         .zip(images)
-        .enumerate()
-        .map(|(index, (frame, image))| {
+        .map(|(frame, image)| {
+          let palette = get_palette_from_images(std::slice::from_ref(&image))
+            .into_iter()
+            .collect::<Vec<_>>();
           let numer_denom_ms = frame.delay().numer_denom_ms();
           let time_in_milliseconds = (numer_denom_ms.0 as f64 / numer_denom_ms.1 as f64) as u16;
-          let header = if index == 0 {
-            FrameHeader {
-              time_in_milliseconds,
-              reuse_palette: false,
-              color_count: palette.len() as u8
-            }
-          } else {
-            FrameHeader {
-              time_in_milliseconds,
-              reuse_palette: true,
-              color_count: 0
-            }
-          };
 
           Frame {
-            header,
-            palette: palette.clone(),
-            local_palette: if index == 0 {
-              palette.clone()
-            } else {
-              Vec::new()
+            header: FrameHeader {
+              time_in_milliseconds,
+              reuse_palette: false,
+              color_count: palette.len() as u8,
             },
-            image
+            palette: palette.clone(),
+            local_palette: palette,
+            image,
           }
         })
         .collect::<Vec<_>>()
