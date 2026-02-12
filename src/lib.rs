@@ -4,15 +4,25 @@ use std::io::BufReader;
 #[cfg(feature = "text")]
 use std::path::Path;
 use std::time::Duration;
+#[cfg(feature = "video")]
+use std::thread;
 
 use bluer::Address;
 use chrono::{NaiveDateTime, NaiveTime};
 use futures::StreamExt;
+#[cfg(feature = "video")]
+use image::{DynamicImage, Rgb, RgbImage};
+#[cfg(feature = "video")]
+use indexmap::IndexSet;
 use log::{debug, info};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 
 use crate::divoom_file_format::animation::Animation as DivoomAnimation;
+#[cfg(feature = "video")]
+use crate::divoom_file_format::frame::Frame;
+#[cfg(feature = "video")]
+use crate::divoom_file_format::frame_header::FrameHeader;
 
 pub mod divoom_file_format;
 pub mod protocol;
@@ -576,6 +586,133 @@ pub async fn send_image(
     info!("Sending packet {}/{}..", index + 1, packets.len());
     conn.fire_and_forget(packet).await?;
   }
+  conn.disconnect().await?;
+  Ok(())
+}
+
+#[cfg(feature = "video")]
+fn encode_rgb_frame(rgb: &[u8; 768]) -> Result<Vec<u8>, Box<dyn Error>> {
+  let mut palette = IndexSet::new();
+  let mut image = RgbImage::new(16, 16);
+  for i in 0..256 {
+    let color = Rgb([rgb[i * 3], rgb[i * 3 + 1], rgb[i * 3 + 2]]);
+    palette.insert(color);
+    image.put_pixel((i % 16) as u32, (i / 16) as u32, color);
+  }
+  let palette: Vec<Rgb<u8>> = palette.into_iter().collect();
+
+  let frame = Frame {
+    header: FrameHeader {
+      time_in_milliseconds: 60,
+      reuse_palette: false,
+      color_count: palette.len() as u8,
+    },
+    palette: palette.clone(),
+    local_palette: palette.clone(),
+    image: DynamicImage::ImageRgb8(image),
+  };
+
+  let mut encoded = Vec::new();
+  frame.serialize(&palette, &mut encoded)?;
+  Ok(encoded)
+}
+
+#[cfg(feature = "video")]
+pub async fn send_video(
+  mac_address: Address,
+  file_path: &str,
+) -> Result<(), Box<dyn Error>> {
+  let (frame_tx, mut frame_rx) = mpsc::channel::<[u8; 768]>(2);
+  let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
+
+  let file_path = file_path.to_string();
+  let mpv_handle = thread::spawn(move || {
+    let player = match protocol::video::VideoPlayer::new(&file_path) {
+      Ok(p) => p,
+      Err(e) => {
+        log::error!("Failed to create video player: {}", e);
+        return;
+      }
+    };
+
+    let mut stop_rx = stop_rx;
+    loop {
+      if let Ok(()) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) = stop_rx.try_recv() {
+        break;
+      }
+
+      if player.poll_events() {
+        break;
+      }
+
+      if let Some(rgb) = player.render_frame() {
+        if frame_tx.try_send(rgb).is_err() {
+          // Channel full or closed — drop frame to keep real-time pace
+        }
+      }
+
+      thread::sleep(Duration::from_millis(5));
+    }
+  });
+
+  let mut conn = DeviceConnection::connect(mac_address).await?;
+
+  conn.fire_and_forget(&Packet {
+    command: Command::DrawingCtrlMoviePlay,
+    payload: vec![0x00],
+  }).await?;
+
+  conn.fire_and_forget(&Packet {
+    command: Command::DrawingCtrlMoviePlay,
+    payload: vec![0x01],
+  }).await?;
+
+  let speed: u16 = 60;
+  let mut frame_count: u64 = 0;
+
+  loop {
+    tokio::select! {
+      frame = frame_rx.recv() => {
+        match frame {
+          Some(rgb) => {
+            let encoded = encode_rgb_frame(&rgb)?;
+            let data_len = encoded.len() as u16;
+            let mut payload = Vec::new();
+            payload.extend_from_slice(&speed.to_le_bytes());
+            payload.extend_from_slice(&data_len.to_le_bytes());
+            payload.extend_from_slice(&encoded);
+
+            conn.fire_and_forget(&Packet {
+              command: Command::DrawingEncodeMoviePlay,
+              payload,
+            }).await?;
+
+            frame_count += 1;
+            if frame_count.is_multiple_of(100) {
+              info!("Sent {} video frames", frame_count);
+            }
+          }
+          None => {
+            info!("Video playback ended ({} frames sent)", frame_count);
+            break;
+          }
+        }
+      }
+      _ = tokio::signal::ctrl_c() => {
+        info!("Interrupted, stopping video playback");
+        break;
+      }
+    }
+  }
+
+  let _ = stop_tx.send(());
+  let _ = mpv_handle.join();
+
+  conn.fire_and_forget(&Packet {
+    command: Command::DrawingCtrlMoviePlay,
+    payload: vec![0x00],
+  }).await?;
+
   conn.disconnect().await?;
   Ok(())
 }

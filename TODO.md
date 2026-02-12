@@ -20,6 +20,7 @@
 - [x] Set language
 - [x] Light mode selection (light, hot, special, music via 0x45)
 - [x] Read and validate device responses (ACK/NAK)
+- [x] Video playback (via libmpv, behind `video` feature flag)
 
 ## Not Implemented
 

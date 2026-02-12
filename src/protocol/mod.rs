@@ -9,3 +9,5 @@ pub mod packet;
 pub mod scrolling_text;
 #[cfg(feature = "text")]
 pub mod static_text;
+#[cfg(feature = "video")]
+pub mod video;

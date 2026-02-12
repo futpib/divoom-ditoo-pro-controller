@@ -20,6 +20,8 @@ use divoom_ditoo_pro_controller::{
 };
 #[cfg(feature = "text")]
 use divoom_ditoo_pro_controller::{send_scrolling_text, send_static_text};
+#[cfg(feature = "video")]
+use divoom_ditoo_pro_controller::send_video;
 use divoom_ditoo_pro_controller::protocol::extended_command;
 #[cfg(feature = "text")]
 use divoom_ditoo_pro_controller::protocol::scrolling_text::{HAlign, VAlign};
@@ -101,6 +103,13 @@ enum Command {
     /// Vertical text alignment
     #[arg(long, default_value = "center", value_enum)]
     valign: VAlign,
+  },
+
+  #[cfg(feature = "video")]
+  /// Play a video file on the 16x16 display
+  Video {
+    /// Path to the video file
+    filename: String,
   },
 
   /// Set screen brightness (0-100)
@@ -395,6 +404,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
       let bg_color_rgb = parse_color(&bg_color)?;
       info!("Sending static text: {:?} (font: {:?}, size: {}, color: {}, bg: {})", text, font_path, font_size, color, bg_color);
       send_static_text(mac, &font_path, &text, font_size, fg_color, bg_color_rgb, align, valign).await?
+    }
+    #[cfg(feature = "video")]
+    Command::Video { filename } => {
+      let mac = resolve_device(args.device).await?;
+      info!("Playing video: {}", filename);
+      send_video(mac, &filename).await?
     }
     Command::Brightness { level } => {
       let mac = resolve_device(args.device).await?;

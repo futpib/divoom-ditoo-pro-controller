@@ -6,13 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["text", "all-image-formats"]
+default = ["text", "all-image-formats", "video"]
 text = ["dep:fontdue", "dep:fontconfig", "dep:bdf-parser"]
 all-image-formats = ["image/default"]
+video = ["dep:libmpv2-sys"]
 
 [dependencies]
 clap = { version = "4.5.30", features = ["derive"] }
-tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros", "io-util", "sync", "time"] }
+tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros", "io-util", "sync", "time", "signal"] }
 env_logger = "0.11.6"
 log = "0.4.26"
 futures = "0.3.31"
@@ -28,6 +29,7 @@ fontconfig = { version = "0.10.0", optional = true }
 uuid = "1.20.0"
 csscolorparser = "0.8.2"
 bdf-parser = { version = "0.1.0", optional = true }
+libmpv2-sys = { version = "4", optional = true }
 
 [dev-dependencies]
 spectral = "0.6.0"
