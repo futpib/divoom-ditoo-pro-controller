@@ -74,10 +74,9 @@ pub(crate) fn rasterize_glyph_bdf(font: &BdfFont, ch: char, target_height: i32) 
         for row in 0..target_height {
             let pixel_x = col - x_off;
             let pixel_y = y_off + glyph_height - scaled_ascent + row;
-            if pixel_x >= 0 && pixel_x < glyph_width && pixel_y >= 0 && pixel_y < glyph_height {
-                if glyph.pixel(pixel_x as usize, pixel_y as usize) {
-                    *word |= 1 << row;
-                }
+            if pixel_x >= 0 && pixel_x < glyph_width && pixel_y >= 0 && pixel_y < glyph_height
+                && glyph.pixel(pixel_x as usize, pixel_y as usize) {
+                *word |= 1 << row;
             }
         }
     }
@@ -172,7 +171,7 @@ pub(crate) fn layout_text(
         for (col_idx, &col_data) in line.iter().enumerate() {
             let target_col = x_offset + col_idx;
             if target_col < max_width && line_y >= 0 {
-                let shifted = (col_data as u16) << line_y;
+                let shifted = col_data << line_y;
                 let existing = u16::from_le_bytes(wide_bitmap[target_col]);
                 wide_bitmap[target_col] = (existing | shifted).to_le_bytes();
             }
@@ -232,7 +231,7 @@ pub fn build_scrolling_text_frames(
     let font_data = std::fs::read(font_path)?;
     let is_bdf = font_path
         .extension()
-        .map_or(false, |ext| ext.eq_ignore_ascii_case("bdf"));
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("bdf"));
 
     let lines: Vec<Vec<u16>> = if is_bdf {
         let bdf_font = BdfFont::parse(&font_data)

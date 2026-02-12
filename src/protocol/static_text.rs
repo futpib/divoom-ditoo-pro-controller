@@ -32,7 +32,7 @@ pub fn build_static_text_image(
     let font_data = std::fs::read(font_path)?;
     let is_bdf = font_path
         .extension()
-        .map_or(false, |ext| ext.eq_ignore_ascii_case("bdf"));
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("bdf"));
 
     let lines: Vec<Vec<u16>> = if is_bdf {
         let bdf_font = BdfFont::parse(&font_data)
