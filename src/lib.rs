@@ -627,7 +627,7 @@ pub async fn send_video(
 
   let file_path = file_path.to_string();
   let mpv_handle = thread::spawn(move || {
-    let player = match protocol::video::VideoPlayer::new(&file_path) {
+    let player = match protocol::video::VideoPlayer::new(&file_path, mac_address) {
       Ok(p) => p,
       Err(e) => {
         log::error!("Failed to create video player: {}", e);

@@ -1,12 +1,63 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use bluer::Address;
 use libmpv2_sys::*;
 
 unsafe extern "C" fn update_callback(cb_ctx: *mut std::os::raw::c_void) {
     let flag = &*(cb_ctx as *const AtomicBool);
     flag.store(true, Ordering::Release);
+}
+
+unsafe fn find_audio_device(ctx: *mut mpv_handle, mac_address: Address) -> Option<String> {
+    // BlueZ/PipeWire sink names use underscores: B1_21_81_DD_B8_9B
+    let mac_str = mac_address.to_string().replace(':', "_");
+
+    let prop_name = CString::new("audio-device-list").ok()?;
+    let mut node: mpv_node = std::mem::zeroed();
+    let rc = mpv_get_property(
+        ctx,
+        prop_name.as_ptr(),
+        mpv_format_MPV_FORMAT_NODE,
+        &mut node as *mut mpv_node as *mut std::os::raw::c_void,
+    );
+    if rc < 0 {
+        return None;
+    }
+
+    let result = (|| -> Option<String> {
+        if node.format != mpv_format_MPV_FORMAT_NODE_ARRAY {
+            return None;
+        }
+        let list = &*node.u.list;
+        for i in 0..list.num {
+            let entry = &*list.values.offset(i as isize);
+            if entry.format != mpv_format_MPV_FORMAT_NODE_MAP {
+                continue;
+            }
+            let map = &*entry.u.list;
+            let mut name: Option<&str> = None;
+            for j in 0..map.num {
+                let key = CStr::from_ptr(*map.keys.offset(j as isize)).to_str().ok()?;
+                if key == "name" {
+                    let val = &*map.values.offset(j as isize);
+                    if val.format == mpv_format_MPV_FORMAT_STRING {
+                        name = Some(CStr::from_ptr(val.u.string).to_str().ok()?);
+                    }
+                }
+            }
+            if let Some(n) = name {
+                if n.contains(&mac_str) {
+                    return Some(n.to_string());
+                }
+            }
+        }
+        None
+    })();
+
+    mpv_free_node_contents(&mut node);
+    result
 }
 
 pub struct VideoPlayer {
@@ -19,7 +70,7 @@ pub struct VideoPlayer {
 unsafe impl Send for VideoPlayer {}
 
 impl VideoPlayer {
-    pub fn new(file_path: &str) -> Result<Self, String> {
+    pub fn new(file_path: &str, mac_address: Address) -> Result<Self, String> {
         unsafe {
             let ctx = mpv_create();
             if ctx.is_null() {
@@ -37,8 +88,6 @@ impl VideoPlayer {
             };
 
             set_opt("vo", "libmpv")?;
-            set_opt("ao", "null")?;
-            set_opt("aid", "no")?;
             set_opt("osd-level", "0")?;
             set_opt("sub", "no")?;
             set_opt("vf", "lavfi=[crop='min(iw,ih):min(iw,ih)']")?;
@@ -47,6 +96,18 @@ impl VideoPlayer {
             if rc < 0 {
                 mpv_terminate_destroy(ctx);
                 return Err(format!("mpv_initialize() failed: {rc}"));
+            }
+
+            if let Some(device) = find_audio_device(ctx, mac_address) {
+                log::info!("Using audio device: {}", device);
+                let name_c = CString::new("audio-device").map_err(|e| e.to_string())?;
+                let value_c = CString::new(device).map_err(|e| e.to_string())?;
+                let rc = mpv_set_property_string(ctx, name_c.as_ptr(), value_c.as_ptr());
+                if rc < 0 {
+                    log::warn!("Failed to set audio device: {rc}");
+                }
+            } else {
+                log::info!("Ditoo Pro audio sink not found, using default audio output");
             }
 
             let frame_ready = Arc::new(AtomicBool::new(false));
