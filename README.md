@@ -85,6 +85,7 @@ divoom-ditoo-pro-controller animation ./images/witch.divoom16
 # Play a video (anything mpv supports: local files, YouTube URLs, streams, etc.)
 divoom-ditoo-pro-controller video ./clip.mp4
 divoom-ditoo-pro-controller video 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+divoom-ditoo-pro-controller video 'https://www.youtube.com/watch?v=FtutLA63Cp8'
 
 # Scrolling text with custom color and font
 divoom-ditoo-pro-controller scrolling-text "Hello world" --color yellow --bg-color black
