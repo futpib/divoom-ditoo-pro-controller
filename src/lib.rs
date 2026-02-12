@@ -669,6 +669,8 @@ pub async fn send_video(
 
   let speed: u16 = 60;
   let mut frame_count: u64 = 0;
+  let ctrl_c = tokio::signal::ctrl_c();
+  tokio::pin!(ctrl_c);
 
   loop {
     tokio::select! {
@@ -698,7 +700,7 @@ pub async fn send_video(
           }
         }
       }
-      _ = tokio::signal::ctrl_c() => {
+      _ = &mut ctrl_c => {
         info!("Interrupted, stopping video playback");
         break;
       }

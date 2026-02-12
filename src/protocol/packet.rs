@@ -41,7 +41,7 @@ impl Packet {
   }
 
   fn checksum_from_buffer(buffer: &[u8]) -> u16 {
-    buffer.iter().fold(0u16, |acc, x| acc + *x as u16)
+    buffer.iter().fold(0u16, |acc, x| acc.wrapping_add(*x as u16))
   }
 }
 
@@ -118,7 +118,7 @@ mod tests {
     frame.extend_from_slice(&length.to_le_bytes());
     frame.extend_from_slice(&payload);
 
-    let checksum: u16 = frame[1..frame.len()].iter().fold(0u16, |acc, &x| acc + x as u16);
+    let checksum: u16 = frame[1..frame.len()].iter().fold(0u16, |acc, &x| acc.wrapping_add(x as u16));
     frame.extend_from_slice(&checksum.to_le_bytes());
     frame.push(0x02);
     frame

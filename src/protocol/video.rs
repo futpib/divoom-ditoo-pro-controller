@@ -41,6 +41,7 @@ impl VideoPlayer {
             set_opt("aid", "no")?;
             set_opt("osd-level", "0")?;
             set_opt("sub", "no")?;
+            set_opt("vf", "lavfi=[crop='min(iw,ih):min(iw,ih)']")?;
 
             let rc = mpv_initialize(ctx);
             if rc < 0 {
