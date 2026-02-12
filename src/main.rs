@@ -110,6 +110,9 @@ enum Command {
   Video {
     /// Path to the video file
     filename: String,
+    /// Extra mpv option (e.g. --mpv-option volume=50)
+    #[arg(long = "mpv-option")]
+    mpv_option: Vec<String>,
   },
 
   /// Set screen brightness (0-100)
@@ -406,10 +409,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
       send_static_text(mac, &font_path, &text, font_size, fg_color, bg_color_rgb, align, valign).await?
     }
     #[cfg(feature = "video")]
-    Command::Video { filename } => {
+    Command::Video { filename, mpv_option } => {
       let mac = resolve_device(args.device).await?;
+      let opts: Vec<(String, String)> = mpv_option.iter().map(|s| {
+        let (k, v) = s.split_once('=').unwrap_or((s, ""));
+        (k.to_string(), v.to_string())
+      }).collect();
       info!("Playing video: {}", filename);
-      send_video(mac, &filename).await?
+      send_video(mac, &filename, &opts).await?
     }
     Command::Brightness { level } => {
       let mac = resolve_device(args.device).await?;

@@ -621,13 +621,15 @@ fn encode_rgb_frame(rgb: &[u8; 768]) -> Result<Vec<u8>, Box<dyn Error>> {
 pub async fn send_video(
   mac_address: Address,
   file_path: &str,
+  mpv_options: &[(String, String)],
 ) -> Result<(), Box<dyn Error>> {
   let (frame_tx, mut frame_rx) = mpsc::channel::<[u8; 768]>(2);
   let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
 
   let file_path = file_path.to_string();
+  let mpv_options = mpv_options.to_vec();
   let mpv_handle = thread::spawn(move || {
-    let player = match protocol::video::VideoPlayer::new(&file_path, mac_address) {
+    let player = match protocol::video::VideoPlayer::new(&file_path, mac_address, &mpv_options) {
       Ok(p) => p,
       Err(e) => {
         log::error!("Failed to create video player: {}", e);

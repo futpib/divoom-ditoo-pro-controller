@@ -70,7 +70,7 @@ pub struct VideoPlayer {
 unsafe impl Send for VideoPlayer {}
 
 impl VideoPlayer {
-    pub fn new(file_path: &str, mac_address: Address) -> Result<Self, String> {
+    pub fn new(file_path: &str, mac_address: Address, extra_options: &[(String, String)]) -> Result<Self, String> {
         unsafe {
             let ctx = mpv_create();
             if ctx.is_null() {
@@ -91,6 +91,10 @@ impl VideoPlayer {
             set_opt("osd-level", "0")?;
             set_opt("sub", "no")?;
             set_opt("vf", "lavfi=[crop='min(iw,ih):min(iw,ih)']")?;
+
+            for (key, value) in extra_options {
+                set_opt(key, value)?;
+            }
 
             let rc = mpv_initialize(ctx);
             if rc < 0 {
