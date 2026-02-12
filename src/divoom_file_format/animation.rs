@@ -78,7 +78,7 @@ impl Animation {
       .into_iter()
       .collect::<Vec<_>>();
 
-    if palette.len() >= 256 {
+    if palette.len() > 256 {
       return Err(
         format!(
           "Too many colors in the image, a maximum of {} is supported, but {} found",

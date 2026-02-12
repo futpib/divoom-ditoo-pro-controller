@@ -34,7 +34,15 @@ impl Frame {
 
     let mut local_palette = Vec::new();
 
-    for _ in 0..header.color_count {
+    // color_count is u8 on the wire, so 256 colors wraps to 0.
+    // Disambiguate: reuse_palette=false with color_count=0 means 256 new colors.
+    let local_color_count = if header.color_count == 0 && !header.reuse_palette {
+      256
+    } else {
+      header.color_count as usize
+    };
+
+    for _ in 0..local_color_count {
       let red = reader.read_u8()?;
       let green = reader.read_u8()?;
       let blue = reader.read_u8()?;
