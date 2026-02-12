@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
+#[cfg(feature = "text")]
 use std::path::Path;
 use std::time::Duration;
 
@@ -478,6 +479,7 @@ pub async fn send_keyboard_backlight(
   Ok(())
 }
 
+#[cfg(feature = "text")]
 pub async fn send_scrolling_text(
   mac_address: Address,
   font_path: &Path,
@@ -532,6 +534,7 @@ pub async fn send_scrolling_text(
 }
 
 
+#[cfg(feature = "text")]
 pub async fn send_static_text(
   mac_address: Address,
   font_path: &Path,

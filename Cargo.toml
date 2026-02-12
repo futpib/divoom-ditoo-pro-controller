@@ -5,25 +5,29 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["text", "all-image-formats"]
+text = ["dep:fontdue", "dep:fontconfig", "dep:bdf-parser"]
+all-image-formats = ["image/default"]
+
 [dependencies]
 clap = { version = "4.5.30", features = ["derive"] }
-tokio = { version = "1.43.0", features = ["full"] }
+tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros", "io-util", "sync", "time"] }
 env_logger = "0.11.6"
 log = "0.4.26"
-time = "0.3.37"
 futures = "0.3.31"
 hex = "0.4.3"
-image = "0.25.5"
+image = { version = "0.25.5", default-features = false, features = ["gif", "png", "jpeg", "bmp", "webp"] }
 byteorder = "1.5.0"
 bitstream-io = "2.6.0"
 chrono = "0.4.40"
 indexmap = "2.7.1"
 bluer = { version = "0.17.4", features = ["rfcomm", "bluetoothd"] }
-fontdue = "0.9.3"
-fontconfig = "0.10.0"
+fontdue = { version = "0.9.3", optional = true }
+fontconfig = { version = "0.10.0", optional = true }
 uuid = "1.20.0"
 csscolorparser = "0.8.2"
-bdf-parser = "0.1.0"
+bdf-parser = { version = "0.1.0", optional = true }
 
 [dev-dependencies]
 spectral = "0.6.0"

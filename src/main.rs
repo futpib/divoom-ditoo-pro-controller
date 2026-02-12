@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
+#[cfg(feature = "text")]
 use std::path::PathBuf;
 use bluer::Address;
 use chrono::NaiveDateTime;
@@ -13,11 +14,14 @@ use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
   find_paired_ditoo_pro_devices, scan_devices, list_paired_devices, send_alarm,
   send_divoom_animation, send_get_clock_face, send_get_volume, send_image,
-  send_keyboard_backlight, send_scrolling_text, send_set_brightness,
+  send_keyboard_backlight, send_set_brightness,
   send_set_box_mode, send_set_clock_face, send_set_datetime, send_set_language,
-  send_set_play_status, send_set_volume, send_static_text
+  send_set_play_status, send_set_volume,
 };
+#[cfg(feature = "text")]
+use divoom_ditoo_pro_controller::{send_scrolling_text, send_static_text};
 use divoom_ditoo_pro_controller::protocol::extended_command;
+#[cfg(feature = "text")]
 use divoom_ditoo_pro_controller::protocol::scrolling_text::{HAlign, VAlign};
 
 /// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
@@ -55,6 +59,7 @@ enum Command {
   /// Send an animation to the display
   Animation { filename: String },
 
+  #[cfg(feature = "text")]
   /// Display scrolling text (supports \n for multiline)
   ScrollingText {
     text: String,
@@ -76,6 +81,7 @@ enum Command {
     valign: VAlign,
   },
 
+  #[cfg(feature = "text")]
   /// Display static text on the 16x16 display (supports \n for multiline)
   StaticText {
     text: String,
@@ -235,6 +241,7 @@ fn parse_color(s: &str) -> Result<[u8; 3], Box<dyn Error>> {
   Ok([r, g, b])
 }
 
+#[cfg(feature = "text")]
 fn find_bitmap_monospace_font() -> Option<PathBuf> {
   let output = std::process::Command::new("fc-match")
     .args(["monospace:scalable=false", "--format=%{file}"])
@@ -247,6 +254,7 @@ fn find_bitmap_monospace_font() -> Option<PathBuf> {
   if path.exists() { Some(path) } else { None }
 }
 
+#[cfg(feature = "text")]
 fn resolve_font(font: Option<&str>) -> Result<PathBuf, Box<dyn Error>> {
   match font {
     Some(name_or_path) => {
@@ -370,6 +378,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
       let mut file = File::open(&filename)?;
       send_divoom_animation(mac, &mut file).await?;
     }
+    #[cfg(feature = "text")]
     Command::ScrollingText { text, font, font_size, color, bg_color, align, valign } => {
       let mac = resolve_device(args.device).await?;
       let font_path = resolve_font(font.as_deref())?;
@@ -378,6 +387,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
       info!("Sending scrolling text: {:?} (font: {:?}, size: {}, color: {}, bg: {})", text, font_path, font_size, color, bg_color);
       send_scrolling_text(mac, &font_path, &text, font_size, fg_color, bg_color_rgb, align, valign).await?
     }
+    #[cfg(feature = "text")]
     Command::StaticText { text, font, font_size, color, bg_color, align, valign } => {
       let mac = resolve_device(args.device).await?;
       let font_path = resolve_font(font.as_deref())?;

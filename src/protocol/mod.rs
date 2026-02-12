@@ -5,5 +5,7 @@ pub mod datetime;
 pub mod extended_command;
 pub mod keyboard_backlight;
 pub mod packet;
+#[cfg(feature = "text")]
 pub mod scrolling_text;
+#[cfg(feature = "text")]
 pub mod static_text;
