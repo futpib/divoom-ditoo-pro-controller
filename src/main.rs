@@ -45,6 +45,9 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+  /// Run uploaded Lua programs on the device (requires Lua runtime firmware)
+  Lua { #[command(subcommand)] action: LuaCommand },
+
   /// Decode and validate an MVA firmware package without connecting to a device
   FirmwareDecode {
     file: PathBuf,
@@ -52,12 +55,12 @@ enum Command {
     #[arg(long)] output: Option<PathBuf>,
   },
 
-  /// Experimental vendor-image updater; same-version writes may be refused by firmware
+  /// Install a pinned stock or experimental image; same-version writes may be refused
   FirmwareUpdate {
     file: PathBuf,
     /// Permit a same-version attempt; cannot override device rejection
     #[arg(long)] reflash: bool,
-    /// Restore pinned stock 306007 only from the experimental 306008 firmware
+    /// Restore pinned stock 306007 from a supported experimental firmware
     #[arg(long)] restore_stock: bool,
     /// Validate image and show metadata without connecting or writing
     #[arg(long)] dry_run: bool,
@@ -295,6 +298,18 @@ enum ConvertCommand {
   }
 }
 
+#[derive(Subcommand, Debug)]
+enum LuaCommand {
+  /// Upload and execute a Lua source file without reflashing
+  Run { file: PathBuf },
+  /// Execute a Lua source expression/program without reflashing
+  Eval { source: String },
+  /// Read the last execution result
+  Status,
+  /// Request cancellation of the running program
+  Cancel,
+}
+
 fn parse_color(s: &str) -> Result<[u8; 3], Box<dyn Error>> {
   let c = csscolorparser::parse(s).map_err(|e| format!("Invalid color '{}': {}", s, e))?;
   let [r, g, b, _] = c.to_rgba8();
@@ -378,6 +393,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn run(args: Args) -> Result<(), Box<dyn Error>> {
   match args.command {
+    Command::Lua { action } => {
+      let (source, cancel) = match action {
+        LuaCommand::Run { file } => (Some(std::fs::read(file)?), false),
+        LuaCommand::Eval { source } => (Some(source.into_bytes()), false),
+        LuaCommand::Status => (None, false),
+        LuaCommand::Cancel => (None, true),
+      };
+      let status = divoom_ditoo_pro_controller::lua::run(resolve_device(args.device).await?, source.as_deref(), cancel).await?;
+      println!("{}", serde_json::to_string(&status)?);
+      if status.state == "error" { return Err(format!("Lua: {}", status.result).into()); }
+    }
     Command::FirmwareDecode { file, output } => {
       let report = divoom_ditoo_pro_controller::firmware_decode::decode(&file, output.as_deref())?;
       println!("{}", serde_json::to_string_pretty(&report)?);

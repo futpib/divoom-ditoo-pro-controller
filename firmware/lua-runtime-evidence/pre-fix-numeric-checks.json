@@ -1,0 +1,26 @@
+[
+  {
+    "name": "string",
+    "source": "return 'Lua is on the Ditoo'",
+    "exit_code": 0,
+    "passed": true,
+    "result": {
+      "state": "done",
+      "peak_memory_bytes": 3894,
+      "instructions": 0,
+      "result": "Lua is on the Ditoo"
+    }
+  },
+  {
+    "name": "arithmetic",
+    "source": "return 6*7",
+    "exit_code": 0,
+    "passed": false,
+    "result": {
+      "state": "done",
+      "peak_memory_bytes": 3810,
+      "instructions": 0,
+      "result": "1.618954e-318"
+    }
+  }
+]

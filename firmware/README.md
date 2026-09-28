@@ -48,3 +48,8 @@ analysis; this commit has not been pushed.
 Its adjacent JSON report and `scripts/build-reflash-probe.py` specify its exact
 changes and provenance. See [the update experiment](../docs/firmware-update.md#reproducible-version-gate-experiment)
 for verification limits and the stock restoration procedure.
+
+`306009-lua-probe.MVA` is the native heap diagnostic, built by
+`scripts/build-lua-probe.py`. `306012-lua.MVA` is the bounded Lua runtime, built by
+`scripts/build-lua-runtime.py`. Both derive from the pinned stock bytes; neither
+is an official vendor release. See [Lua build, protocol and verification](../docs/lua.md).

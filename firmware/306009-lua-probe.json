@@ -1,0 +1,10 @@
+{
+  "version": 306009,
+  "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+  "bytes": 1877691,
+  "code_bytes": 1876136,
+  "probe_address": 1875968,
+  "probe_bytes": 168,
+  "boot_crc16": 24328,
+  "status": "offline-built; hardware-unverified; not a Lua runtime"
+}

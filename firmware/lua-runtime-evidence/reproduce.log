@@ -1,0 +1,32 @@
+{
+  "version": 306009,
+  "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+  "bytes": 1877691,
+  "code_bytes": 1876136,
+  "probe_address": 1875968,
+  "probe_bytes": 168,
+  "boot_crc16": 24328,
+  "status": "offline-built; hardware-unverified; not a Lua runtime"
+}
+/usr/lib/gcc/nds32le-elf/15.2.0/../../../../nds32le-elf/bin/ld: warning: dot moved backwards before `.text'
+/usr/lib/gcc/nds32le-elf/15.2.0/../../../../nds32le-elf/bin/ld: warning: dot moved backwards before `.text'
+/usr/lib/gcc/nds32le-elf/15.2.0/../../../../nds32le-elf/bin/ld: warning: dot moved backwards before `.text'
+   text	   data	    bss	    dec	    hex	filename
+ 119804	    720	   2592	 123116	  1e0ec	<repo>/target/lua/reproduce/target/lua/runtime/runtime.elf
+{
+  "version": 306012,
+  "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+  "bytes": 2025699,
+  "checksum": 173062405,
+  "lua": "5.4.9",
+  "number_bits": 32,
+  "memory_limit": 32768,
+  "task_stack_words": 4096,
+  "globals_reserved": 8192,
+  "source_limit": 2048,
+  "instruction_limit": 20000,
+  "boot_crc16": 24328,
+  "status": "offline-built; hardware-unverified"
+}
+306009-lua-probe.MVA 4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e byte-identical
+306012-lua.MVA cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56 byte-identical

@@ -16,6 +16,12 @@ const IMAGE_SIZE: usize = 1_877_379;
 const SHA256: &str = "fc16341c005b11d0ac476917dc2fd98c9bc7481b92a183e64bfe209801566544";
 const PROBE_VERSION: u32 = 306008;
 const PROBE_SHA256: &str = "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b";
+const LUA_PROBE_VERSION: u32 = 306009;
+const LUA_PROBE_SHA256: &str = "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e";
+const LUA_PROBE_SIZE: usize = 1_877_691;
+const LUA_VERSION: u32 = 306012;
+const LUA_SHA256: &str = "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56";
+const LUA_SIZE: usize = 2_025_699;
 const CHUNK_SIZE: usize = 256;
 const EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -27,16 +33,23 @@ pub struct Image {
 }
 
 impl Image {
-  /// Restrict writes to pinned stock and the reproducible, narrowly patched probe.
+  /// Restrict writes to pinned stock and reproducible experimental images.
   pub fn load(path: &Path) -> Result<Self, Box<dyn Error>> {
     let bytes = std::fs::read(path)?;
     let sha256 = hex::encode(Sha256::digest(&bytes));
     let version = match sha256.as_str() {
       SHA256 => VERSION,
       PROBE_SHA256 => PROBE_VERSION,
-      _ => return Err("Unrecognized firmware image: only pinned stock 306007 and the reproducible 306008 reflash probe are supported".into()),
+      LUA_PROBE_SHA256 => LUA_PROBE_VERSION,
+      LUA_SHA256 => LUA_VERSION,
+      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtime 306012 are supported".into()),
     };
-    if bytes.len() != IMAGE_SIZE {
+    let expected_size = match version {
+      LUA_VERSION => LUA_SIZE,
+      LUA_PROBE_VERSION => LUA_PROBE_SIZE,
+      _ => IMAGE_SIZE,
+    };
+    if bytes.len() != expected_size {
       return Err("Unexpected firmware image size".into());
     }
     let checksum = bytes.iter().map(|b| u32::from(*b)).sum();
@@ -181,8 +194,13 @@ fn validate_target(
   reflash: bool,
   restore_stock: bool,
 ) -> Result<(), Box<dyn Error>> {
-  if restore_stock && !(installed == PROBE_VERSION && version == VERSION) {
-    return Err("--restore-stock requires device 306008 and pinned stock 306007".into());
+  if restore_stock
+    && !(matches!(
+      installed,
+      PROBE_VERSION | LUA_PROBE_VERSION | 306010 | 306011 | LUA_VERSION
+    ) && version == VERSION)
+  {
+    return Err("--restore-stock requires a supported probe device (306008 through 306012) and pinned stock 306007".into());
   }
   if installed / 1000 != version / 1000 {
     return Err(format!("Hardware mismatch: device {installed}, image {version}").into());
@@ -367,10 +385,42 @@ mod tests {
   }
 
   #[test]
+  fn native_probe_uses_its_pinned_size_and_identity() -> Result<(), Box<dyn Error>> {
+    let image = Image::load(Path::new(concat!(
+      env!("CARGO_MANIFEST_DIR"),
+      "/firmware/306009-lua-probe.MVA"
+    )))?;
+    assert_eq!(image.version, LUA_PROBE_VERSION);
+    assert_eq!(image.bytes.len(), LUA_PROBE_SIZE);
+    assert_eq!(
+      image.metadata().payload,
+      hex::decode("0059ab0400bba61c00e8d9a109")?
+    );
+    Ok(())
+  }
+
+  #[test]
+  fn lua_runtime_image_is_pinned() -> Result<(), Box<dyn Error>> {
+    let image = Image::load(Path::new(concat!(
+      env!("CARGO_MANIFEST_DIR"),
+      "/firmware/306012-lua.MVA"
+    )))?;
+    assert_eq!(image.version, LUA_VERSION);
+    assert_eq!(image.bytes.len(), LUA_SIZE);
+    assert_eq!(image.checksum, 173062405);
+    assert_eq!(image.version, crate::lua::VERSION);
+    Ok(())
+  }
+
+  #[test]
   fn target_validation_rejects_wrong_hardware_and_implicit_reflash() {
     assert!(validate_target(306007, PROBE_VERSION, false, false).is_ok());
     assert!(validate_target(306008, VERSION, false, true).is_ok());
-    assert!(validate_target(306009, VERSION, false, true).is_err());
+    assert!(validate_target(306009, VERSION, false, true).is_ok());
+    assert!(validate_target(306010, VERSION, false, true).is_ok());
+    assert!(validate_target(306011, VERSION, false, true).is_ok());
+    assert!(validate_target(306012, VERSION, false, true).is_ok());
+    assert!(validate_target(306013, VERSION, false, true).is_err());
     assert!(validate_target(306007, VERSION, false, true).is_err());
     assert!(validate_target(306008, PROBE_VERSION, false, true).is_err());
     assert!(validate_target(306006, VERSION, false, false).is_ok());

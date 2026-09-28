@@ -1,0 +1,68 @@
+   Compiling divoom-ditoo-pro-controller v0.1.0 (<repo>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.56s
+warning: the following packages contain code that will be rejected by a future version of Rust: nom v6.1.2
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running unittests src/lib.rs (target/debug/deps/divoom_ditoo_pro_controller-84fbc8f04bfe359f)
+
+running 35 tests
+test control::tests::decode_real_device_firmware_and_state ... ok
+test firmware::tests::target_validation_rejects_wrong_hardware_and_implicit_reflash ... ok
+test firmware::tests::update_events_require_ready_and_explicit_success ... ok
+test lua::tests::malformed_runtime_responses_are_rejected ... ok
+test firmware_decode::tests::malformed_packages_are_rejected_even_with_correct_crc ... ok
+test lua::tests::upload_length_and_limits ... ok
+test protocol::alarm::tests::weekday_alarm_payload_matches_app_layout ... ok
+test protocol::packet::tests::test_deserialize_ack ... ok
+test protocol::packet::tests::test_deserialize_bad_checksum ... ok
+test protocol::packet::tests::test_deserialize_bad_start_byte ... ok
+test protocol::packet::tests::test_deserialize_bad_end_byte ... ok
+test protocol::packet::tests::test_deserialize_too_short ... ok
+test protocol::packet::tests::test_deserialize_nak ... ok
+test protocol::packet::tests::test_deserialize_with_data ... ok
+test protocol::scrolling_text::tests::bdf_rasterize_missing_glyph ... ok
+test protocol::scrolling_text::tests::bdf_rasterize_line ... ok
+test protocol::scrolling_text::tests::bdf_rasterize_full_height ... ok
+test protocol::scrolling_text::tests::bdf_multiline_two_lines ... ok
+test protocol::scrolling_text::tests::layout_single_line_center ... ok
+test protocol::scrolling_text::tests::bdf_rasterize_half_height ... ok
+test protocol::scrolling_text::tests::bdf_tall_font_full_height ... ok
+test protocol::scrolling_text::tests::layout_two_lines_halign_right ... ok
+test protocol::scrolling_text::tests::layout_two_lines_vertical_positioning ... ok
+test protocol::scrolling_text::tests::bdf_tall_font_half_height ... ok
+test transport::tests::captured_brightness_packet ... ok
+test protocol::scrolling_text::tests::layout_two_lines_halign_left ... ok
+test transport::tests::corrupt_notification_is_rejected ... ok
+test transport::tests::fragmented_and_concatenated_notifications ... ok
+test control::tests::apk_extended_selector_and_response_prefix ... ok
+test control::tests::validation_rejects_unknown_fields_and_bad_payloads ... ok
+test firmware::tests::native_probe_uses_its_pinned_size_and_identity ... ok
+test firmware::tests::vendor_image_metadata_and_final_padding ... ok
+test firmware::tests::probe_image_has_its_own_version_and_wire_checksum ... ok
+test firmware::tests::lua_runtime_image_is_pinned ... ok
+test firmware_decode::tests::crc_check_vector_and_vendor_records ... ok
+
+test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+
+     Running unittests src/main.rs (target/debug/deps/divoom_ditoo_pro_controller-c0a51840b84588e5)
+
+running 4 tests
+test control_cli::tests::android_tool_and_signed_temperature_payloads ... ok
+test ids::tests::source_mappings_and_dynamic_ids_remain_distinct ... ok
+test cli_tests::alarm_requires_explicit_time_and_preserves_enabled_value ... ok
+test cli_tests::top_level_controls_preserve_dry_run_and_global_options ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/convert.rs (target/debug/deps/convert-7ab1fdbba58cf9cb)
+
+running 2 tests
+test convert_divoom16_to_gif ... ok
+test convert_gif_to_divoom16 ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests divoom_ditoo_pro_controller
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

@@ -30,6 +30,7 @@ mod transport;
 pub mod control;
 pub mod firmware;
 pub mod firmware_decode;
+pub mod lua;
 pub use transport::{Transport, with_transport};
 use transport::DeviceConnection;
 

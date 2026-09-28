@@ -7,7 +7,9 @@ or native application loader. This is an evidence-limited finding, not a proof
 that every hidden command has been ruled out. The original investigation was
 offline. A subsequent [native instruction patch](firmware-update.md#reproducible-version-gate-experiment)
 booted as 306008 and accepted an older stock image through its patched version
-gate. A general code loader or interpreter has not been implemented.
+gate. A bounded Lua implementation and a live native heap probe have since been added;
+see [Lua runtime status, API and verification](lua.md). The architectural
+investigation below records the earlier stock-firmware findings.
 
 The related MVsilicon SDK includes a small UART diagnostic shell behind
 `CFG_FUNC_SHELL_EN`; its example configuration leaves that define commented out.
@@ -60,7 +62,8 @@ pointer call in a scheduler does not solve the loading problem.
 ## Proposed design for this device
 
 The desired endpoint is a **one-time runtime installation**, followed by ordinary
-program uploads and reloads. It is not implemented or hardware-verified yet.
+program uploads and reloads. The [initial Lua runtime](lua.md) implements bounded
+source execution; the richer event and persistent-program design below is future work.
 
 1. Keep Bluetooth, audio, display and key scanning in the existing firmware.
 2. Add a bounded interpreter and a small API: key press/release events, display
@@ -74,10 +77,9 @@ program uploads and reloads. It is not implemented or hardware-verified yet.
    scripts cannot block key scanning or Bluetooth/audio tasks. Define stack,
    memory and instruction limits and a way to disable a broken program at boot.
 
-A compact bytecode interpreter is the initial design preference. Lua or another
-larger language remains an option after measuring the device's actual free RAM,
-flash space and execution budget. No runtime has been selected based solely on
-SDK-wide memory constants. Native plugins can be added later if their speed is
+The live native heap probe measured 104,384 free bytes and a 90,576-byte largest
+block in the tested device state. The initial runtime selects Lua 5.4.9 with
+32-bit numbers and a 32 KiB allocation quota; see its separate verification record. Native plugins can be added later if their speed is
 needed; they require stronger ABI and lifecycle guarantees.
 
 This design supports standalone custom games, keyboard mappings, animations and

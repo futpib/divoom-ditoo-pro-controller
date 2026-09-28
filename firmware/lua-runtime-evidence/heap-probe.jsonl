@@ -1,0 +1,1 @@
+{"delivery":"command_reply","events":[],"request":{"delay_ms":0,"listen_ms":0,"opcode":55,"payload_hex":"7f444c554100000000","response":{"opcode":55,"prefix_hex":""},"rfcomm_frame_hex":"010c00377f444c554100000000e80102"},"response":{"ack":true,"data_hex":"444c554101000000c0970100d061010005000000f8d20020400b02200c000000","opcode":55},"transport":"ble"}

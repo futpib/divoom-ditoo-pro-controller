@@ -1,0 +1,146 @@
+[
+  {
+    "name": "string",
+    "source": "return 'Lua is on the Ditoo'",
+    "exit_code": 0,
+    "passed": true,
+    "result": {
+      "state": "done",
+      "peak_memory_bytes": 3894,
+      "instructions": 0,
+      "result": "Lua is on the Ditoo"
+    }
+  },
+  {
+    "name": "arithmetic",
+    "source": "return 6*7",
+    "exit_code": 0,
+    "passed": true,
+    "result": {
+      "state": "done",
+      "peak_memory_bytes": 3810,
+      "instructions": 0,
+      "result": "42"
+    }
+  },
+  {
+    "name": "float",
+    "source": "return 7/2",
+    "exit_code": 0,
+    "passed": true,
+    "result": {
+      "state": "done",
+      "peak_memory_bytes": 3858,
+      "instructions": 0,
+      "result": "3.5"
+    }
+  },
+  {
+    "name": "float-string",
+    "source": "return tostring(7/2)",
+    "exit_code": 0,
+    "passed": true,
+    "result": {
+      "state": "done",
+      "peak_memory_bytes": 3940,
+      "instructions": 0,
+      "result": "3.5"
+    }
+  },
+  {
+    "name": "integer-max",
+    "source": "return 2147483647",
+    "exit_code": 0,
+    "passed": true,
+    "result": {
+      "state": "done",
+      "peak_memory_bytes": 3858,
+      "instructions": 0,
+      "result": "2147483647"
+    }
+  },
+  {
+    "name": "second-program",
+    "source": "local n=0; for i=1,100 do n=n+i end; return n",
+    "exit_code": 0,
+    "passed": true,
+    "result": {
+      "state": "done",
+      "peak_memory_bytes": 4334,
+      "instructions": 200,
+      "result": "5050"
+    }
+  },
+  {
+    "name": "infinite-loop",
+    "source": "while true do end",
+    "exit_code": 1,
+    "passed": true,
+    "result": {
+      "state": "error",
+      "peak_memory_bytes": 3922,
+      "instructions": 20000,
+      "result": "instruction budget exceeded"
+    }
+  },
+  {
+    "name": "syntax-error",
+    "source": "return function (",
+    "exit_code": 1,
+    "passed": true,
+    "result": {
+      "state": "error",
+      "peak_memory_bytes": 4061,
+      "instructions": 0,
+      "result": "[string \"upload\"]:1: <name> or '...' expected near <eof>"
+    }
+  },
+  {
+    "name": "memory-limit",
+    "source": "local t={}; for i=1,10000 do t[i]={i,i,i,i} end",
+    "exit_code": 1,
+    "passed": true,
+    "result": {
+      "state": "error",
+      "peak_memory_bytes": 32751,
+      "instructions": 3000,
+      "result": "not enough memory"
+    }
+  },
+  {
+    "name": "recursion-limit",
+    "source": "local function f() return 1+f() end; return f()",
+    "exit_code": 1,
+    "passed": true,
+    "result": {
+      "state": "error",
+      "peak_memory_bytes": 27094,
+      "instructions": 900,
+      "result": "[string \"upload\"]:1: stack overflow"
+    }
+  },
+  {
+    "name": "max-source",
+    "source": "return 123                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ",
+    "exit_code": 0,
+    "passed": true,
+    "result": {
+      "state": "done",
+      "peak_memory_bytes": 3810,
+      "instructions": 0,
+      "result": "123"
+    }
+  },
+  {
+    "name": "after-errors",
+    "source": "return 99",
+    "exit_code": 0,
+    "passed": true,
+    "result": {
+      "state": "done",
+      "peak_memory_bytes": 3810,
+      "instructions": 0,
+      "result": "99"
+    }
+  }
+]

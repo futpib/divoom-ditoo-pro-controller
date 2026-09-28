@@ -276,13 +276,12 @@ the full slot. Library callers pass `&Alarm` to `send_alarm`.
 
 ## Firmware updates (experimental)
 
-`firmware-update FILE --dry-run` validates the archived 306007 vendor image or
-the reproducible 306008 version-gate probe and
-prints update metadata. `firmware-update FILE --reflash` permits attempting the
+`firmware-update FILE --dry-run` validates the pinned stock image or a supported
+reproducible experimental image and prints update metadata. `firmware-update FILE --reflash` permits attempting the
 same version; it cannot override a device refusal. Stock rejects an equal-version
 announcement with status 2. The 306007 → modified 306008 → stock 306007 round
-trip is verified by completion events and live version reads. `--restore-stock` permits only the probe's
-306008 to pinned stock 306007 restoration. See [protocol and evidence](docs/firmware-update.md).
+trip is verified by completion events and live version reads. `--restore-stock` permits supported experimental versions 306008–306012 to return
+to pinned stock 306007. See [protocol and evidence](docs/firmware-update.md).
 
 ## Android feature comparison and firmware archive
 
@@ -295,3 +294,8 @@ The [firmware archive](firmware/README.md) contains the vendor image matching
 installed version 306007, also the latest returned by the checked test-channel
 endpoints, with verified hashes and saved API responses. See the updater
 documentation for subsequent flashing experiments.
+
+### On-device Lua
+
+The experimental native runtime provides `lua run FILE`, `lua eval SOURCE`,
+`lua status` and `lua cancel`. See [installation, limits and verification](docs/lua.md).

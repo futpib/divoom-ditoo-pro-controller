@@ -1,0 +1,139 @@
+[
+  {
+    "name": "file-program",
+    "args": [
+      "lua",
+      "run",
+      "examples/lua/sum.lua"
+    ],
+    "exit_code": 0,
+    "replies": [
+      {
+        "state": "done",
+        "peak_memory_bytes": 4336,
+        "instructions": 200,
+        "result": "5050"
+      }
+    ]
+  },
+  {
+    "name": "set-controls",
+    "args": [
+      "lua",
+      "eval",
+      "brightness(7); volume(4); return volume()"
+    ],
+    "exit_code": 0,
+    "replies": [
+      {
+        "state": "done",
+        "peak_memory_bytes": 3950,
+        "instructions": 0,
+        "result": "4"
+      }
+    ]
+  },
+  {
+    "name": "brightness-check",
+    "args": [
+      "status"
+    ],
+    "exit_code": 0,
+    "replies": [
+      {
+        "delivery": "command_reply",
+        "events": [],
+        "request": {
+          "delay_ms": 0,
+          "listen_ms": 0,
+          "opcode": 70,
+          "payload_hex": "",
+          "response": {
+            "opcode": 70,
+            "prefix_hex": ""
+          },
+          "rfcomm_frame_hex": "01030046490002"
+        },
+        "response": {
+          "ack": true,
+          "brightness": 7,
+          "data_hex": "000000ff5000070001030700ff500006010000003439",
+          "mode": 0,
+          "opcode": 70
+        },
+        "transport": "ble"
+      }
+    ]
+  },
+  {
+    "name": "volume-check",
+    "args": [
+      "volume",
+      "get"
+    ],
+    "exit_code": 0,
+    "replies": [
+      4
+    ]
+  },
+  {
+    "name": "restore-controls",
+    "args": [
+      "lua",
+      "eval",
+      "brightness(0); volume(3); return volume()"
+    ],
+    "exit_code": 0,
+    "replies": [
+      {
+        "state": "done",
+        "peak_memory_bytes": 3950,
+        "instructions": 0,
+        "result": "3"
+      }
+    ]
+  },
+  {
+    "name": "final-screen",
+    "args": [
+      "status"
+    ],
+    "exit_code": 0,
+    "replies": [
+      {
+        "delivery": "command_reply",
+        "events": [],
+        "request": {
+          "delay_ms": 0,
+          "listen_ms": 0,
+          "opcode": 70,
+          "payload_hex": "",
+          "response": {
+            "opcode": 70,
+            "prefix_hex": ""
+          },
+          "rfcomm_frame_hex": "01030046490002"
+        },
+        "response": {
+          "ack": true,
+          "brightness": 0,
+          "data_hex": "000000ff5000000001030000ff500006010000004141",
+          "mode": 0,
+          "opcode": 70
+        },
+        "transport": "ble"
+      }
+    ]
+  },
+  {
+    "name": "final-volume",
+    "args": [
+      "volume",
+      "get"
+    ],
+    "exit_code": 0,
+    "replies": [
+      3
+    ]
+  }
+]

@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-28",
+  "version": 306012,
+  "firmware_sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+  "device": "B1:21:81:DD:B8:9B",
+  "script_checks": 12,
+  "script_checks_passed": true,
+  "file_upload_result": "5050",
+  "controls_verified": {
+    "test_brightness": 7,
+    "test_volume": 4,
+    "final_brightness": 0,
+    "final_volume": 3
+  },
+  "rust_tests_passed": 41,
+  "host_sanitizers": [
+    "address",
+    "undefined"
+  ],
+  "toolchain": {
+    "gcc": "15.2.0",
+    "binutils": "2.45.1",
+    "newlib": "4.5.0.20241231"
+  },
+  "isolated_rebuild": "byte-identical",
+  "installed_cli_sha256": "a58ec6b068ce623b558ddf290f5e7ce54c07a75f3c5350dd9ac223068b30507b",
+  "limits": [
+    "no physical-key callbacks",
+    "no persistent or autostart programs",
+    "no drawing API or timers",
+    "stock restoration from 306012 not tested"
+  ]
+}
