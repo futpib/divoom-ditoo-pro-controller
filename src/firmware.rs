@@ -22,6 +22,9 @@ const LUA_PROBE_SIZE: usize = 1_877_691;
 const LUA_VERSION: u32 = 306012;
 const LUA_SHA256: &str = "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56";
 const LUA_SIZE: usize = 2_025_699;
+const APP_VERSION: u32 = 306013;
+const APP_SHA256: &str = "ab8f89fea9d460e8a96e9ec571340357a94ab3133c0f35f97ad5085d5b179b1b";
+const APP_SIZE: usize = 2026511;
 const CHUNK_SIZE: usize = 256;
 const EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -54,10 +57,12 @@ impl Image {
       PROBE_SHA256 => PROBE_VERSION,
       LUA_PROBE_SHA256 => LUA_PROBE_VERSION,
       LUA_SHA256 => LUA_VERSION,
-      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtime 306012 are supported".into()),
+      APP_SHA256 => APP_VERSION,
+      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013 are supported".into()),
     };
     let expected_size = match version {
       LUA_VERSION => LUA_SIZE,
+      APP_VERSION => APP_SIZE,
       LUA_PROBE_VERSION => LUA_PROBE_SIZE,
       _ => IMAGE_SIZE,
     };
@@ -209,10 +214,10 @@ fn validate_target(
   if restore_stock
     && !(matches!(
       installed,
-      PROBE_VERSION | LUA_PROBE_VERSION | 306010 | 306011 | LUA_VERSION
+      PROBE_VERSION | LUA_PROBE_VERSION | 306010 | 306011 | LUA_VERSION | APP_VERSION
     ) && version == VERSION)
   {
-    return Err("--restore-stock requires a supported probe device (306008 through 306012) and pinned stock 306007".into());
+    return Err("--restore-stock requires a supported probe device (306008 through 306013) and pinned stock 306007".into());
   }
   if installed / 1000 != version / 1000 {
     return Err(format!("Hardware mismatch: device {installed}, image {version}").into());
@@ -425,6 +430,19 @@ mod tests {
   }
 
   #[test]
+  fn resident_runtime_image_is_pinned() -> Result<(), Box<dyn Error>> {
+    let image = Image::load(Path::new(concat!(
+      env!("CARGO_MANIFEST_DIR"),
+      "/firmware/306013-lua.MVA"
+    )))?;
+    assert_eq!(image.version, APP_VERSION);
+    assert_eq!(image.bytes.len(), APP_SIZE);
+    assert_eq!(image.checksum, 173866409);
+    assert_eq!(image.version, crate::lua::APP_VERSION);
+    Ok(())
+  }
+
+  #[test]
   fn target_validation_rejects_wrong_hardware_and_implicit_reflash() {
     assert!(validate_target(306007, PROBE_VERSION, false, false).is_ok());
     assert!(validate_target(306008, VERSION, false, true).is_ok());
@@ -432,7 +450,8 @@ mod tests {
     assert!(validate_target(306010, VERSION, false, true).is_ok());
     assert!(validate_target(306011, VERSION, false, true).is_ok());
     assert!(validate_target(306012, VERSION, false, true).is_ok());
-    assert!(validate_target(306013, VERSION, false, true).is_err());
+    assert!(validate_target(306013, VERSION, false, true).is_ok());
+    assert!(validate_target(306014, VERSION, false, true).is_err());
     assert!(validate_target(306007, VERSION, false, true).is_err());
     assert!(validate_target(306008, PROBE_VERSION, false, true).is_err());
     assert!(validate_target(306006, VERSION, false, false).is_ok());

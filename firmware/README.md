@@ -53,3 +53,9 @@ for verification limits and the stock restoration procedure.
 `scripts/build-lua-probe.py`. `306012-lua.MVA` is the bounded Lua runtime, built by
 `scripts/build-lua-runtime.py`. Both derive from the pinned stock bytes; neither
 is an official vendor release. See [Lua build, protocol and verification](../docs/lua.md).
+
+`306013-lua.MVA` adds resident apps, framebuffer ownership, physical keyboard
+events, timers, messages and guards that cannot be caught by Lua protected calls.
+Build it with `scripts/build-lua-app-runtime.py`; its offline report is adjacent
+and compact device results are in `lua-app-evidence/verification.json`. Full
+working logs stay in ignored `firmware/runs/`.

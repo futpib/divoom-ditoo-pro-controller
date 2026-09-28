@@ -305,6 +305,18 @@ enum ConvertCommand {
 
 #[derive(Subcommand, Debug)]
 enum LuaCommand {
+  /// Start or replace a resident app; the device continues after disconnect
+  Start { file: PathBuf },
+  /// Stop the app and release its controls
+  Stop,
+  /// Pause callbacks and release display/input ownership
+  Pause,
+  /// Resume a paused app
+  Resume,
+  /// Deliver data to the running app's message callback
+  Send { message: String },
+  /// Read and acknowledge the app's outgoing message
+  Receive,
   /// Upload and execute a Lua source file without reflashing
   Run { file: PathBuf },
   /// Execute a Lua source expression/program without reflashing
@@ -399,13 +411,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn run(args: Args) -> Result<(), Box<dyn Error>> {
   match args.command {
     Command::Lua { action } => {
-      let (source, cancel) = match action {
-        LuaCommand::Run { file } => (Some(std::fs::read(file)?), false),
-        LuaCommand::Eval { source } => (Some(source.into_bytes()), false),
-        LuaCommand::Status => (None, false),
-        LuaCommand::Cancel => (None, true),
+      use divoom_ditoo_pro_controller::lua::{self, Action};
+      let address = resolve_device(args.device).await?;
+      let status = match action {
+        LuaCommand::Run { file } => lua::control(address, Action::Run(&std::fs::read(file)?)).await?,
+        LuaCommand::Start { file } => lua::control(address, Action::Start(&std::fs::read(file)?)).await?,
+        LuaCommand::Eval { source } => lua::control(address, Action::Run(source.as_bytes())).await?,
+        LuaCommand::Status => lua::control(address, Action::Status).await?,
+        LuaCommand::Cancel | LuaCommand::Stop => lua::control(address, Action::Stop).await?,
+        LuaCommand::Pause => lua::control(address, Action::Pause).await?,
+        LuaCommand::Resume => lua::control(address, Action::Resume).await?,
+        LuaCommand::Send { message } => lua::control(address, Action::Send(message.as_bytes())).await?,
+        LuaCommand::Receive => lua::control(address, Action::Receive).await?,
       };
-      let status = divoom_ditoo_pro_controller::lua::run(resolve_device(args.device).await?, source.as_deref(), cancel).await?;
       println!("{}", serde_json::to_string(&status)?);
       if status.state == "error" { return Err(format!("Lua: {}", status.result).into()); }
     }
