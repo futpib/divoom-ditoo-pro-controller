@@ -1,0 +1,447 @@
+[
+  {
+    "category": "games",
+    "command": "game ID",
+    "note": "Ditoo Pro GameTypeV5 built-in game menu. IDs select firmware games; no executable-game upload path is established.",
+    "source": "GameHorizontalMainFragment: E2/lazyLoad/onItemClick; GameModel.b -> CmdManager.q2",
+    "status": "app-defined; not hardware-verified",
+    "entries": [
+      {
+        "id": 1,
+        "name": "Pixel Slot"
+      },
+      {
+        "id": 2,
+        "name": "Pixel Dice"
+      },
+      {
+        "id": 3,
+        "name": "Magic 8 Box"
+      },
+      {
+        "id": 4,
+        "name": "Astro Battle"
+      },
+      {
+        "id": 5,
+        "name": "Flappy Wings"
+      },
+      {
+        "id": 6,
+        "name": "Pixel Snake"
+      },
+      {
+        "id": 7,
+        "name": "Pixel Race"
+      },
+      {
+        "id": 8,
+        "name": "Block Eliminator"
+      },
+      {
+        "id": 9,
+        "name": "PixelFrog"
+      },
+      {
+        "id": 10,
+        "name": "Gomoku"
+      },
+      {
+        "id": 11,
+        "name": "Pixel Match"
+      },
+      {
+        "id": 12,
+        "name": "Pixel Crush"
+      },
+      {
+        "id": 13,
+        "name": "Pixel Fighter"
+      },
+      {
+        "id": 14,
+        "name": "Pixel Bee"
+      },
+      {
+        "id": 15,
+        "name": "Pixel Battle"
+      }
+    ]
+  },
+  {
+    "category": "game-keys",
+    "command": "game-key CODE [--release]",
+    "note": "Virtual inputs to built-in games, not mappings for physical keyboard keys. Start/go uses separate opcode 88, not a key ID.",
+    "source": "GameHorizontalMainFragment.onTouch/F2",
+    "status": "app-defined; not hardware-verified",
+    "entries": [
+      {
+        "id": 1,
+        "name": "left"
+      },
+      {
+        "id": 2,
+        "name": "right"
+      },
+      {
+        "id": 3,
+        "name": "up"
+      },
+      {
+        "id": 4,
+        "name": "down"
+      },
+      {
+        "id": 5,
+        "name": "switch/action"
+      }
+    ]
+  },
+  {
+    "category": "tools",
+    "command": "tool-status TOOL",
+    "note": "Tool selector for opcode 71. Queries timed out on firmware 306007.",
+    "source": "ToolModel.TYPE; CmdManager.Z0/s3/t3/u3/v3",
+    "status": "app-defined; not hardware-verified",
+    "entries": [
+      {
+        "id": 0,
+        "name": "stopwatch"
+      },
+      {
+        "id": 1,
+        "name": "scoreboard"
+      },
+      {
+        "id": 2,
+        "name": "noise meter"
+      },
+      {
+        "id": 3,
+        "name": "countdown"
+      }
+    ]
+  },
+  {
+    "category": "stopwatch",
+    "command": "stopwatch ACTION",
+    "note": "Control bytes for opcode 72/00.",
+    "source": "StopwatchFragment.mOnclick/B2 -> ToolServer.j -> CmdManager.t3",
+    "status": "app-defined; not hardware-verified",
+    "entries": [
+      {
+        "id": 0,
+        "name": "stop/pause"
+      },
+      {
+        "id": 1,
+        "name": "start"
+      },
+      {
+        "id": 2,
+        "name": "reset"
+      }
+    ]
+  },
+  {
+    "category": "noise-meter",
+    "command": "noise-meter ACTION",
+    "note": "Bluetooth stop is 2, unlike the phone/Wi-Fi API where stop is 0.",
+    "source": "ToolServer.h -> CmdManager.v3",
+    "status": "app-defined; not hardware-verified",
+    "entries": [
+      {
+        "id": 1,
+        "name": "start"
+      },
+      {
+        "id": 2,
+        "name": "stop"
+      }
+    ]
+  },
+  {
+    "category": "weather",
+    "command": "weather CELSIUS CONDITION",
+    "note": "Firmware condition selector, mapped from the app weather icon code.",
+    "source": "WeatherUtils.returnType",
+    "status": "app-defined; not hardware-verified",
+    "entries": [
+      {
+        "id": 1,
+        "name": "clear sky (day, 01d)"
+      },
+      {
+        "id": 2,
+        "name": "few clouds (day, 02d)"
+      },
+      {
+        "id": 3,
+        "name": "scattered clouds (day, 03d)"
+      },
+      {
+        "id": 4,
+        "name": "broken clouds (day, 04d)"
+      },
+      {
+        "id": 5,
+        "name": "shower rain (day, 09d)"
+      },
+      {
+        "id": 6,
+        "name": "rain (day, 10d)"
+      },
+      {
+        "id": 7,
+        "name": "thunderstorm (day, 11d)"
+      },
+      {
+        "id": 8,
+        "name": "snow (day, 13d)"
+      },
+      {
+        "id": 9,
+        "name": "mist (day, 50d)"
+      },
+      {
+        "id": 10,
+        "name": "clear sky (night, 01n)"
+      },
+      {
+        "id": 11,
+        "name": "few clouds (night, 02n)"
+      },
+      {
+        "id": 12,
+        "name": "scattered clouds (night, 03n)"
+      },
+      {
+        "id": 13,
+        "name": "broken clouds (night, 04n)"
+      },
+      {
+        "id": 14,
+        "name": "shower rain (night, 09n)"
+      },
+      {
+        "id": 15,
+        "name": "rain (night, 10n)"
+      },
+      {
+        "id": 16,
+        "name": "thunderstorm (night, 11n)"
+      },
+      {
+        "id": 17,
+        "name": "snow (night, 13n)"
+      },
+      {
+        "id": 18,
+        "name": "mist (night, 50n)"
+      }
+    ]
+  },
+  {
+    "category": "light-modes",
+    "command": "mode light SUB_MODE",
+    "note": "Existing CLI sub-mode labels; full device behavior has not been verified.",
+    "source": "src/main.rs::BoxMode::Light",
+    "status": "existing CLI mapping; not hardware-verified",
+    "entries": [
+      {
+        "id": 0,
+        "name": "clock"
+      },
+      {
+        "id": 1,
+        "name": "temperature"
+      },
+      {
+        "id": 2,
+        "name": "color"
+      },
+      {
+        "id": 3,
+        "name": "special"
+      },
+      {
+        "id": 4,
+        "name": "sound"
+      },
+      {
+        "id": 5,
+        "name": "sound-user"
+      },
+      {
+        "id": 6,
+        "name": "music"
+      }
+    ]
+  },
+  {
+    "category": "alarm-slots",
+    "command": "alarm on|off --index ID --time HH:MM",
+    "note": "Slot indexes observed in the captured alarm-list response on firmware 306007.",
+    "source": "docs/protocol-evidence/queries.jsonl",
+    "status": "observed on firmware 306007",
+    "entries": [
+      {
+        "id": 0,
+        "name": "alarm slot 0"
+      },
+      {
+        "id": 1,
+        "name": "alarm slot 1"
+      },
+      {
+        "id": 2,
+        "name": "alarm slot 2"
+      },
+      {
+        "id": 3,
+        "name": "alarm slot 3"
+      },
+      {
+        "id": 4,
+        "name": "alarm slot 4"
+      },
+      {
+        "id": 5,
+        "name": "alarm slot 5"
+      },
+      {
+        "id": 6,
+        "name": "alarm slot 6"
+      },
+      {
+        "id": 7,
+        "name": "alarm slot 7"
+      },
+      {
+        "id": 8,
+        "name": "alarm slot 8"
+      },
+      {
+        "id": 9,
+        "name": "alarm slot 9"
+      }
+    ]
+  },
+  {
+    "category": "repeat-days",
+    "command": "alarm on|off --repeat MASK --time HH:MM",
+    "note": "Add day-bit values together. 0=no weekly repeat; 62=Monday-Friday; 127=every day.",
+    "source": "src/main.rs alarm repeat bitmask",
+    "status": "CLI bitmask definition",
+    "entries": [
+      {
+        "id": 1,
+        "name": "Sunday"
+      },
+      {
+        "id": 2,
+        "name": "Monday"
+      },
+      {
+        "id": 4,
+        "name": "Tuesday"
+      },
+      {
+        "id": 8,
+        "name": "Wednesday"
+      },
+      {
+        "id": 16,
+        "name": "Thursday"
+      },
+      {
+        "id": 32,
+        "name": "Friday"
+      },
+      {
+        "id": 64,
+        "name": "Saturday"
+      }
+    ]
+  },
+  {
+    "category": "clock-faces",
+    "command": "clock set ID",
+    "note": "Firmware/resource-dependent clock IDs; no complete named list decoded. clock get reads the current ID. Clock artwork/resource transfer is distinct from the selector.",
+    "source": "docs/protocol-capabilities.md",
+    "status": "unresolved or device-dependent; no fixed list",
+    "entries": []
+  },
+  {
+    "category": "sd-tracks",
+    "command": "sd-track ID",
+    "note": "Dynamic IDs from the inserted SD card, not a fixed enum. Track listing uses opcodes 07/7D; a decoded listing helper is not implemented.",
+    "source": "docs/protocol-capabilities.md",
+    "status": "unresolved or device-dependent; no fixed list",
+    "entries": []
+  },
+  {
+    "category": "sd-play-modes",
+    "command": "sd-play-mode MODE",
+    "note": "Play/repeat mode labels have not been established for this firmware.",
+    "source": "docs/protocol-capabilities.md",
+    "status": "unresolved or device-dependent; no fixed list",
+    "entries": []
+  },
+  {
+    "category": "track-directions",
+    "command": "track DIRECTION",
+    "note": "CLI accepts 0 or 1; which means previous versus next is not yet established.",
+    "source": "docs/protocol-capabilities.md",
+    "status": "unresolved or device-dependent; no fixed list",
+    "entries": []
+  },
+  {
+    "category": "special-modes",
+    "command": "mode special ID",
+    "note": "Effect IDs are firmware-dependent; no verified named list yet.",
+    "source": "docs/protocol-capabilities.md",
+    "status": "unresolved or device-dependent; no fixed list",
+    "entries": []
+  },
+  {
+    "category": "music-modes",
+    "command": "mode music ID",
+    "note": "Visualizer IDs are firmware-dependent; no verified named list yet.",
+    "source": "docs/protocol-capabilities.md",
+    "status": "unresolved or device-dependent; no fixed list",
+    "entries": []
+  },
+  {
+    "category": "startup-channels",
+    "command": "setting startup-channel VALUE",
+    "note": "Do not assume these IDs equal display-mode IDs; mapping not established.",
+    "source": "docs/protocol-capabilities.md",
+    "status": "unresolved or device-dependent; no fixed list",
+    "entries": []
+  },
+  {
+    "category": "sleep-modes",
+    "command": "setting sleep-mode VALUE",
+    "note": "Sleep control mode values not decoded. Omit VALUE to query.",
+    "source": "docs/protocol-capabilities.md",
+    "status": "unresolved or device-dependent; no fixed list",
+    "entries": []
+  },
+  {
+    "category": "alarm-modes",
+    "command": "alarm on|off --mode ID --time HH:MM",
+    "note": "Alarm scene/mode labels not fully decoded.",
+    "source": "docs/protocol-capabilities.md",
+    "status": "unresolved or device-dependent; no fixed list",
+    "entries": []
+  },
+  {
+    "category": "alarm-triggers",
+    "command": "alarm on|off --trigger ID --time HH:MM",
+    "note": "Alarm trigger labels not fully decoded.",
+    "source": "docs/protocol-capabilities.md",
+    "status": "unresolved or device-dependent; no fixed list",
+    "entries": []
+  }
+]

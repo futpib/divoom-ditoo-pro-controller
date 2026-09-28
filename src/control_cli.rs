@@ -65,6 +65,7 @@ pub enum DeviceCommand {
     dry_run: bool,
   },
   /// Read a tool: 0 stopwatch, 1 scoreboard, 2 noise meter, 3 countdown
+  #[command(after_help = "See `ids tools` for the ID reference.")]
   ToolStatus {
     #[arg(long)]
     dry_run: bool,
@@ -93,19 +94,22 @@ pub enum DeviceCommand {
     #[arg(value_parser=clap::value_parser!(u8).range(0..=59))]
     seconds: u8,
   },
-  /// Stopwatch control byte as used by the app (see protocol documentation)
+  /// Stopwatch action: 0 stop/pause, 1 start, 2 reset
+  #[command(after_help = "See `ids stopwatch` for the ID reference.")]
   Stopwatch {
     #[arg(long)]
     dry_run: bool,
     action: u8,
   },
-  /// Noise-meter control byte as used by the app
+  /// Noise-meter action: 1 start, 2 stop
+  #[command(after_help = "See `ids noise-meter` for the ID reference.")]
   NoiseMeter {
     #[arg(long)]
     dry_run: bool,
     action: u8,
   },
-  /// Enter a built-in game; IDs follow firmware, not app labels
+  /// Enter a built-in game; see ids games for the Ditoo Pro app mapping
+  #[command(after_help = "See `ids games` for the ID reference.")]
   Game {
     #[arg(long)]
     dry_run: bool,
@@ -114,6 +118,7 @@ pub enum DeviceCommand {
     exit: bool,
   },
   /// Send a virtual game key press or release; does not bind physical keys
+  #[command(after_help = "See `ids game-keys` for the ID reference.")]
   GameKey {
     #[arg(long)]
     dry_run: bool,
@@ -122,6 +127,7 @@ pub enum DeviceCommand {
     release: bool,
   },
   /// Send signed Celsius temperature and firmware weather-condition code
+  #[command(after_help = "See `ids weather` for the ID reference.")]
   Weather {
     #[arg(long)]
     dry_run: bool,
@@ -143,6 +149,7 @@ pub enum DeviceCommand {
     dry_run: bool,
   },
   /// Select a TF-card track by its firmware ID
+  #[command(after_help = "See `ids sd-tracks` for the ID reference.")]
   SdTrack {
     #[arg(long)]
     dry_run: bool,
@@ -155,12 +162,14 @@ pub enum DeviceCommand {
     position: u16,
   },
   /// Set TF-card repeat/play mode by firmware mode ID
+  #[command(after_help = "See `ids sd-play-modes` for the ID reference.")]
   SdPlayMode {
     #[arg(long)]
     dry_run: bool,
     mode: u8,
   },
   /// Previous/next track protocol selector, 0 or 1
+  #[command(after_help = "See `ids track-directions` for the ID reference.")]
   Track {
     #[arg(long)]
     dry_run: bool,

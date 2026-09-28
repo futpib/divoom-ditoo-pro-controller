@@ -123,8 +123,8 @@ JADX reported 65 decompilation errors; unavailable method bodies limit coverage.
 Implemented payloads follow those builders:
 
 - Tool setter 72: `00 action`, `01 enabled redLE16 blueLE16`, `02 action`, or
-  `03 enabled minutes seconds`. Unknown action values remain numeric.
-- Game A0: `enabled gameID`; 17/21: `keyCode` down/up. Game IDs depend on firmware.
+  `03 enabled minutes seconds`. `ids stopwatch` lists 0=stop, 1=start, 2=reset; `ids noise-meter` lists 1=start, 2=stop.
+- Game A0: `enabled gameID`; 17/21: `keyCode` down/up. Game IDs depend on firmware; `ids games` lists the inspected Ditoo Pro app mapping.
 - Weather 5F: signed Celsius byte and condition byte.
 - Alarm 43: index, enabled, hour, minute, repeat, mode, trigger, two FM bytes,
   volume. Repeat bits start at Sunday; 62 is Monday through Friday. CLI FM

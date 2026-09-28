@@ -65,6 +65,23 @@ List already-paired Ditoo Pro devices:
 divoom-ditoo-pro-controller devices
 ```
 
+## Look up numeric IDs
+
+```sh
+divoom-ditoo-pro-controller ids
+divoom-ditoo-pro-controller ids games
+divoom-ditoo-pro-controller ids game-keys
+divoom-ditoo-pro-controller ids weather
+divoom-ditoo-pro-controller ids noise-meter
+divoom-ditoo-pro-controller ids games --json
+```
+
+This is an offline reference: it does not connect, launch games or discover
+firmware capabilities. The Ditoo Pro app maps 15 built-in games to IDs 1–15.
+App-defined mappings are labeled separately from observed device data;
+unresolved categories explain the gap. Command help points to the relevant
+category. See [ID sources and storage](docs/device-ids.md).
+
 ## Send commands
 
 If only one Ditoo Pro is paired, the device is auto-detected. Otherwise, pass `--device`:

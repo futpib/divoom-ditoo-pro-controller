@@ -1,4 +1,5 @@
 mod control_cli;
+mod ids;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
@@ -45,6 +46,14 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+  /// List known game IDs and other selectors without connecting to a device
+  Ids {
+    /// Category to inspect; omit to list categories
+    category: Option<String>,
+    /// Print source metadata and mappings as JSON
+    #[arg(long)] json: bool,
+  },
+
   /// Low-level protocol catalogue, commands, scripts and response monitoring
   Raw { #[command(subcommand)] action: control_cli::RawCommand },
 
@@ -133,6 +142,7 @@ enum Command {
   },
 
   /// Get or set the clock face
+  #[command(after_help = "See `ids clock-faces` for the ID reference.")]
   Clock {
     #[command(subcommand)]
     action: ClockCommand
@@ -175,6 +185,7 @@ enum Command {
   },
 
   /// Write an alarm slot, including its enabled state and time
+  #[command(after_help = "See `ids alarm-modes` for the ID reference.")]
   Alarm {
     #[arg(required = true, number_of_values = 1, value_parser = clap::builder::BoolishValueParser::new())]
     enable: bool,
@@ -224,6 +235,7 @@ enum KeyboardBacklightAction {
 #[derive(Subcommand, Debug)]
 enum BoxMode {
   /// Light mode: color, clock overlay, temperature, sound-reactive, etc.
+  #[command(after_help = "See `ids light-modes` for the ID reference.")]
   Light {
     /// Sub-mode: 0=clock, 1=temp, 2=color, 3=special, 4=sound, 5=sound-user, 6=music
     #[arg(value_parser = clap::value_parser!(u8).range(0..=6))]
@@ -241,11 +253,13 @@ enum BoxMode {
   /// Trending/hot animations
   Hot,
   /// Special effects
+  #[command(after_help = "See `ids special-modes` for the ID reference.")]
   Special {
     /// Effect sub-type index
     sub_type: u8
   },
   /// Music visualizer
+  #[command(after_help = "See `ids music-modes` for the ID reference.")]
   Music {
     /// Visualizer sub-type index
     sub_type: u8
@@ -347,6 +361,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn run(args: Args) -> Result<(), Box<dyn Error>> {
   match args.command {
+    Command::Ids { category, json } => ids::show(category.as_deref(), json)?,
     Command::Raw { action } => control_cli::run(args.device, action).await?,
     Command::Device(action) => control_cli::run_requests(args.device, vec![action.request()?], action.dry_run()).await?,
     Command::Scan => scan_devices().await?,
