@@ -1,0 +1,6 @@
+# Ditoo application interfaces; allow the active local desktop user to update.
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="8888", ATTR{idProduct}=="1719", TAG+="uaccess"
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="8888", ATTR{idProduct}=="171e", TAG+="uaccess"
+# MVsilicon bootloader ID is shared by other products. The CLI also requires
+# the selected physical port, exact HID descriptor and matching bootloader CRC.
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="0000", ATTR{idProduct}=="2244", TAG+="uaccess"

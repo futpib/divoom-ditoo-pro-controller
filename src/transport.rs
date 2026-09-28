@@ -16,6 +16,8 @@ pub enum Transport {
   Auto,
   Rfcomm,
   Ble,
+  /// USB bootloader (firmware-update only)
+  Usb,
 }
 
 tokio::task_local! { static TRANSPORT: Transport; }
@@ -33,6 +35,9 @@ pub(crate) enum DeviceConnection {
 impl DeviceConnection {
   pub async fn connect(address: Address) -> Result<Self, Box<dyn Error>> {
     let transport = TRANSPORT.try_with(|t| *t).unwrap_or_default();
+    if matches!(transport, Transport::Usb) {
+      return Err("USB transport supports firmware-update only; use BLE or RFCOMM for device commands".into());
+    }
     if !matches!(transport, Transport::Ble) {
       match ClassicConnection::connect(address).await {
         Ok(mut connection) => {

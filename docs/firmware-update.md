@@ -1,4 +1,8 @@
-# Experimental firmware updater
+# Bluetooth firmware updater
+
+For fast USB flashing, same-image reinstall and interrupted-transfer recovery,
+see [the USB updater](usb.md). The version gates and full-MVA transfer described
+below apply to Bluetooth.
 
 The CLI implements the Android app's Bluetooth 98/99 updater. It currently
 accepts the exact archived vendor image for Ditoo Pro hardware family 306,

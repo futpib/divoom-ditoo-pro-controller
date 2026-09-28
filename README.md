@@ -276,12 +276,28 @@ the full slot. Library callers pass `&Alarm` to `send_alarm`.
 
 ## Firmware updates (experimental)
 
-`firmware-update FILE --dry-run` validates the pinned stock image or a supported
-reproducible experimental image and prints update metadata. `firmware-update FILE --reflash` permits attempting the
-same version; it cannot override a device refusal. Stock rejects an equal-version
-announcement with status 2. The 306007 → modified 306008 → stock 306007 round
-trip is verified by completion events and live version reads. `--restore-stock` permits supported experimental versions 306008–306012 to return
-to pinned stock 306007. See [protocol and evidence](docs/firmware-update.md).
+USB flashing is supported, including reinstalling stock firmware and recovery
+from an interrupted application transfer:
+
+```sh
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306012-lua.MVA
+# Reinstall the same image, or recover through the bootloader on this port:
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306012-lua.MVA --usb-port 1-6 --reflash
+```
+
+The updater preserves the bootloader and checks device read-back acknowledgments
+for every block. Bluetooth is optional; add `--device MAC` to also verify the
+running version over BLE after USB completion. See [USB setup, protocol,
+performance and recovery](docs/usb.md).
+
+`firmware-update FILE --dry-run` validates the pinned stock or experimental image
+and prints metadata for the selected transport without connecting. Bluetooth
+flashing retains the Android protocol and version checks: stock rejects an
+equal-version announcement, even with `--reflash`. `--restore-stock` allows
+supported experimental versions 306008–306012 to return to pinned stock 306007.
+The Bluetooth 306007 → modified 306008 → stock 306007 round trip is verified by
+completion events and live version reads. See [Bluetooth protocol and
+evidence](docs/firmware-update.md).
 
 ## Android feature comparison and firmware archive
 

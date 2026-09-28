@@ -29,6 +29,7 @@ pub mod protocol;
 mod transport;
 pub mod control;
 pub mod firmware;
+pub mod usb_firmware;
 pub mod firmware_decode;
 pub mod lua;
 pub use transport::{Transport, with_transport};

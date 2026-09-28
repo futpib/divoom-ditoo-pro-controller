@@ -33,6 +33,18 @@ pub struct Image {
 }
 
 impl Image {
+  pub(crate) fn code(&self) -> &[u8] {
+    &self.bytes[0x60f..self.bytes.len() - 4]
+  }
+
+  pub fn version(&self) -> u32 {
+    self.version
+  }
+
+  pub(crate) fn sha256(&self) -> &str {
+    &self.sha256
+  }
+
   /// Restrict writes to pinned stock and reproducible experimental images.
   pub fn load(path: &Path) -> Result<Self, Box<dyn Error>> {
     let bytes = std::fs::read(path)?;
@@ -162,7 +174,7 @@ async fn next_event(
   Ok(None)
 }
 
-async fn versions(conn: &mut DeviceConnection) -> Result<Vec<u32>, Box<dyn Error>> {
+pub(crate) async fn versions(conn: &mut DeviceConnection) -> Result<Vec<u32>, Box<dyn Error>> {
   let packet = Packet {
     command: Command::Raw(0x37),
     payload: vec![0],

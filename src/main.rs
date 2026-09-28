@@ -27,15 +27,15 @@ use divoom_ditoo_pro_controller::protocol::extended_command;
 #[cfg(feature = "text")]
 use divoom_ditoo_pro_controller::protocol::scrolling_text::{HAlign, VAlign};
 
-/// CLI tool to send bluetooth commands to a Divoom Ditoo Pro
+/// Control a Divoom Ditoo Pro and update its firmware over Bluetooth or USB
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-  /// Device MAC address (auto-detected if only one paired Ditoo Pro exists)
+  /// Bluetooth MAC (auto-detected for Bluetooth; optional USB post-flash version check)
   #[arg(long, global = true)]
   device: Option<String>,
 
-  /// Connection transport; auto falls back to BLE if RFCOMM cannot connect
+  /// Transport; auto tries RFCOMM then BLE. USB supports firmware-update only
   #[arg(long, value_enum, default_value = "auto", global = true)]
   transport: divoom_ditoo_pro_controller::Transport,
 
@@ -55,13 +55,18 @@ enum Command {
     #[arg(long)] output: Option<PathBuf>,
   },
 
-  /// Install a pinned stock or experimental image; same-version writes may be refused
+  /// Install a pinned stock or experimental image over Bluetooth or USB
   FirmwareUpdate {
     file: PathBuf,
-    /// Permit a same-version attempt; cannot override device rejection
+    /// Reinstall the same image (USB forces it; Bluetooth may still reject it)
     #[arg(long)] reflash: bool,
     /// Restore pinned stock 306007 from a supported experimental firmware
     #[arg(long)] restore_stock: bool,
+    /// Physical USB port, e.g. 1-6 or 1-2.3; required for bootloader recovery
+    #[arg(long)] usb_port: Option<String>,
+    /// Number of USB reports in flight within each verified block
+    #[arg(long, default_value_t = 16, value_parser = clap::value_parser!(u8).range(1..=16))]
+    usb_queue_depth: u8,
     /// Validate image and show metadata without connecting or writing
     #[arg(long)] dry_run: bool,
   },
@@ -408,10 +413,25 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
       let report = divoom_ditoo_pro_controller::firmware_decode::decode(&file, output.as_deref())?;
       println!("{}", serde_json::to_string_pretty(&report)?);
     }
-    Command::FirmwareUpdate { file, reflash, restore_stock, dry_run } => {
+    Command::FirmwareUpdate { file, reflash, restore_stock, usb_port, usb_queue_depth, dry_run } => {
       let image = divoom_ditoo_pro_controller::firmware::Image::load(&file)?;
-      if dry_run { println!("{}", image.describe()); }
-      else { divoom_ditoo_pro_controller::firmware::flash(resolve_device(args.device).await?, &image, reflash, restore_stock).await?; }
+      if matches!(args.transport, divoom_ditoo_pro_controller::Transport::Usb) {
+        let metadata = divoom_ditoo_pro_controller::usb_firmware::describe(&image, reflash)?;
+        if restore_stock && image.version() != 306007 {
+          return Err("--restore-stock requires pinned stock 306007".into());
+        }
+        if dry_run { println!("{metadata}"); }
+        else {
+          let address = args.device.map(|s| s.parse::<Address>()).transpose()?;
+          divoom_ditoo_pro_controller::usb_firmware::flash(&image, usb_port.as_deref(), reflash, usb_queue_depth, address).await?;
+        }
+      } else {
+        if usb_port.is_some() || usb_queue_depth != 16 {
+          return Err("--usb-port and --usb-queue-depth require --transport usb".into());
+        }
+        if dry_run { println!("{}", image.describe()); }
+        else { divoom_ditoo_pro_controller::firmware::flash(resolve_device(args.device).await?, &image, reflash, restore_stock).await?; }
+      }
     }
 
     Command::Ids { category, json } => ids::show(category.as_deref(), json)?,
@@ -636,6 +656,18 @@ mod cli_tests {
     let parsed = Args::try_parse_from(["divoom", "raw", "send", "0x45", "--data", "060000", "--dry-run", "--device", "B1:21:81:DD:B8:9B"])?;
     assert_eq!(parsed.device.as_deref(), Some("B1:21:81:DD:B8:9B"));
     assert!(matches!(parsed.command, Command::Raw { action: control_cli::RawCommand::Send { dry_run: true, .. } }));
+    Ok(())
+  }
+
+  #[test]
+  fn usb_flash_options_work_without_a_bluetooth_address() -> Result<(), Box<dyn Error>> {
+    let args = Args::try_parse_from(["divoom", "firmware-update", "firmware/306007.MVA", "--transport", "usb", "--usb-port", "1-2.3", "--reflash", "--dry-run"])?;
+    assert!(args.device.is_none());
+    assert!(matches!(args.transport, divoom_ditoo_pro_controller::Transport::Usb));
+    assert!(matches!(args.command, Command::FirmwareUpdate { usb_port: Some(port), usb_queue_depth: 16, reflash: true, dry_run: true, .. } if port == "1-2.3"));
+    for depth in ["0", "17"] {
+      assert!(Args::try_parse_from(["divoom", "firmware-update", "firmware/306007.MVA", "--usb-queue-depth", depth]).is_err());
+    }
     Ok(())
   }
 

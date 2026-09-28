@@ -8,8 +8,8 @@ separately below; an offline build alone is not device proof.
 ## Commands
 
 ```sh
-# One runtime installation (explicit device address recommended).
-divoom-ditoo-pro-controller --device B1:21:81:DD:B8:9B --transport ble \
+# One runtime installation over USB (see docs/usb.md for permissions).
+divoom-ditoo-pro-controller --transport usb \
   firmware-update firmware/306012-lua.MVA
 
 # Subsequent program changes are RAM uploads, not firmware updates.
