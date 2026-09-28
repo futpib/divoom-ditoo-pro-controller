@@ -218,6 +218,8 @@ async fn transfer(
   if usize::from(start) >= image.count() {
     return Err("Device resume index is outside the image".into());
   }
+  println!("{}", json!({"event":"resume","chunk_index":start}));
+  let started = tokio::time::Instant::now();
   let mut next = usize::from(start);
   let mut retries = VecDeque::new();
   let mut retry_counts = vec![0u8; image.count()];
@@ -272,7 +274,9 @@ async fn transfer(
       percent = progress;
       println!(
         "{}",
-        json!({"event":"progress","percent":percent,"chunks_sent":next,"chunks_total":image.count()})
+        json!({"event":"progress","percent":percent,"chunks_sent":next,"chunks_total":image.count(),
+          "elapsed_seconds":started.elapsed().as_secs_f64(),
+          "bytes_per_second":(next-usize::from(start)) as f64*CHUNK_SIZE as f64/started.elapsed().as_secs_f64()})
       );
     }
   }

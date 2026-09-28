@@ -81,9 +81,20 @@ supplied by a fresh valid ready response. Progress and device events are JSON
 lines on stdout; diagnostics/errors go to stderr. Keep USB power connected and
 capture output to a file rather than terminating the process midway.
 
-The current BLE transport uses paced 20-byte writes, so this 1,877,379-byte image
-would take over an hour at nominal pacing. The implementation does not increase
-transfer speed by assuming a larger writable packet size.
+Firmware streaming uses the characteristic's negotiated write capacity (capped
+at 512 bytes), with acknowledged GATT writes and a protocol acknowledgment per
+firmware packet. It falls back to 20 bytes if capacity cannot be read. The
+`bluer` API already removes ATT overhead from the reported MTU. Streaming adds
+no artificial delay after a completed write; ordinary control commands retain
+their existing pacing. Progress includes elapsed time and effective byte rate.
+
+The initial probe attempt used the old fixed 20-byte writes plus 50 ms sleeps
+and was stopped at roughly 18%. The reconnected device requested chunk zero;
+saved-index resume was not demonstrated in this attempt. With negotiated MTU
+517 (512-byte write capacity), each 272-byte firmware envelope fits in one ATT
+write. Live throughput initially increased to approximately 2.7 KB/s, before
+shortening the new connection's interval. These measurements validate transport
+improvement, not firmware installation or boot.
 
 The [offline decoder](firmware-format.md) now extracts the MVA container and
 verifies its package and internal CRCs. The updater requires exact equality

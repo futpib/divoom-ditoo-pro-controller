@@ -194,6 +194,7 @@ impl Drop for DeviceLease {
 
 pub(crate) struct BleConnection {
   write: Characteristic,
+  stream_write_size: usize,
   responses: mpsc::UnboundedReceiver<Response>,
   pending: VecDeque<Response>,
   reader: tokio::task::JoinHandle<()>,
@@ -281,8 +282,18 @@ impl BleConnection {
         }
       }
     });
+    // bluer's mtu() already subtracts ATT overhead; do not subtract it twice.
+    let stream_write_size = match write.mtu().await {
+      Ok(size) if size > 0 => size.min(512),
+      result => {
+        log::warn!("BLE write capacity unavailable ({result:?}); using 20-byte writes");
+        20
+      }
+    };
+    log::info!("BLE streaming write capacity: {stream_write_size} bytes");
     let mut connection = Self {
       write,
+      stream_write_size,
       responses,
       pending: VecDeque::new(),
       reader,
@@ -296,7 +307,7 @@ impl BleConnection {
       now.timestamp(),
       now.format("%Y-%m-%d %H:%M:%S")
     );
-    if let Err(error) = connection.write_payload(init.as_bytes(), 1).await {
+    if let Err(error) = connection.write_payload(init.as_bytes(), 1, false).await {
       let not_connected = error
         .downcast_ref::<bluer::Error>()
         .is_some_and(|e| e.kind == bluer::ErrorKind::Failed && e.message == "Not connected");
@@ -305,15 +316,25 @@ impl BleConnection {
       }
       // Cached notifications can also succeed with only the classic bearer active.
       connect_ble_bearer(&adapter, &connection.device.device).await?;
-      connection.write_payload(init.as_bytes(), 1).await?;
+      connection.write_payload(init.as_bytes(), 1, false).await?;
     }
     tokio::time::sleep(Duration::from_secs(1)).await;
     log::info!("Connected via BLE GATT (device clock synchronized)");
     Ok(connection)
   }
 
-  async fn write_payload(&mut self, payload: &[u8], sequence: u16) -> Result<(), Box<dyn Error>> {
-    for chunk in envelope(payload, sequence)?.chunks(20) {
+  async fn write_payload(
+    &mut self,
+    payload: &[u8],
+    sequence: u16,
+    streaming: bool,
+  ) -> Result<(), Box<dyn Error>> {
+    let capacity = if streaming {
+      self.stream_write_size
+    } else {
+      20
+    };
+    for chunk in envelope(payload, sequence)?.chunks(capacity) {
       self
         .write
         .write_ext(
@@ -324,7 +345,10 @@ impl BleConnection {
           },
         )
         .await?;
-      tokio::time::sleep(Duration::from_millis(50)).await;
+      // Acknowledged GATT writes provide backpressure for firmware streaming.
+      if !streaming {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+      }
     }
     Ok(())
   }
@@ -355,7 +379,7 @@ impl BleConnection {
     };
     let mut payload = vec![packet.command.value()];
     payload.extend(&packet.payload);
-    self.write_payload(&payload, sequence).await?;
+    self.write_payload(&payload, sequence, preserve).await?;
     let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
     let mut acknowledged = false;
     let mut command_response = None;
