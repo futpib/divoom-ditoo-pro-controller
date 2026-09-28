@@ -221,15 +221,20 @@ hardware results. The command catalogue contains 196 Android symbols,
 including extended selectors; catalogue membership does not imply Ditoo support.
 
 ```sh
-divoom-ditoo-pro-controller --transport ble device firmware
-divoom-ditoo-pro-controller --transport ble device status
-divoom-ditoo-pro-controller --transport ble device setting hour24
+divoom-ditoo-pro-controller --transport ble firmware
+divoom-ditoo-pro-controller --transport ble status
+divoom-ditoo-pro-controller --transport ble setting hour24
 divoom-ditoo-pro-controller raw list --filter ALARM
 divoom-ditoo-pro-controller raw send 0x37 --data 00 --query
 divoom-ditoo-pro-controller raw run examples/device-info.json
-divoom-ditoo-pro-controller device --dry-run scoreboard 12 34
+divoom-ditoo-pro-controller scoreboard 12 34 --dry-run
 divoom-ditoo-pro-controller alarm on --time 07:30 --repeat 62 --dry-run
 ```
+
+Friendly device commands now run directly at the top level: `status`, `firmware`,
+`scoreboard`, `setting`, etc. The former `device` prefix is removed. Both
+`--device` and `--transport` work before or after subcommands. Commands with
+`--dry-run` accept it after their name, for example `scoreboard 12 34 --dry-run`.
 
 Low-level commands live under `raw` (`list`, `send`, `run`, `monitor`), replacing
 the former `protocol` group. Use `raw send 0x45 --data "…"` for the former

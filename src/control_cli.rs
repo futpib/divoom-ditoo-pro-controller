@@ -45,20 +45,36 @@ pub enum RawCommand {
 #[derive(Debug, Subcommand)]
 pub enum DeviceCommand {
   /// Read mode and brightness, retaining the full raw response
-  Status,
+  Status {
+    #[arg(long)]
+    dry_run: bool,
+  },
   /// Read firmware version list
-  Firmware,
+  Firmware {
+    #[arg(long)]
+    dry_run: bool,
+  },
   /// Read alarm slots (raw response)
-  Alarms,
+  Alarms {
+    #[arg(long)]
+    dry_run: bool,
+  },
   /// Read music playback status
-  PlaybackStatus,
+  PlaybackStatus {
+    #[arg(long)]
+    dry_run: bool,
+  },
   /// Read a tool: 0 stopwatch, 1 scoreboard, 2 noise meter, 3 countdown
   ToolStatus {
+    #[arg(long)]
+    dry_run: bool,
     #[arg(value_parser=clap::value_parser!(u8).range(0..=3))]
     tool: u8,
   },
   /// Set scoreboard scores using the Android tool protocol
   Scoreboard {
+    #[arg(long)]
+    dry_run: bool,
     #[arg(long,action=clap::ArgAction::Set,default_value_t=true)]
     enabled: bool,
     #[arg(value_parser=clap::value_parser!(u16).range(0..=999))]
@@ -68,6 +84,8 @@ pub enum DeviceCommand {
   },
   /// Configure countdown, with 0..59 minutes and seconds
   Countdown {
+    #[arg(long)]
+    dry_run: bool,
     #[arg(long,action=clap::ArgAction::Set,default_value_t=true)]
     enabled: bool,
     #[arg(value_parser=clap::value_parser!(u8).range(0..=59))]
@@ -76,43 +94,76 @@ pub enum DeviceCommand {
     seconds: u8,
   },
   /// Stopwatch control byte as used by the app (see protocol documentation)
-  Stopwatch { action: u8 },
+  Stopwatch {
+    #[arg(long)]
+    dry_run: bool,
+    action: u8,
+  },
   /// Noise-meter control byte as used by the app
-  NoiseMeter { action: u8 },
+  NoiseMeter {
+    #[arg(long)]
+    dry_run: bool,
+    action: u8,
+  },
   /// Enter a built-in game; IDs follow firmware, not app labels
   Game {
+    #[arg(long)]
+    dry_run: bool,
     id: u8,
     #[arg(long)]
     exit: bool,
   },
   /// Send a virtual game key press or release; does not bind physical keys
   GameKey {
+    #[arg(long)]
+    dry_run: bool,
     code: u8,
     #[arg(long)]
     release: bool,
   },
   /// Send signed Celsius temperature and firmware weather-condition code
   Weather {
+    #[arg(long)]
+    dry_run: bool,
     #[arg(allow_hyphen_values = true)]
     celsius: i8,
     condition: u8,
   },
   /// Read/set a firmware setting; boolean values are 0 or 1
   Setting {
+    #[arg(long)]
+    dry_run: bool,
     #[arg(value_enum)]
     name: Setting,
     value: Option<u16>,
   },
   /// Read TF-card track/playback information
-  SdStatus,
+  SdStatus {
+    #[arg(long)]
+    dry_run: bool,
+  },
   /// Select a TF-card track by its firmware ID
-  SdTrack { id: u16 },
+  SdTrack {
+    #[arg(long)]
+    dry_run: bool,
+    id: u16,
+  },
   /// Set TF-card playback position in device units
-  SdSeek { position: u16 },
+  SdSeek {
+    #[arg(long)]
+    dry_run: bool,
+    position: u16,
+  },
   /// Set TF-card repeat/play mode by firmware mode ID
-  SdPlayMode { mode: u8 },
+  SdPlayMode {
+    #[arg(long)]
+    dry_run: bool,
+    mode: u8,
+  },
   /// Previous/next track protocol selector, 0 or 1
   Track {
+    #[arg(long)]
+    dry_run: bool,
     #[arg(value_parser=clap::value_parser!(u8).range(0..=1))]
     direction: u8,
   },
@@ -130,15 +181,40 @@ pub enum Setting {
 }
 
 impl DeviceCommand {
+  pub fn dry_run(&self) -> bool {
+    match self {
+      Self::Status { dry_run, .. } => *dry_run,
+      Self::Firmware { dry_run, .. } => *dry_run,
+      Self::Alarms { dry_run, .. } => *dry_run,
+      Self::PlaybackStatus { dry_run, .. } => *dry_run,
+      Self::ToolStatus { dry_run, .. } => *dry_run,
+      Self::Scoreboard { dry_run, .. } => *dry_run,
+      Self::Countdown { dry_run, .. } => *dry_run,
+      Self::Stopwatch { dry_run, .. } => *dry_run,
+      Self::NoiseMeter { dry_run, .. } => *dry_run,
+      Self::Game { dry_run, .. } => *dry_run,
+      Self::GameKey { dry_run, .. } => *dry_run,
+      Self::Weather { dry_run, .. } => *dry_run,
+      Self::Setting { dry_run, .. } => *dry_run,
+      Self::SdStatus { dry_run, .. } => *dry_run,
+      Self::SdTrack { dry_run, .. } => *dry_run,
+      Self::SdSeek { dry_run, .. } => *dry_run,
+      Self::SdPlayMode { dry_run, .. } => *dry_run,
+      Self::Track { dry_run, .. } => *dry_run,
+    }
+  }
+
   pub fn request(&self) -> Result<Request, Box<dyn Error>> {
     use DeviceCommand::*;
     let request = match *self {
-      Status => Request::bytes(0x46, &[], true),
-      Firmware => Request::bytes(0x37, &[0], true),
-      Alarms => Request::bytes(0x42, &[], true),
-      PlaybackStatus => Request::bytes(0x0b, &[], true),
-      ToolStatus { tool } => Request::bytes(0x71, &[tool], true),
-      Scoreboard { enabled, red, blue } => {
+      Status { .. } => Request::bytes(0x46, &[], true),
+      Firmware { .. } => Request::bytes(0x37, &[0], true),
+      Alarms { .. } => Request::bytes(0x42, &[], true),
+      PlaybackStatus { .. } => Request::bytes(0x0b, &[], true),
+      ToolStatus { tool, .. } => Request::bytes(0x71, &[tool], true),
+      Scoreboard {
+        enabled, red, blue, ..
+      } => {
         let mut p = vec![1, enabled as u8];
         p.extend(red.to_le_bytes());
         p.extend(blue.to_le_bytes());
@@ -148,20 +224,23 @@ impl DeviceCommand {
         enabled,
         minutes,
         seconds,
+        ..
       } => Request::bytes(0x72, &[3, enabled as u8, minutes, seconds], false),
-      Stopwatch { action } => Request::bytes(0x72, &[0, action], false),
-      NoiseMeter { action } => Request::bytes(0x72, &[2, action], false),
-      Game { id, exit } => Request::bytes(0xa0, &[!exit as u8, id], false),
-      GameKey { code, release } => {
+      Stopwatch { action, .. } => Request::bytes(0x72, &[0, action], false),
+      NoiseMeter { action, .. } => Request::bytes(0x72, &[2, action], false),
+      Game { id, exit, .. } => Request::bytes(0xa0, &[!exit as u8, id], false),
+      GameKey { code, release, .. } => {
         Request::bytes(if release { 0x21 } else { 0x17 }, &[code], false)
       }
-      Weather { celsius, condition } => Request::bytes(0x5f, &[celsius as u8, condition], false),
-      SdStatus => Request::bytes(0xb4, &[], true),
-      SdTrack { id } => Request::bytes(0x11, &id.to_le_bytes(), false),
-      SdSeek { position } => Request::bytes(0xb8, &position.to_le_bytes(), false),
-      SdPlayMode { mode } => Request::bytes(0xb9, &[mode], false),
-      Track { direction } => Request::bytes(0x12, &[direction], false),
-      Setting { name, value } => {
+      Weather {
+        celsius, condition, ..
+      } => Request::bytes(0x5f, &[celsius as u8, condition], false),
+      SdStatus { .. } => Request::bytes(0xb4, &[], true),
+      SdTrack { id, .. } => Request::bytes(0x11, &id.to_le_bytes(), false),
+      SdSeek { position, .. } => Request::bytes(0xb8, &position.to_le_bytes(), false),
+      SdPlayMode { mode, .. } => Request::bytes(0xb9, &[mode], false),
+      Track { direction, .. } => Request::bytes(0x12, &[direction], false),
+      Setting { name, value, .. } => {
         if matches!(
           name,
           self::Setting::Hour24
@@ -327,6 +406,7 @@ mod tests {
   fn android_tool_and_signed_temperature_payloads() -> Result<(), Box<dyn Error>> {
     assert_eq!(
       DeviceCommand::Scoreboard {
+        dry_run: false,
         enabled: true,
         red: 258,
         blue: 999
@@ -337,6 +417,7 @@ mod tests {
     );
     assert_eq!(
       DeviceCommand::Countdown {
+        dry_run: false,
         enabled: true,
         minutes: 12,
         seconds: 34
@@ -347,6 +428,7 @@ mod tests {
     );
     assert_eq!(
       DeviceCommand::Weather {
+        dry_run: false,
         celsius: -5,
         condition: 8
       }
@@ -355,6 +437,7 @@ mod tests {
       "fb08"
     );
     assert!(DeviceCommand::Setting {
+      dry_run: false,
       name: Setting::Hour24,
       value: Some(2)
     }

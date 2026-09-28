@@ -32,7 +32,7 @@ use divoom_ditoo_pro_controller::protocol::scrolling_text::{HAlign, VAlign};
 #[command(author, version, about, long_about = None)]
 pub struct Args {
   /// Device MAC address (auto-detected if only one paired Ditoo Pro exists)
-  #[arg(long)]
+  #[arg(long, global = true)]
   device: Option<String>,
 
   /// Connection transport; auto falls back to BLE if RFCOMM cannot connect
@@ -48,11 +48,8 @@ enum Command {
   /// Low-level protocol catalogue, commands, scripts and response monitoring
   Raw { #[command(subcommand)] action: control_cli::RawCommand },
 
-  /// Device protocol controls and queries, independent of phone UI
-  Device {
-    #[arg(long, global=true)] dry_run: bool,
-    #[command(subcommand)] action: control_cli::DeviceCommand
-  },
+  #[command(flatten)]
+  Device(control_cli::DeviceCommand),
 
   /// Scan for available bluetooth devices
   Scan,
@@ -351,7 +348,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn run(args: Args) -> Result<(), Box<dyn Error>> {
   match args.command {
     Command::Raw { action } => control_cli::run(args.device, action).await?,
-    Command::Device { action, dry_run } => control_cli::run_requests(args.device, vec![action.request()?], dry_run).await?,
+    Command::Device(action) => control_cli::run_requests(args.device, vec![action.request()?], action.dry_run()).await?,
     Command::Scan => scan_devices().await?,
     Command::Devices => list_paired_devices().await?,
     Command::Convert { convert } => match convert {
@@ -552,6 +549,28 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
 #[cfg(test)]
 mod cli_tests {
   use super::*;
+  #[test]
+  fn top_level_controls_preserve_dry_run_and_global_options() -> Result<(), Box<dyn Error>> {
+    for args in [
+      vec!["divoom", "--device", "B1:21:81:DD:B8:9B", "--transport", "ble", "scoreboard", "12", "34", "--dry-run"],
+      vec!["divoom", "scoreboard", "12", "34", "--dry-run", "--device", "B1:21:81:DD:B8:9B", "--transport", "ble"],
+    ] {
+      let parsed = Args::try_parse_from(args)?;
+      assert_eq!(parsed.device.as_deref(), Some("B1:21:81:DD:B8:9B"));
+      assert!(matches!(parsed.transport, divoom_ditoo_pro_controller::Transport::Ble));
+      let Command::Device(action) = parsed.command else {
+        return Err("Expected a friendly device control".into());
+      };
+      assert!(action.dry_run());
+      assert_eq!(action.request()?.payload_hex, "01010c002200");
+    }
+    assert!(Args::try_parse_from(["divoom", "device", "status"]).is_err());
+    let parsed = Args::try_parse_from(["divoom", "raw", "send", "0x45", "--data", "060000", "--dry-run", "--device", "B1:21:81:DD:B8:9B"])?;
+    assert_eq!(parsed.device.as_deref(), Some("B1:21:81:DD:B8:9B"));
+    assert!(matches!(parsed.command, Command::Raw { action: control_cli::RawCommand::Send { dry_run: true, .. } }));
+    Ok(())
+  }
+
   #[test]
   fn alarm_requires_explicit_time_and_preserves_enabled_value() -> Result<(), Box<dyn Error>> {
     assert!(Args::try_parse_from(["divoom", "alarm", "true"]).is_err());

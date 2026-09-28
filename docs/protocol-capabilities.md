@@ -19,22 +19,22 @@ are retained; their BLE transfer path has not been exercised on hardware.
 
 | # | Device operation | Protocol | Current coverage / remaining gap |
 |---|---|---|---|
-| 1 | Firmware versions, device metadata | 36,37,97; BD/2B | `device firmware` decodes version list; other metadata raw. Version 306007 read live. |
-| 2 | Display/channel state, colors, brightness | 44,45,46,49,74 | Existing mode/brightness controls; `device status` decodes mode/brightness and preserves all bytes. State read live. |
+| 1 | Firmware versions, device metadata | 36,37,97; BD/2B | `firmware` decodes version list; other metadata raw. Version 306007 read live. |
+| 2 | Display/channel state, colors, brightness | 44,45,46,49,74 | Existing mode/brightness controls; `status` decodes mode/brightness and preserves all bytes. State read live. |
 | 3 | Static pixels, GIFs, animation/movie streaming | 19,1A,25,58,5A–5C,6B–6F,8B | Existing image/animation/video/text renderers; raw access to other encodings and transfer variants. No new codec parity claim. |
 | 4 | Persistent custom channels/playlists, slots, timing | B1,8C–8F; BD/13–17,1B | Raw. Need slot enumeration, upload/storage, delete, selection and playback-duration workflows. |
-| 5 | Clock faces, time, language, temperature/clock units | 18,2B,2D; BD/26,2A,2E | Existing clock/time/language; `device setting hour24` and `fahrenheit` read/set. Clock-format write/readback and restoration verified live. |
-| 6 | Weather and temperature display | 59,5D–5F,73 | `device weather CELSIUS CONDITION`; full forecast layout/data and sensor responses raw. |
+| 5 | Clock faces, time, language, temperature/clock units | 18,2B,2D; BD/26,2A,2E | Existing clock/time/language; `setting hour24` and `fahrenheit` read/set. Clock-format write/readback and restoration verified live. |
+| 6 | Weather and temperature display | 59,5D–5F,73 | `weather CELSIUS CONDITION`; full forecast layout/data and sensor responses raw. |
 | 7 | Keyboard lights and light effects | 23; BD/33 | Existing keyboard next/previous/toggle. Absolute keyboard-off state/readback unknown; extended effects raw. |
-| 8 | Alarm slots and repeat schedules | 42,43 | `device alarms` reads raw slots; `alarm on/off --time ...` writes all configurable fields and now honors enabled state. Alarm list read live. |
+| 8 | Alarm slots and repeat schedules | 42,43 | `alarms` reads raw slots; `alarm on/off --time ...` writes all configurable fields and now honors enabled state. Alarm list read live. |
 | 9 | Alarm artwork, audio, preview and preview volume | 51,82,A5,A6 | Raw; custom media transfer and preview workflow missing. |
-| 10 | Sleep schedules, scenes, color, brightness, audio | 40,41,79,A2–A4,AD,AE | `device setting sleep-mode`; other payloads/workflows raw. |
+| 10 | Sleep schedules, scenes, color, brightness, audio | 40,41,79,A2–A4,AD,AE | `setting sleep-mode`; other payloads/workflows raw. |
 | 11 | Planner/reminders/time-management and artwork | 53–57 | Raw; schedule serialization, enumeration and attached artwork workflow missing. |
 | 12 | Stopwatch, scoreboard, noise meter, countdown | 71,72 | Helpers `stopwatch`, `scoreboard`, `noise-meter`, `countdown`, `tool-status`. Android payloads implemented; tool queries received no reply in this test. Setters not physically exercised. |
-| 13 | Built-in games and virtual key presses/releases | A0,17,21,88 | `device game`, `game-key [--release]`; shake raw. Does not bind physical keys or install new games. |
-| 14 | Volume and playback state | 08–0B; BD/34–36 | Existing volume/play/pause; `device playback-status`. Volume read live. Newer extended variants raw. |
+| 13 | Built-in games and virtual key presses/releases | A0,17,21,88 | `game`, `game-key [--release]`; shake raw. Does not bind physical keys or install new games. |
+| 14 | Volume and playback state | 08–0B; BD/34–36 | Existing volume/play/pause; `playback-status`. Volume read live. Newer extended variants raw. |
 | 15 | TF/SD music listing, track selection, seek and repeat | 07,11,12,14,15,7D,B4,B8,B9 | Helpers `sd-status`, `sd-track`, `sd-seek`, `sd-play-mode`, `track`. SD status captured live; paginated names/IDs and response decoding remain raw. Seek units not established. |
-| 16 | Saved volume, auto-connect, boot channel, idle shutdown | AB,AC,8A; BD/18–1A | `device setting save-volume/auto-connect/startup-channel/idle-power-off`. First two queried live; latter two timed out. Timeout is not proof of lack of support. |
+| 16 | Saved volume, auto-connect, boot channel, idle shutdown | AB,AC,8A; BD/18–1A | `setting save-volume/auto-connect/startup-channel/idle-power-off`. First two queried live; latter two timed out. Timeout is not proof of lack of support. |
 | 17 | Scheduled power on/off, energy and eye-care settings | 1F,22,B2,B3 | Raw; schedule/energy codecs missing. |
 | 18 | Startup sound, volume, boot artwork | 1C,52,BB | Raw; media upload and startup settings helpers missing. |
 | 19 | Notifications and custom notification icons | 3C,50,84; BD/27 | Raw; notification category/icon payload builders missing. Phone permission/UI features are out of scope. |
@@ -57,7 +57,7 @@ inventory of the inspected enums, not every feature in every app version.
 
 ```sh
 # Explicit --device is useful when BLE is available but the device is unpaired.
-divoom-ditoo-pro-controller --device B1:21:81:DD:B8:9B --transport ble device firmware
+divoom-ditoo-pro-controller --device B1:21:81:DD:B8:9B --transport ble firmware
 
 # List names, or send an opcode. --query waits for a reply with that opcode.
 divoom-ditoo-pro-controller raw list --filter ALARM
@@ -77,9 +77,9 @@ divoom-ditoo-pro-controller raw run examples/device-info.json
 divoom-ditoo-pro-controller raw run examples/device-settings.json --dry-run
 
 # Inspect exact payloads without connecting or changing the device.
-divoom-ditoo-pro-controller device --dry-run scoreboard 12 34
-divoom-ditoo-pro-controller device --dry-run countdown 5 30
-divoom-ditoo-pro-controller device --dry-run weather -5 8
+divoom-ditoo-pro-controller scoreboard 12 34 --dry-run
+divoom-ditoo-pro-controller countdown 5 30 --dry-run
+divoom-ditoo-pro-controller weather -5 8 --dry-run
 divoom-ditoo-pro-controller alarm on --time 07:30 --repeat 62 --dry-run
 ```
 
