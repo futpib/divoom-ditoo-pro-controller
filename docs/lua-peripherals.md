@@ -114,6 +114,19 @@ voice memo and noise meter.
 Examples: `examples/lua/battery.lua`, `noise-meter.lua` and `voice-memo.lua`.
 The memo example accepts `lua send record`, `stop`, `play`, `delete` and `status`.
 
+For a short sound, `examples/lua/short-sound.lua` starts silently and accepts
+`lua send play`. It selects mode 6 at preview volume 15/100, waits for the native
+playing flag, then requests a stop after 300 ms. A two-second startup timeout
+also stops the preview. App ticks and asynchronous native dispatch add latency;
+this is not a sample-exact 300 ms output. Stop/error releases preview ownership.
+
+Preview volume is independent of the music-volume setting. Mode 6 at 60/100
+for 1.5 seconds was confirmed audible by the owner and was too loud for this
+test. The quieter short example has not yet been confirmed audibly. Earlier
+300 ms attempts with mode 2 were silent to the owner despite `sound_playing`;
+the changed sound and duration do not isolate the cause. That flag reports a
+decoder assignment, not measured speaker output.
+
 ## Implementation and checks
 
 `native/lua-app/peripherals.c` contains the bounded request bridge and Lua
@@ -164,7 +177,8 @@ run it with `lua start`, then inspect `lua status` after eight seconds.
 
 The device has no SD card installed, so actual SD decoding/seek/repeat remains
 unverified. Recorder byte counts, memo playback state and live noise readings
-were observed, but audible output and the battery bar's physical appearance
-have not been independently confirmed. The native preview arbiter can refuse
+were observed. Native preview output was confirmed audible for mode 6;
+memo audibility and the battery bar's physical appearance remain unconfirmed.
+The native preview arbiter can refuse
 a request while another native mode has priority; this is reported as a failed
 ticket, and the bridge does not force an override.

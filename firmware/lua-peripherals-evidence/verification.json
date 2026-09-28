@@ -245,12 +245,30 @@
   },
   "limits": [
     "SD card absent; actual SD playback, seeking and repeat not exercised.",
-    "Native audio state and recorder bytes were observed; audible output was not independently confirmed.",
+    "Native preview mode 6 was confirmed audible; memo audibility and the quieter 300 ms example remain unconfirmed.",
     "Battery indicator override and release passed host hook tests and earlier live API exercise; physical LED appearance was not confirmed.",
     "Battery level is coarse 0..7. This unit reported USB power, full level 7 and charging false; charger-transition calibration was not tested.",
     "Sound preview was refused by the native priority arbiter in the exercised mode, and the final image reported the refusal correctly.",
     "Scheduled wake boots stock firmware; Lua autostart remains unimplemented.",
     "Lua limits and recovery do not constitute memory isolation or a guarantee against defects in vendor native code."
   ],
-  "raw_logs": "Ignored firmware/runs/lua-peripherals. No raw JSONL logs, microphone audio or storage bytes committed."
+  "raw_logs": "Ignored firmware/runs/lua-peripherals, lua-audio-diagnosis-* and lua-short-sound-* directories. No raw JSONL logs, microphone audio or storage bytes committed.",
+  "audible_preview": {
+    "tested_sha256": "a955d25fa90434d12981b92972b7c5780368c875b6ed905b16edd20eb715a099",
+    "mode": 6,
+    "preview_volume": 60,
+    "requested_duration_ms": 1500,
+    "runtime_result": "baseline 60, preview 70, flag true",
+    "physical_result": "Owner confirmed audible output and described it as terrifying; no repeat at this level.",
+    "restored": "Preview stopped, noise monitoring released, clock restarted; music volume unchanged.",
+    "earlier_attempts": "Mode 2 at preview volumes 40 and 70 with roughly 300 ms cutoff was silent to the owner despite sound_playing.",
+    "conclusion": "Lua can play native sound. Changing both mode and duration does not isolate why the earlier attempts were silent.",
+    "short_example": "examples/lua/short-sound.lua uses mode 6 at 15/100 and requests stop 300 ms after sound_playing. Audibility and acoustic duration at these settings remain unverified.",
+    "short_example_checks": {
+      "syntax": "luac -p passed",
+      "device_silent_start": "Passed on the installed runtime; no play message sent.",
+      "clock_restored": true,
+      "sound_replayed": false
+    }
+  }
 }
