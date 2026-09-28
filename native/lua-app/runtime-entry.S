@@ -22,6 +22,8 @@ runtime_worker_entry:
     j screen_filter
 .section .key_hook,"ax"
     jal key_filter
+.section .led_hook,"ax"
+    j led_filter
 
 .section .text.screen_filter,"ax"
 screen_filter:
@@ -45,3 +47,22 @@ key_filter:
     jal runtime_adc_result
     lmw.bim $r6, [$sp], $r6, 2
     ret
+
+.section .text.runtime_led_context,"ax"
+.global runtime_led_context
+runtime_led_context:
+    /* Stock lwi.gp r0, [gp - 33664]; preserve the verified instruction bytes. */
+    .byte 0x3c, 0x0d, 0xdf, 0x20
+    ret
+
+.section .text.led_filter,"ax"
+led_filter:
+    smw.adm $r6, [$sp], $r6, 2
+    jal runtime_led_override
+    beqz $r0, led_stock
+    lmw.bim $r6, [$sp], $r6, 2
+    ret
+led_stock:
+    lmw.bim $r6, [$sp], $r6, 2
+    smw.adm $sp, [$sp], $sp, 2
+    j stock_led_original

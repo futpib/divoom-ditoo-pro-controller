@@ -10,6 +10,7 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('device')
 p.add_argument('--binary', type=Path, default=ROOT/'target/release/divoom-ditoo-pro-controller')
 p.add_argument('--output', type=Path, required=True)
+p.add_argument('--firmware', type=int, choices=[306013,306014], default=306014)
 a = p.parse_args()
 a.output.mkdir(parents=True, exist_ok=False)
 # The CLI checks the installed firmware before using any extension selector.
@@ -38,6 +39,12 @@ cases = [
     ('binary','\x1bLua',3,None),
     ('capabilities','return io or os or package or debug or load or string.dump or string.format',2,'nil'),
 ]
+if a.firmware >= 306014:
+    cases += [
+        ('stock-heap-headroom','return device.stats().free_heap >= 24576',2,'true'),
+        ('led-frame',"lights.fill(0x123456); lights.pixel(0,0xffffff); return #lights.frame()..':'..lights.count",2,'36:12'),
+        ('one-shot-present','display.clear(0); display.present(); return 42',2,'42'),
+    ]
 requests = []
 resident_checks = []
 def request(data, delay=0):
@@ -83,6 +90,18 @@ for name,source in [
 source='return {}\n--'+('x'*(8192-len('return {}\n--')))
 start(source)
 status('full-8192-byte-upload',4)
+if a.firmware >= 306014:
+    start('return {init=function() lights.fill(0x080008); lights.present() end, '
+          'message=function() while true do end end}')
+    status('led-resident',4)
+    op(6,delay=100)
+    status('led-paused',5)
+    op(7,delay=250)
+    status('led-resumed',4)
+    op(8,b'crash',250)
+    status('led-error-reclaimed',3,reclaimed=True)
+    start('return {}')
+    status('led-error-recovery',4)
 op(2,delay=100)
 status('final-stop',2,'stopped',True)
 request(b'\0')
@@ -122,7 +141,7 @@ for offset,name,state,value,reclaimed in resident_checks:
         'frames':int.from_bytes(d[20:24],'little'),
         'callbacks':int.from_bytes(d[24:28],'little')})
     print(name,'passed' if ok else 'FAILED',flush=True)
-healthy=len(rows)==len(requests) and rows[-1]['response']['data_hex']=='015dab0400'
-report={'firmware':306013,'checks':results,'stock_version_afterwards':healthy,'exit_code':run.returncode}
+healthy=len(rows)==len(requests) and rows[-1]['response']['data_hex']==(b'\x01'+a.firmware.to_bytes(4,'little')).hex()
+report={'firmware':a.firmware,'checks':results,'stock_version_afterwards':healthy,'exit_code':run.returncode}
 (a.output/'results.json').write_text(json.dumps(report,indent=2)+'\n')
 if run.returncode or not healthy or not all(r['passed'] for r in results): raise SystemExit(1)

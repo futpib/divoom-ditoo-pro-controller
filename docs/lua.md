@@ -1,13 +1,14 @@
 # Resident Lua apps
 
-Firmware **306013** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
+Firmware **306014** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
 over Bluetooth, disconnect, and it keeps running. Changing scripts does not flash
-firmware. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
+firmware. 306014 adds independent RGB control of 12 keyboard LED positions;
+306013 remains supported for the original resident app API. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
 and supported by the CLI.
 
 ```sh
 # Install the runtime once; see docs/usb.md for USB permissions.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306013-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306014-lua.MVA
 
 # Subsequent changes only upload source into RAM.
 divoom-ditoo-pro-controller --transport ble lua start examples/lua/clock.lua
@@ -71,6 +72,18 @@ The next stock redraw restores the native screen; immediate redraw is not forced
 | 8 | `device.brightness(0..100)`, `device.volume([0..15])` | Native controls; globals `brightness` and `volume` also exist. No volume argument reads the current value. |
 | 9 | `app.claim(bool)`, `app.stop()`, `app.log(value)` | Ownership, stop request and last-result logging. `print(value)` logs its first argument. |
 | 10 | `comms.send(string)` and `message(string)` | 128-byte inbox/outbox; send returns false while the outgoing slot is occupied. Host `lua receive` reads/acknowledges that slot. |
+| 11 | `lights.count`, `fill(rgb)`, `pixel(index,rgb)`, `frame([rgb888])` | 306014: 12 LED positions indexed 0–11; 36-byte packed RGB buffer, independent of display pixels. Physical key/LED correspondence is not assumed. |
+| 12 | `lights.present()`, `enabled([bool])`, `claim(bool)` | 306014: publish lights at the next tick; disable to publish black; release ownership to restore native lighting. |
+| 13 | `device.stats()` | 306014: free stock heap, Lua used/peak memory, frames, callbacks and dropped keys. |
+
+`examples/lua/keyboard-lights.lua` chases the LED positions; any keyboard press
+changes color. LED intensities are raw 8-bit values, without the stock gamma
+curve. `lights.present()` claims lighting independently of display/input;
+`lights.claim(false)` releases it. Pause/error/stop also releases lighting.
+The normal native LED task performs all hardware I/O; Lua publishes a complete
+buffer and requests refresh. Resume restores the app's previous LED output.
+A one-shot program can present a display frame; keyboard effects require a
+resident app so ownership has a defined lifetime.
 
 Selected base, math, string, table and coroutine libraries are available. There
 is no `io`, `os`, `package`, `debug`, `load`, `loadfile`, `dofile`,
@@ -82,7 +95,9 @@ is no `io`, `os`, `package`, `debug`, `load`, `loadfile`, `dofile`,
 - Source: 1–8,192 bytes, text only, uploaded in at most 512-byte chunks.
 - Lua memory: a fixed 40 KiB arena. The quota includes allocator headers,
   alignment and temporary allocations during realloc. Stop/error frees the whole
-  arena without running Lua finalizers.
+  arena without running Lua finalizers. 306014 also requires at least 24 KiB
+  of spare native heap beyond the arena before launching. Other native tasks
+  can still allocate afterward; this is a startup reserve check.
 - Each setup or complete app tick has a 100,000-unit work budget. The guard runs
   for every VM instruction, allocator call and string-pattern backtracking step.
   A 50 ms elapsed-time check runs every 128 guard calls. Native configuration
@@ -116,7 +131,7 @@ messages; its physical direction labels still need mapping on this device.
 | 1 | Drawing, animations and custom games | Implemented primitives; clock and Snake examples. Custom fonts/palettes can be represented in Lua/packed RGB data. |
 | 2 | Controls and lifecycle | Physical input, held state, ownership, pause/resume/stop/reload implemented. |
 | 3 | Clocks, timers, stopwatch, scoreboards | RTC, timers and drawing implemented. Native sleep/wake alarms and stock notification precedence remain unbound. |
-| 4 | Keyboard lighting | Native LED entry points traced; no Lua binding yet. |
+| 4 | Keyboard lighting | 12 independently controlled RGB LED positions, custom effects and ownership restoration implemented in 306014. |
 | 5 | Audio | Volume only. Playback, samples/tones, recording, microphone levels/spectrum need verified native bindings. |
 | 6 | Installed apps, assets and settings | RAM only. Filesystem isolation, atomic writes, app installation, modules and safe boot selection remain to implement. |
 | 7 | Communications | BLE upload, bidirectional app messages and status implemented. USB script upload is not implemented. |
@@ -134,7 +149,7 @@ python3 scripts/build-lua-app-runtime.py
 python3 scripts/test-lua-app-runtime.py
 cargo test --locked --no-default-features
 cargo build --locked --release --no-default-features
-# Requires an already-installed 306013; stops the current app, performs no flash writes.
+# Requires an already-installed 306014; stops the current app, performs no flash writes.
 python3 scripts/check-lua-app-device.py B1:21:81:DD:B8:9B \
   --output firmware/runs/lua-app-check
 ```
@@ -144,13 +159,18 @@ Build prerequisites and the earlier one-shot checks are in
 Lua sources and original hook bytes, checks code/RAM boundaries and bootloader
 CRC preservation, and rejects accidental semihosting system calls. The updater
 separately pins the resulting image's SHA and size. The build report deliberately
-states offline status; [hardware evidence](../firmware/lua-app-evidence/verification.json)
-is separate. Raw runs stay in ignored `firmware/runs/`.
+states offline status; [306013 hardware evidence](../firmware/lua-app-evidence/verification.json) and
+[306014 hardware evidence](../firmware/lua-io-evidence/verification.json)
+are separate. Raw runs stay in ignored `firmware/runs/`.
+
+To reproduce the previous 306013 image exactly, build the source at commit
+`9a9d89c`; the current builder produces 306014. Both images remain pinned.
 
 The image reserves 16 KiB of native globals below `0x2004c000`; text starts at
 `0x1ca000`, initialized data loads at `0x1ee000`, and neither crosses `0x1f0000`.
 Hooks wrap heap initialization, command 0x37, screen output and the ADC scanner's
-return at `0x2d490`. Intercepting after native key-action mapping loses key-down
+return at `0x2d490`. 306014 also wraps the LED flush at `0x7580c`;
+when ownership is released it executes the original native path. Intercepting after native key-action mapping loses key-down
 records whose stock action is zero; the ADC hook precedes that filtering.
 
 The command prefix is `7f DLUA`, followed by operation: 0=status, 1=one-shot,

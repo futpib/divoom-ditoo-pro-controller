@@ -19,9 +19,12 @@
 #define QUEUE_SIZE 16
 #define TIMER_COUNT 12
 #define MESSAGE_LIMIT 128
+#define LED_COUNT 12
+#define STOCK_HEAP_RESERVE 24576
 
 extern void *stock_alloc(unsigned);
 extern void stock_free(void *);
+extern unsigned stock_free_heap(void);
 extern void *stock_task(void (*)(void *), const char *, void *, unsigned, unsigned, unsigned);
 extern void stock_delay(unsigned);
 extern unsigned stock_ticks(void);
@@ -30,6 +33,8 @@ extern unsigned stock_event(void *);
 extern void stock_calendar(void *);
 extern unsigned stock_screen_command(unsigned, const void *, unsigned);
 extern unsigned runtime_screen(const void *);
+extern unsigned char *runtime_led_context(void);
+extern void stock_led_write(const void *, unsigned);
 extern void stock_version(unsigned);
 extern void stock_set_version(const unsigned char *);
 extern void stock_reply(unsigned, unsigned, const void *, unsigned);
@@ -59,6 +64,9 @@ static struct {
     char source[SOURCE_LIMIT];
     char result[RESULT_LIMIT];
     unsigned char frame[768];
+    unsigned char leds[LED_COUNT * 3], led_buffers[2][LED_COUNT * 3];
+    volatile unsigned led_owner, led_active;
+    unsigned led_enabled, led_dirty;
     struct timer timers[TIMER_COUNT];
     jmp_buf escape;
 } app;
@@ -136,9 +144,15 @@ static void *allocate(void *ud, void *ptr, size_t old, size_t size) {
     return NULL;
 }
 
+static void led_refresh(void) {
+    unsigned char *context = runtime_led_context();
+    if (context) context[0x48] = 1;
+}
+
 static void discard(unsigned state) {
     app.suppressed |= app.held;
     app.guarded = app.owner = app.dirty = 0;
+    app.led_owner = app.led_dirty = 0; led_refresh();
     app.L = NULL; app.used = 0; app.held = 0;
     if (app.arena_base) stock_free(app.arena_base);
     app.arena_base = NULL; app.arena = NULL;
@@ -183,6 +197,14 @@ unsigned runtime_adc_result(unsigned packed) {
 
 unsigned runtime_screen_allowed(const void *frame) {
     return !app.owner || frame == app.frame;
+}
+
+/* The stock LED task performs I/O. Lua only publishes a complete packed buffer
+ * and requests its normal refresh, so no script enters the LED driver. */
+unsigned runtime_led_override(void) {
+    if (!app.led_owner || app.state != ACTIVE) return 0;
+    stock_led_write(app.led_buffers[app.led_active], LED_COUNT * 3);
+    return 1;
 }
 
 static lua_Integer integer(lua_State *L, int arg, int lo, int hi) {
@@ -324,6 +346,64 @@ static int logging(lua_State *L) {
     memcpy(app.result,s,n); app.result[n] = 0; return 0;
 }
 
+static int led_fill(lua_State *L) {
+    unsigned c = color(L,1);
+    for (unsigned i=0;i<LED_COUNT;++i) {
+        app.leds[i*3] = c >> 16; app.leds[i*3+1] = c >> 8; app.leds[i*3+2] = c;
+    }
+    return 0;
+}
+static int led_pixel(lua_State *L) {
+    unsigned i = integer(L,1,0,LED_COUNT-1), c = color(L,2);
+    app.leds[i*3] = c >> 16; app.leds[i*3+1] = c >> 8; app.leds[i*3+2] = c;
+    return 0;
+}
+static int led_frame(lua_State *L) {
+    if (!lua_isnoneornil(L,1)) {
+        size_t n; const char *data = luaL_checklstring(L,1,&n);
+        luaL_argcheck(L,n==sizeof app.leds,1,"expected 36 RGB888 bytes");
+        memcpy(app.leds,data,n);
+    }
+    lua_pushlstring(L,(const char *)app.leds,sizeof app.leds); return 1;
+}
+static int led_enable(lua_State *L) {
+    if (!lua_isnoneornil(L,1)) { app.led_enabled = lua_toboolean(L,1); app.led_dirty = 1; }
+    lua_pushboolean(L,app.led_enabled); return 1;
+}
+static int led_present(lua_State *L) { (void)L; app.led_dirty = 1; return 0; }
+static int led_claim(lua_State *L) {
+    app.led_owner = lua_toboolean(L,1);
+    if (app.led_owner) app.led_dirty = 1;
+    else { app.led_dirty = 0; led_refresh(); }
+    return 0;
+}
+static int stats(lua_State *L) {
+    const char *names[] = {"free_heap","lua_used","lua_peak","frames","callbacks","dropped_keys"};
+    unsigned values[] = {stock_free_heap(),app.used,app.peak,app.frames,app.callbacks,app.dropped};
+    lua_createtable(L,0,6);
+    for (unsigned i=0;i<6;++i) { lua_pushinteger(L,values[i]); lua_setfield(L,-2,names[i]); }
+    return 1;
+}
+
+static void present_outputs(void) {
+    if (app.dirty) {
+        if (runtime_screen(app.frame) == 1) ++app.frames;
+        app.dirty = 0;
+    }
+    if (app.led_dirty && app.state == ACTIVE) {
+        unsigned next = app.led_active ^ 1;
+        for (unsigned i=0;i<LED_COUNT;++i) {
+            /* The device driver consumes GRB; values are raw 8-bit intensities. */
+            app.led_buffers[next][i*3] = app.led_enabled ? app.leds[i*3+1] : 0;
+            app.led_buffers[next][i*3+1] = app.led_enabled ? app.leds[i*3] : 0;
+            app.led_buffers[next][i*3+2] = app.led_enabled ? app.leds[i*3+2] : 0;
+        }
+        __asm__ volatile ("" ::: "memory");
+        app.led_active = next; app.led_owner = 1; app.led_dirty = 0;
+        led_refresh();
+    }
+}
+
 static int newtimer(lua_State *L, unsigned repeating) {
     unsigned ms = integer(L,1,10,86400000); luaL_checktype(L,2,LUA_TFUNCTION);
     for (unsigned i = 0; i < TIMER_COUNT; ++i) if (!app.timers[i].ref) {
@@ -365,11 +445,15 @@ static int setup(lua_State *L) {
     static const luaL_Reg timing[] = {{"millis",ticks},{"calendar",calendar},{NULL,NULL}};
     static const luaL_Reg timers[] = {{"after",after},{"every",every},{"cancel",untimer},{NULL,NULL}};
     static const luaL_Reg keyboard[] = {{"held",held},{NULL,NULL}};
-    static const luaL_Reg device[] = {{"brightness",brightness},{"volume",volume},{NULL,NULL}};
+    static const luaL_Reg device[] = {{"brightness",brightness},{"volume",volume},{"stats",stats},{NULL,NULL}};
+    static const luaL_Reg lights[] = {{"fill",led_fill},{"pixel",led_pixel},{"frame",led_frame},
+        {"enabled",led_enable},{"present",led_present},{"claim",led_claim},{NULL,NULL}};
     static const luaL_Reg control[] = {{"claim",claim},{"stop",stop},{"log",logging},{NULL,NULL}};
     static const luaL_Reg comms[] = {{"send",send},{NULL,NULL}};
     module(L,"display",drawing); module(L,"time",timing); module(L,"timer",timers);
     module(L,"keys",keyboard); module(L,"device",device); module(L,"app",control); module(L,"comms",comms);
+    module(L,"lights",lights);
+    lua_getglobal(L,"lights"); lua_pushinteger(L,LED_COUNT); lua_setfield(L,-2,"count"); lua_pop(L,1);
     lua_pushcfunction(L,brightness); lua_setglobal(L,"brightness");
     lua_pushcfunction(L,volume); lua_setglobal(L,"volume");
     lua_pushcfunction(L,logging); lua_setglobal(L,"print");
@@ -402,6 +486,10 @@ static void scalar(lua_State *L) {
 static void launch(void) {
     app.used = app.peak = app.frames = app.callbacks = app.dropped = app.steps = 0;
     app.outbox_size = 0; app.app_ref = 0; app.last_tick = stock_ticks();
+    app.led_enabled = 1; app.led_dirty = 0; memset(app.leds,0,sizeof app.leds);
+    if (stock_free_heap() < MEMORY_LIMIT + 8 + STOCK_HEAP_RESERVE) {
+        result("insufficient stock heap headroom"); discard(ERROR); return;
+    }
     app.arena_base = stock_alloc(MEMORY_LIMIT + 8);
     if (!app.arena_base) { result("Lua arena allocation failed"); discard(ERROR); return; }
     app.arena = (void *)(((uintptr_t)app.arena_base+7) & ~(uintptr_t)7);
@@ -414,7 +502,7 @@ static void launch(void) {
     lua_pushcfunction(app.L,setup); check_call(app.L,0,0);
     if (luaL_loadbufferx(app.L,app.source,app.source_size,"app","t")) abort_script(lua_tostring(app.L,-1));
     check_call(app.L,0,1);
-    if (!app.resident) { scalar(app.L); discard(DONE); return; }
+    if (!app.resident) { scalar(app.L); present_outputs(); discard(DONE); return; }
     if (!lua_istable(app.L,-1)) abort_script("app must return a callback table");
     app.app_ref = luaL_ref(app.L,LUA_REGISTRYINDEX);
     app.owner = 1;
@@ -431,6 +519,7 @@ static void service(void) {
         unsigned action = app.action; app.action = 0;
         app.state = action == 1 ? PAUSED : ACTIVE;
         app.owner = action == 1 ? 0 : 1; app.last_tick = now;
+        if (app.led_owner) led_refresh();
         app.key_read = app.key_write;
     }
     if (app.state != ACTIVE || (unsigned)(now-app.last_tick) < FRAME_MS) return;
@@ -461,10 +550,7 @@ static void service(void) {
     }
     if (callback("update")) { lua_pushinteger(L,dt); check_call(L,1,0); }
     app.guarded = 0;
-    if (app.dirty) {
-        if (runtime_screen(app.frame) == 1) ++app.frames;
-        app.dirty = 0;
-    }
+    present_outputs();
 }
 
 void runtime_worker(void *unused) {

@@ -9,6 +9,8 @@
 #include "runtime.c"
 unsigned char __data_start[1], __data_end[1], __data_load[1], __bss_start[1], __bss_end[1];
 static unsigned clock_ms, allocations, frames;
+static unsigned free_heap = 100000, led_writes;
+static unsigned char led_context[0x50], last_leds[36];
 static int fail_alloc;
 void *stock_alloc(unsigned n) {
     if (fail_alloc) return NULL;
@@ -17,6 +19,11 @@ void *stock_alloc(unsigned n) {
     return p ? p+4 : NULL;
 }
 void stock_free(void *p) { if (p) { --allocations; free((char *)p-4); } }
+unsigned stock_free_heap(void) { return free_heap; }
+unsigned char *runtime_led_context(void) { return led_context; }
+void stock_led_write(const void *p, unsigned n) {
+    assert(n==sizeof last_leds);memcpy(last_leds,p,n);++led_writes;
+}
 void stock_heap_init(void) {}
 void *stock_task(void (*f)(void *),const char *n,void *a,unsigned w,unsigned p,unsigned i) {
     (void)f;(void)n;(void)a;(void)w;(void)p;(void)i;return (void *)1;
@@ -61,6 +68,9 @@ int main(void) {
     check("return string.upper('ditoo')",DONE,"DITOO");
     check("return tostring(time.calendar().year)",DONE,"2026");
     check("return io or os or package or debug or load or string.dump or string.format",DONE,"nil");
+    check("return device.stats().free_heap",DONE,"100000");
+    free_heap = 65536;
+    check("return 1",ERROR,"insufficient stock heap headroom");free_heap=100000;
     const char *attacks[] = {
         "while true do end",
         "while true do pcall(function() while true do end end) end",
@@ -114,6 +124,26 @@ int main(void) {
     load("return {update=function() while true do pcall(function() while true do end end) end end}",1);
     assert(app.state==ACTIVE);tick();assert(app.state==ERROR && !allocations && !app.owner);
     check("return 42",DONE,"42");
+    unsigned before_frames=frames;
+    check("display.clear(1); display.present(); return 42",DONE,"42");
+    assert(frames==before_frames+1);
+    load("return {init=function() lights.fill(0x123456); lights.pixel(0,0xabcd01); lights.present() end}",1);
+    tick();assert(led_context[0x48] && runtime_led_override());
+    assert(led_writes==1 && last_leds[0]==0xcd && last_leds[1]==0xab && last_leds[2]==1);
+    assert(last_leds[3]==0x34 && last_leds[4]==0x12 && last_leds[5]==0x56);
+    app.action=1;tick();assert(!runtime_led_override());
+    app.action=2;tick();assert(runtime_led_override());
+    app.cancel=1;service();assert(!runtime_led_override() && led_context[0x48]);
+    load("return {init=function() lights.fill(0xffffff); lights.enabled(false) end}",1);
+    tick();assert(runtime_led_override());
+    for (unsigned i=0;i<sizeof last_leds;++i) assert(last_leds[i]==0);
+    app.cancel=1;service();
+    load("return {init=function() lights.fill(0x080008); lights.present() end,"
+         "message=function() while true do end end}",1);
+    tick();assert(runtime_led_override());
+    memcpy(app.message,"crash",5);app.message_size=5;
+    tick();assert(app.state==ERROR && !allocations && !runtime_led_override());
+    assert(led_context[0x48]);
     /* Cancellation remains independent of callback dispatch. */
     load("return {}",1);app.cancel=1;service();assert(app.state==DONE && !allocations);
     /* Corrupted upload sequencing cannot start partial or oversized programs. */

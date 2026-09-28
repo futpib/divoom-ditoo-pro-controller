@@ -59,3 +59,9 @@ events, timers, messages and guards that cannot be caught by Lua protected calls
 Build it with `scripts/build-lua-app-runtime.py`; its offline report is adjacent
 and compact device results are in `lua-app-evidence/verification.json`. Full
 working logs stay in ignored `firmware/runs/`.
+
+`306014-lua.MVA` adds independently controlled keyboard RGB LEDs, native heap
+telemetry and a launch headroom check. It also flushes one-shot display presents.
+The current `scripts/build-lua-app-runtime.py` builds this image; use source at
+commit `9a9d89c` for the earlier 306013 image. Its device evidence is in
+`lua-io-evidence/verification.json`.

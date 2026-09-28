@@ -13,6 +13,7 @@ use std::{error::Error, time::Duration};
 pub const VERSION: u32 = 306012;
 pub const SOURCE_LIMIT: usize = 2048;
 pub const APP_VERSION: u32 = 306013;
+pub const IO_VERSION: u32 = 306014;
 pub const APP_SOURCE_LIMIT: usize = 8192;
 
 #[derive(Debug, Serialize)]
@@ -193,9 +194,10 @@ async fn execute(
     return Err("Invalid firmware version reply; no Lua command sent".into());
   }
   let installed = u32::from_le_bytes(version.data[1..5].try_into()?);
-  if !matches!(installed, VERSION | APP_VERSION) {
+  if !matches!(installed, VERSION | APP_VERSION | IO_VERSION) {
     return Err(
-      format!("Lua requires firmware {VERSION} or {APP_VERSION}; no program sent").into(),
+      format!("Lua requires firmware {VERSION}, {APP_VERSION} or {IO_VERSION}; no program sent")
+        .into(),
     );
   }
   if installed == VERSION {
