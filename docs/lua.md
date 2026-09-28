@@ -61,6 +61,104 @@ boundary. It shares firmware privileges. Recovery from a nonbooting image remain
 unproven; the prior version-gate round trip proves recovery from a working custom
 image only.
 
+## Target: replace the built-in applications
+
+The intended endpoint is an on-device application runtime capable of replacing
+all device-side built-in features: clocks, games, animations, timers, alarms,
+scoreboards, lighting, audio tools and custom applications. The current 306012
+runtime is a proof of bounded execution and two device bindings; it does not
+meet that endpoint. PC/phone editors and cloud services are outside this runtime.
+
+Lua should own application behavior while native firmware supplies FreeRTOS,
+Bluetooth/USB, key scanning, display refresh, audio processing and storage.
+The interpreter supports host-defined C bindings and resumable execution; see
+the [Lua embedding interface](https://www.lua.org/manual/5.4/manual.html#4).
+The work is in device integration, application lifecycle and resource management.
+A wrapper that merely launches a built-in game would not establish that a new
+game can be implemented in Lua.
+
+The following is a target capability map, **not an implemented API contract**:
+
+| # | Capability | Current Lua | Required for the target |
+| --- | --- | --- | --- |
+| 1 | Drawing and animations | Brightness only | Own a 16x16 framebuffer; pixels, clear, lines, rectangles, text/fonts, sprites, palette/frame operations and present. |
+| 2 | Physical controls | None | Key down/up, held state, combinations and repeat/hold events; consume or pass through events deliberately. |
+| 3 | Time and scheduling | None | Monotonic time, RTC/calendar reads, periodic callbacks, timers, alarms and appropriate power/wake events. |
+| 4 | App lifetime | Fresh state for each short run | Keep state between events; start, suspend, resume, stop, replace and switch apps; isolate script errors and reclaim resources. |
+| 5 | Keyboard lighting | None | Set/read available lighting controls and run custom effects at the granularity the hardware exposes; per-key RGB is not established. |
+| 6 | Audio | Volume read/write | Playback/track controls, samples or tones, recording controls and microphone/level/spectrum events for games, mixers, noise meters and visualizers. |
+| 7 | Persistence and assets | RAM-only source | Install/list/delete apps; load assets; save settings/high scores; select a boot app and start without a host. |
+| 8 | Communications | Upload source, poll result, cancel via Bluetooth | App messages, remote input and data feeds; report errors/state and reload programs without firmware replacement. USB script upload is not currently implemented. |
+| 9 | Lua libraries | Only type/tostring plus two device functions | Selected base, math, string, table, coroutine and text helpers; package-scoped modules and logging. |
+| 10 | Stock settings and modes | Volume and brightness | Bind confirmed device controls and queries, and define precedence between apps, alarms, notifications, stock modes and recovery controls. |
+
+### Execution and ownership
+
+The current 20,000-instruction limit applies to the entire program. Hitting it
+produces an error and closes the Lua state. A long-running app instead needs
+bounded work per callback or resumable time slice, with a persistent state and
+event queue. The scheduler must yield to Bluetooth/audio tasks, bound event
+backlog and avoid blocking native calls. Increasing the lifetime instruction
+limit alone does not implement an application scheduler.
+
+A custom app must be able to claim display/input so stock clock/game tasks do
+not redraw its screen or also act on its keys. Application stop/error must
+release that ownership. An intentional recovery key action must remain usable
+independently of Lua, including for a broken boot app. Timers and native callbacks
+must be unregistered before unloading a state. RTC wake and background alarms
+need native support when the Lua task is not running.
+
+Useful acceptance cases, in dependency order:
+
+1. Upload a custom clock and a game such as Snake. Each uses Lua drawing and
+   timing; the game receives real physical key events. Switch between them
+   without flashing, retain state between ticks, and continue with Bluetooth
+   disconnected. Verify that stock redraw/key actions do not interfere.
+2. Install both apps and their assets into verified storage. Select a boot app,
+   power-cycle, recover from a deliberately broken boot script, and update an
+   app without replacing firmware. Preserve stock settings and existing files.
+3. Cover the remaining built-in categories using the same primitives: timers,
+   stopwatch, scoreboard, alarm/reminder UI, animations, keyboard effects,
+   audio controls, mixer/sound tools, recording and reactive visualizers.
+   Establish each native binding on this model rather than assuming that an
+   Android protocol symbol or a related SDK example proves it works.
+4. Run sustained clock/game/audio workloads; measure frame timing, input latency,
+   free heap, allocation failures and cancellation/reload behavior. Keep the
+   communication and recovery paths usable throughout.
+
+### Hardware and investigation limits
+
+A packed RGB888 16x16 framebuffer is 768 bytes (1,536 for two buffers), so the
+screen itself is inexpensive. Lua table representations cost more; native packed
+buffers and drawing/audio helpers should do bulk work. Game performance and a
+sustainable frame rate have not yet been measured.
+
+The 2 KiB source, 32 KiB Lua allocation and lifetime instruction limits are
+choices in this runtime, not language limits. Larger chunked program uploads,
+assets loaded on demand and a measured memory budget are needed. The previous
+104,384-byte free-heap measurement predates the full runtime and is not a promise
+of spare app RAM during Bluetooth audio. Worker stacks, native allocations and
+allocator overhead also consume heap.
+
+The existing native image is tight too. Its built ELF contains 119,784 bytes of
+runtime text/read-only data and 720 bytes of initialized data. The current linker
+layout has 27,672 bytes before the data-load address and 7,472 bytes after that
+data before `0x1f0000`: about 34.3 KiB combined, in separate regions. Opening
+libraries and adding native APIs must be budgeted; expansion may require code
+size work or a revised layout. The stock user-data region is occupied until
+proven otherwise and must not be treated as free app storage. TF/SD storage is
+an avenue to investigate, not an implemented persistence backend.
+
+The exact Ditoo framebuffer/present, key dispatch, RTC, audio and filesystem
+entry points still need tracing, ABI/threading checks and hardware validation.
+The related SDK is useful for orientation but is not the Divoom application
+source. Clocks and small games are plausible targets; complete built-in parity
+is a goal, not a verified property of this firmware.
+
+Weather, notifications and internet radio still need their external data/source
+provider. A custom local interface can use data delivered by a phone or PC;
+adding Lua does not itself add internet connectivity or missing hardware.
+
 ## Reproduce
 
 The native build uses `nds32le-elf-gcc` 15.2.0, binutils 2.45.1, and newlib
