@@ -35,9 +35,13 @@ pub struct Args {
   #[arg(long, global = true)]
   device: Option<String>,
 
-  /// Transport; auto tries RFCOMM then BLE. USB supports firmware-update only
+  /// Transport; auto tries RFCOMM then BLE. USB control needs firmware 306019+
   #[arg(long, value_enum, default_value = "auto", global = true)]
   transport: divoom_ditoo_pro_controller::Transport,
+
+  /// USB physical port (e.g. 1-6); automatic when one Ditoo is attached
+  #[arg(long, global = true)]
+  usb_port: Option<String>,
 
   #[command(subcommand)]
   command: Command
@@ -62,8 +66,6 @@ enum Command {
     #[arg(long)] reflash: bool,
     /// Restore pinned stock 306007 from a supported experimental firmware
     #[arg(long)] restore_stock: bool,
-    /// Physical USB port, e.g. 1-6 or 1-2.3; required for bootloader recovery
-    #[arg(long)] usb_port: Option<String>,
     /// Number of USB reports in flight within each verified block
     #[arg(long, default_value_t = 16, value_parser = clap::value_parser!(u8).range(1..=16))]
     usb_queue_depth: u8,
@@ -85,10 +87,10 @@ enum Command {
   #[command(flatten)]
   Device(control_cli::DeviceCommand),
 
-  /// Scan for available bluetooth devices
+  /// Scan for Bluetooth devices or list attached USB Ditoos
   Scan,
 
-  /// List paired Divoom Ditoo Pro devices
+  /// List paired Bluetooth Ditoos or attached USB Ditoos
   Devices,
 
   /// Convert between Divoom and GIF formats
@@ -374,6 +376,10 @@ fn resolve_font(font: Option<&str>) -> Result<PathBuf, Box<dyn Error>> {
 }
 
 async fn resolve_device(device: Option<String>) -> Result<Address, Box<dyn Error>> {
+  if matches!(divoom_ditoo_pro_controller::selected_transport(), divoom_ditoo_pro_controller::Transport::Usb) {
+    // Library APIs retain the address argument; USB uses only the physical port.
+    return Ok(Address::new([0; 6]));
+  }
   match device {
     Some(addr) => addr
       .parse()
@@ -405,10 +411,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   let args = Args::parse();
 
-  divoom_ditoo_pro_controller::with_transport(args.transport, run(args)).await
+  divoom_ditoo_pro_controller::with_usb_port(args.usb_port.clone(),
+    divoom_ditoo_pro_controller::with_transport(args.transport, run(args))).await
 }
 
 async fn run(args: Args) -> Result<(), Box<dyn Error>> {
+  if args.usb_port.is_some() && !matches!(args.transport, divoom_ditoo_pro_controller::Transport::Usb) {
+    return Err("--usb-port requires --transport usb".into());
+  }
   match args.command {
     Command::Lua { action } => {
       use divoom_ditoo_pro_controller::lua::{self, Action};
@@ -431,7 +441,8 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
       let report = divoom_ditoo_pro_controller::firmware_decode::decode(&file, output.as_deref())?;
       println!("{}", serde_json::to_string_pretty(&report)?);
     }
-    Command::FirmwareUpdate { file, reflash, restore_stock, usb_port, usb_queue_depth, dry_run } => {
+    Command::FirmwareUpdate { file, reflash, restore_stock, usb_queue_depth, dry_run } => {
+      let usb_port = args.usb_port;
       let image = divoom_ditoo_pro_controller::firmware::Image::load(&file)?;
       if matches!(args.transport, divoom_ditoo_pro_controller::Transport::Usb) {
         let metadata = divoom_ditoo_pro_controller::usb_firmware::describe(&image, reflash)?;
@@ -455,6 +466,9 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
     Command::Ids { category, json } => ids::show(category.as_deref(), json)?,
     Command::Raw { action } => control_cli::run(args.device, action).await?,
     Command::Device(action) => control_cli::run_requests(args.device, vec![action.request()?], action.dry_run()).await?,
+    Command::Scan | Command::Devices if matches!(args.transport, divoom_ditoo_pro_controller::Transport::Usb) => {
+      println!("{}", divoom_ditoo_pro_controller::usb_firmware::devices().await?);
+    }
     Command::Scan => scan_devices().await?,
     Command::Devices => list_paired_devices().await?,
     Command::Convert { convert } => match convert {
@@ -682,7 +696,8 @@ mod cli_tests {
     let args = Args::try_parse_from(["divoom", "firmware-update", "firmware/306007.MVA", "--transport", "usb", "--usb-port", "1-2.3", "--reflash", "--dry-run"])?;
     assert!(args.device.is_none());
     assert!(matches!(args.transport, divoom_ditoo_pro_controller::Transport::Usb));
-    assert!(matches!(args.command, Command::FirmwareUpdate { usb_port: Some(port), usb_queue_depth: 16, reflash: true, dry_run: true, .. } if port == "1-2.3"));
+    assert_eq!(args.usb_port.as_deref(), Some("1-2.3"));
+    assert!(matches!(args.command, Command::FirmwareUpdate { usb_queue_depth: 16, reflash: true, dry_run: true, .. }));
     for depth in ["0", "17"] {
       assert!(Args::try_parse_from(["divoom", "firmware-update", "firmware/306007.MVA", "--usb-queue-depth", depth]).is_err());
     }

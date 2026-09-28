@@ -1,0 +1,757 @@
+{
+  "firmware": 306019,
+  "sha256": "ae6653954ca95cb459d5a3666670fe8e6af9f9fb90cda94995ed9e67ad0c6435",
+  "rebuild_identical": true,
+  "flash": {
+    "application_reenumerated": true,
+    "ble_version_check_requested": false,
+    "blocks_verified": 479,
+    "erase_transfer_verify_seconds": 11.117423116,
+    "event": "usb_complete",
+    "total_usb_seconds": 18.813450848,
+    "usb_port": "1-6",
+    "version": 306019
+  },
+  "live_version": {
+    "event": "verified",
+    "firmware_versions": [
+      306019
+    ],
+    "transport": "usb",
+    "verification_transport": "usb"
+  },
+  "older_firmware_probe": {
+    "firmware": 306018,
+    "result": "read-only capability rejection; no output report sent"
+  },
+  "lua_guard_checks": [
+    {
+      "name": "integer",
+      "source": "return 6*7",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "float",
+      "source": "return 7/2",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 2,
+        "result": "3.5",
+        "peak_memory_bytes": 14200,
+        "steps": 411
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "libraries",
+      "source": "return string.upper('ditoo')..math.floor(math.sqrt(81))",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 2,
+        "result": "DITOO9",
+        "peak_memory_bytes": 14384,
+        "steps": 442
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "loop",
+      "source": "while true do end",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "instruction budget exceeded",
+        "peak_memory_bytes": 14264,
+        "steps": 100000
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "pcall",
+      "source": "while true do pcall(function() while true do end end) end",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "instruction budget exceeded",
+        "peak_memory_bytes": 14384,
+        "steps": 100000
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "coroutine",
+      "source": "pcall(function() coroutine.wrap(function() while true do end end)() end)",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "instruction budget exceeded",
+        "peak_memory_bytes": 15288,
+        "steps": 100000
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "nested-coroutine",
+      "source": "while true do coroutine.resume(coroutine.create(function() while true do end end)) end",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "instruction budget exceeded",
+        "peak_memory_bytes": 14912,
+        "steps": 100000
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "finalizer",
+      "source": "while true do local t=setmetatable({}, {__gc=function() while true do end end}) end",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "instruction budget exceeded",
+        "peak_memory_bytes": 30040,
+        "steps": 100000
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "close",
+      "source": "pcall(function() local x <close> = setmetatable({}, {__close=function() while true do end end}) end)",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "instruction budget exceeded",
+        "peak_memory_bytes": 15080,
+        "steps": 100000
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "tostring",
+      "source": "tostring(setmetatable({}, {__tostring=function() while true do end end}))",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "instruction budget exceeded",
+        "peak_memory_bytes": 14568,
+        "steps": 100000
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "sort",
+      "source": "table.sort({3,2,1},function() while true do end end)",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "instruction budget exceeded",
+        "peak_memory_bytes": 14472,
+        "steps": 100000
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "gsub",
+      "source": "('abc'):gsub('.',function() while true do end end)",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "instruction budget exceeded",
+        "peak_memory_bytes": 14520,
+        "steps": 100000
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "pattern",
+      "source": "string.match(string.rep('a',100),string.rep('a*',20)..'b')",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "callback time budget exceeded",
+        "peak_memory_bytes": 14656,
+        "steps": 95872
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "oom",
+      "source": "local t={}; while true do t[#t+1]=string.rep('x',100) end",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "not enough memory",
+        "peak_memory_bytes": 39552,
+        "steps": 2276
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "caught-oom",
+      "source": "while true do pcall(string.rep,'a',2147483647) end",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "callback time budget exceeded",
+        "peak_memory_bytes": 40664,
+        "steps": 14208
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "recursion",
+      "source": "local function f() return 1+f() end; return f()",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "not enough memory",
+        "peak_memory_bytes": 40208,
+        "steps": 2106
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "native-call-limit",
+      "source": "while true do volume() end",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "device call budget exceeded",
+        "peak_memory_bytes": 14376,
+        "steps": 554
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "syntax",
+      "source": "return function (",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "[string \"app\"]:1: <name> or '...' expected near <eof>",
+        "peak_memory_bytes": 14408,
+        "steps": 403
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "binary",
+      "source": "\u001bLua",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 3,
+        "result": "attempt to load a binary chunk (mode is 't')",
+        "peak_memory_bytes": 13864,
+        "steps": 388
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "capabilities",
+      "source": "return io or os or package or debug or load or string.dump or string.format",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 2,
+        "result": "nil",
+        "peak_memory_bytes": 14712,
+        "steps": 452
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "stock-heap-headroom",
+      "source": "return device.stats().free_heap >= 24576",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 2,
+        "result": "true",
+        "peak_memory_bytes": 14464,
+        "steps": 440
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "led-frame",
+      "source": "lights.fill(0x123456); lights.pixel(0,0xffffff); return #lights.frame()..':'..lights.count",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 2,
+        "result": "36:12",
+        "peak_memory_bytes": 14608,
+        "steps": 453
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "one-shot-present",
+      "source": "display.clear(0); display.present(); return 42",
+      "passed": true,
+      "execution": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14288,
+        "steps": 425
+      },
+      "recovery": {
+        "passed": true,
+        "state": 2,
+        "result": "42",
+        "peak_memory_bytes": 14152,
+        "steps": 407
+      }
+    },
+    {
+      "name": "resident-start",
+      "passed": true,
+      "state": 4,
+      "result": "",
+      "memory_bytes": 16128,
+      "frames": 6,
+      "callbacks": 7
+    },
+    {
+      "name": "incoming-message",
+      "passed": true,
+      "state": 4,
+      "result": "ping",
+      "memory_bytes": 16208,
+      "frames": 13,
+      "callbacks": 15
+    },
+    {
+      "name": "outgoing-message",
+      "passed": true,
+      "state": 4,
+      "result": "ping",
+      "memory_bytes": 16208,
+      "frames": 13,
+      "callbacks": 15
+    },
+    {
+      "name": "outgoing-acknowledged",
+      "passed": true,
+      "state": 4,
+      "result": "",
+      "memory_bytes": 16208,
+      "frames": 13,
+      "callbacks": 15
+    },
+    {
+      "name": "paused",
+      "passed": true,
+      "state": 5,
+      "result": "ping",
+      "memory_bytes": 16208,
+      "frames": 13,
+      "callbacks": 15
+    },
+    {
+      "name": "resumed",
+      "passed": true,
+      "state": 4,
+      "result": "ping",
+      "memory_bytes": 16208,
+      "frames": 19,
+      "callbacks": 21
+    },
+    {
+      "name": "stopped",
+      "passed": true,
+      "state": 2,
+      "result": "stopped",
+      "memory_bytes": 0,
+      "frames": 19,
+      "callbacks": 21
+    },
+    {
+      "name": "update-loop",
+      "passed": true,
+      "state": 3,
+      "result": "instruction budget exceeded",
+      "memory_bytes": 0,
+      "frames": 0,
+      "callbacks": 1
+    },
+    {
+      "name": "update-loop-recovery",
+      "passed": true,
+      "state": 4,
+      "result": "",
+      "memory_bytes": 14256,
+      "frames": 0,
+      "callbacks": 0
+    },
+    {
+      "name": "timer-loop",
+      "passed": true,
+      "state": 3,
+      "result": "instruction budget exceeded",
+      "memory_bytes": 0,
+      "frames": 0,
+      "callbacks": 1
+    },
+    {
+      "name": "timer-loop-recovery",
+      "passed": true,
+      "state": 4,
+      "result": "",
+      "memory_bytes": 14256,
+      "frames": 0,
+      "callbacks": 0
+    },
+    {
+      "name": "message-loop",
+      "passed": true,
+      "state": 3,
+      "result": "instruction budget exceeded",
+      "memory_bytes": 0,
+      "frames": 0,
+      "callbacks": 1
+    },
+    {
+      "name": "message-loop-recovery",
+      "passed": true,
+      "state": 4,
+      "result": "",
+      "memory_bytes": 14256,
+      "frames": 0,
+      "callbacks": 0
+    },
+    {
+      "name": "full-8192-byte-upload",
+      "passed": true,
+      "state": 4,
+      "result": "",
+      "memory_bytes": 14256,
+      "frames": 0,
+      "callbacks": 0
+    },
+    {
+      "name": "led-resident",
+      "passed": true,
+      "state": 4,
+      "result": "",
+      "memory_bytes": 14944,
+      "frames": 0,
+      "callbacks": 1
+    },
+    {
+      "name": "led-paused",
+      "passed": true,
+      "state": 5,
+      "result": "",
+      "memory_bytes": 14944,
+      "frames": 0,
+      "callbacks": 1
+    },
+    {
+      "name": "led-resumed",
+      "passed": true,
+      "state": 4,
+      "result": "",
+      "memory_bytes": 14944,
+      "frames": 0,
+      "callbacks": 1
+    },
+    {
+      "name": "led-error-reclaimed",
+      "passed": true,
+      "state": 3,
+      "result": "instruction budget exceeded",
+      "memory_bytes": 0,
+      "frames": 0,
+      "callbacks": 2
+    },
+    {
+      "name": "led-error-recovery",
+      "passed": true,
+      "state": 4,
+      "result": "",
+      "memory_bytes": 14256,
+      "frames": 0,
+      "callbacks": 0
+    },
+    {
+      "name": "final-stop",
+      "passed": true,
+      "state": 2,
+      "result": "stopped",
+      "memory_bytes": 0,
+      "frames": 0,
+      "callbacks": 0
+    }
+  ],
+  "lua_guard_count": 43,
+  "stock_version_after_lua_guards": true,
+  "usb_control_checks": [
+    {
+      "name": "running-version",
+      "passed": true
+    },
+    {
+      "name": "read-alarms",
+      "passed": true
+    },
+    {
+      "name": "read-playback-status",
+      "passed": true
+    },
+    {
+      "name": "read-sd-status",
+      "passed": true
+    },
+    {
+      "name": "read-setting:save-volume",
+      "passed": true
+    },
+    {
+      "name": "read-setting:auto-connect",
+      "passed": true
+    },
+    {
+      "name": "read-setting:idle-power-off",
+      "passed": true
+    },
+    {
+      "name": "read-setting:startup-channel",
+      "passed": true
+    },
+    {
+      "name": "volume-roundtrip",
+      "passed": true
+    },
+    {
+      "name": "brightness-roundtrip",
+      "passed": true
+    },
+    {
+      "name": "setting-roundtrip",
+      "passed": true
+    },
+    {
+      "name": "scoreboard-query",
+      "passed": true,
+      "data_hex": "010000000000",
+      "scores_applied": false
+    },
+    {
+      "name": "game-and-keys-dispatched",
+      "passed": true
+    },
+    {
+      "name": "image-and-animation-dispatched",
+      "passed": true
+    },
+    {
+      "name": "fragmented-response",
+      "passed": true
+    },
+    {
+      "name": "maximum-4096-byte-native-command",
+      "passed": true
+    },
+    {
+      "name": "device-confirms-no-ble-connection",
+      "passed": true
+    },
+    {
+      "name": "session-survives-long-script-delay",
+      "passed": true
+    },
+    {
+      "name": "asynchronous-native-notification",
+      "passed": true
+    }
+  ],
+  "host_transport_trace": {
+    "tool": "strace -f -e trace=connect",
+    "connect_syscalls": 0,
+    "bluetooth_or_dbus_connections": 0
+  },
+  "bluetooth_regression": {
+    "transport": "ble",
+    "scoreboard_set_ack": true,
+    "scoreboard_query_hex": "010000000000",
+    "same_as_usb": true
+  },
+  "local_validation": {
+    "rust_tests": 55,
+    "clippy_no_default_features": true,
+    "native_asan_ubsan": true,
+    "full_feature_release_build": true
+  },
+  "limitations": [
+    "Display dispatch was acknowledged; no optical screen comparison.",
+    "Native scoreboard scores remained zero over both USB and BLE.",
+    "Stock AVRCP-only bond persistence issue is documented but not changed by USB firmware.",
+    "USB control does not establish whether the TV obeys AVRCP commands."
+  ],
+  "restored_app": {
+    "script": "examples/lua/tv-remote.lua",
+    "state": "active",
+    "status": "peer=0C:CD:B4:D0:0C:26 media=2 audio=0 BLE=false",
+    "usb_control": true
+  }
+}

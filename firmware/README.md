@@ -80,6 +80,13 @@ See the [peripheral API](../docs/lua-peripherals.md) and
 `lua-peripherals-evidence/verification.json`. Raw transport logs remain ignored.
 
 `306017-lua.MVA` adds bounded native AVRCP connections and explicit play/pause
-commands for Lua. The current `scripts/build-lua-app-runtime.py` builds this image.
+commands for Lua. Build it from source at commit `95d7f6e`.
 See the [Bluetooth API and TV example](../docs/lua-bluetooth.md) and
 `lua-bluetooth-evidence/verification.json` for verified behavior and limitations.
+
+`306018-lua.MVA` adds the queued AVRCP mute toggle. Build it from `ac82bb9`;
+see `lua-mute-evidence/verification.json`.
+
+`306019-lua.MVA` adds full USB native protocol control and Lua upload/messages.
+The current `scripts/build-lua-app-runtime.py` builds this image. See
+[USB control](../docs/usb-control.md) and `usb-control-evidence/verification.json`.

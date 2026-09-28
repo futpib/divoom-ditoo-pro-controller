@@ -16,11 +16,21 @@ pub enum Transport {
   Auto,
   Rfcomm,
   Ble,
-  /// USB bootloader (firmware-update only)
+  /// USB control (custom firmware 306019+) and bootloader updates
   Usb,
 }
 
 tokio::task_local! { static TRANSPORT: Transport; }
+tokio::task_local! { static USB_PORT: Option<String>; }
+
+pub fn selected_transport() -> Transport {
+  TRANSPORT.try_with(|t| *t).unwrap_or_default()
+}
+
+/// Select the physical USB port without requiring a Bluetooth address.
+pub async fn with_usb_port<F: Future>(port: Option<String>, future: F) -> F::Output {
+  USB_PORT.scope(port, future).await
+}
 
 /// Select a transport for controller calls within this future.
 pub async fn with_transport<F: Future>(transport: Transport, future: F) -> F::Output {
@@ -30,13 +40,15 @@ pub async fn with_transport<F: Future>(transport: Transport, future: F) -> F::Ou
 pub(crate) enum DeviceConnection {
   Classic(ClassicConnection),
   Ble(BleConnection),
+  Usb(crate::usb_control::UsbConnection),
 }
 
 impl DeviceConnection {
   pub async fn connect(address: Address) -> Result<Self, Box<dyn Error>> {
-    let transport = TRANSPORT.try_with(|t| *t).unwrap_or_default();
+    let transport = selected_transport();
     if matches!(transport, Transport::Usb) {
-      return Err("USB transport supports firmware-update only; use BLE or RFCOMM for device commands".into());
+      let port = USB_PORT.try_with(Clone::clone).unwrap_or_default();
+      return Ok(Self::Usb(crate::usb_control::UsbConnection::connect(port.as_deref()).await?));
     }
     if !matches!(transport, Transport::Ble) {
       match ClassicConnection::connect(address).await {
@@ -72,6 +84,7 @@ impl DeviceConnection {
     match self {
       Self::Classic(c) => c.fire_and_forget(packet).await,
       Self::Ble(c) => c.send(packet, None).await.map(|_| ()),
+      Self::Usb(c) => c.send(packet, false).await,
     }
   }
 
@@ -80,6 +93,7 @@ impl DeviceConnection {
     match self {
       Self::Classic(c) => c.fire_and_forget(packet).await,
       Self::Ble(c) => c.send_inner(packet, None, true).await.map(|_| ()),
+      Self::Usb(c) => c.send(packet, true).await,
     }
   }
 
@@ -95,6 +109,7 @@ impl DeviceConnection {
   ) -> Result<Response, Box<dyn Error>> {
     match self {
       Self::Classic(c) => c.exchange(packet, expected, prefix).await,
+      Self::Usb(c) => c.exchange(packet, expected, prefix).await,
       Self::Ble(c) => c
         .send(packet, Some((expected, prefix)))
         .await?
@@ -106,10 +121,12 @@ impl DeviceConnection {
     match self {
       Self::Classic(_) => "rfcomm",
       Self::Ble(_) => "ble",
+      Self::Usb(_) => "usb",
     }
   }
 
   pub async fn receive(&mut self, timeout: Duration) -> Result<Option<Response>, Box<dyn Error>> {
+    if let Self::Usb(c) = self { return c.receive(timeout).await; }
     if let Self::Ble(c) = self {
       if let Some(reply) = c.pending.pop_front() {
         return Ok(Some(reply));
@@ -118,6 +135,7 @@ impl DeviceConnection {
     let rx = match self {
       Self::Classic(c) => &mut c.response_rx,
       Self::Ble(c) => &mut c.responses,
+      Self::Usb(_) => unreachable!("USB response handled above"),
     };
     match tokio::time::timeout(timeout, rx.recv()).await {
       Ok(Some(reply)) => Ok(Some(reply)),
@@ -130,7 +148,14 @@ impl DeviceConnection {
     match self {
       Self::Classic(c) => c.disconnect().await,
       Self::Ble(mut c) => c.device.release().await,
+      Self::Usb(c) => c.disconnect().await,
     }
+  }
+
+  pub async fn delay(&mut self, duration: Duration) -> Result<(), Box<dyn Error>> {
+    if let Self::Usb(c) = self { c.delay(duration).await?; }
+    else { tokio::time::sleep(duration).await; }
+    Ok(())
   }
 }
 

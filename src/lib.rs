@@ -32,7 +32,8 @@ pub mod firmware;
 pub mod usb_firmware;
 pub mod firmware_decode;
 pub mod lua;
-pub use transport::{Transport, with_transport};
+pub use transport::{Transport, selected_transport, with_transport, with_usb_port};
+mod usb_control;
 use transport::DeviceConnection;
 
 use crate::protocol::alarm::Alarm;

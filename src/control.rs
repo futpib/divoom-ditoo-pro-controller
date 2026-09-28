@@ -186,10 +186,10 @@ impl Session {
         break;
       }
     }
-    tokio::time::sleep(request.delay).await;
+    self.connection.delay(request.delay).await?;
     Ok(
       json!({"transport":self.connection.transport_name(),"request":request.describe(),"response":response,"events":events,
-      "delivery":if response.is_some() {"command_reply"} else if self.connection.transport_name()=="ble" {"transport_ack"} else {"written"}}),
+      "delivery":if response.is_some() {"command_reply"} else if matches!(self.connection.transport_name(), "ble" | "usb") {"transport_ack"} else {"written"}}),
     )
   }
 

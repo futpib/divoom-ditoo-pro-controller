@@ -2,10 +2,11 @@
 
 Firmware 306017 exposes the stock classic Bluetooth AVRCP connection API to Lua.
 306018 adds a mute toggle through the Bluetooth task queue.
-The computer still uses the existing BLE control service. This does not add HID,
+The computer can use the existing BLE control service or, with 306019,
+[USB control](usb-control.md) while leaving Bluetooth to the remote peer. This does not add HID,
 Bluetooth scanning, arbitrary sockets, custom GATT services or a general pairing
-agent. The native stack handles link security and stores bonds when pairing
-succeeds; a remote device may require confirmation.
+agent. The native stack handles link security; its stock bond persistence has an
+A2DP-dependent limitation described below; a remote device may require confirmation.
 
 | # | API | Behavior |
 | --- | --- | --- |
@@ -180,3 +181,19 @@ Both links terminate on the computer; that test alone does not establish a
 working TV remote. For independent transport confirmation, capture with
 `sudo btmon -i 0 -w firmware/runs/concurrency.btsnoop` and check the LE-ACL and
 BR-ACL handles. Raw traces remain ignored.
+
+## Pairing persistence investigation
+
+Bluetooth can reuse a saved bond without another pairing prompt. The stock
+306007 routine at `0x7e4d4` writes dirty pairing records only after **both A2DP
+and AVRCP reach connected state**: A2DP gate `0x7e4e0`, AVRCP gate `0x7e4ec`,
+dirty flag `stock_bt_manager[0]` at `0x7e510`, save call `0x7d570` at `0x7e52a`.
+This matches [`BtLinkStateConnect` in the related SDK](https://github.com/leadercxn/bp1048_sdk_v0.1.12/blob/8105bd864b04995d81c9f9ae77cb158259f39015/MVsB1_Base_SDK/middleware/bluetooth/src/bt_manager.c).
+The exact stock instructions are retained in [the disassembly](firmware-analysis/306007-usb-control.nds32.S).
+Our TV experiments had AVRCP state 2 and A2DP state 0. A new key retained only
+in RAM can therefore be lost at reboot/firmware installation, explaining the
+repeated-pairing symptom without implying that AVRCP inherently requires it.
+This is a source-backed explanation; persistent TV reconnection has not yet
+been verified. The USB bridge preserves flash partitions and does not clear
+bonds. A separate fix must persist authenticated AVRCP-only bonds without
+pretending an A2DP connection exists or writing on every reconnect.

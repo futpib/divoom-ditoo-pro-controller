@@ -1,5 +1,12 @@
 ENTRY(runtime_command)
 stock_dispatch_end = 0x3b30a;
+stock_dispatch_command = 0x3998c;
+stock_response_resume = 0x38f04;
+stock_control_connected = 0x39048;
+stock_usb_receive = 0x2b240;
+stock_usb_send = 0x8b6d6;
+stock_usb_setup = 0x2000d2f8 - 35480;
+stock_command_context = 0x2000d2f8 - 34060;
 stock_version = 0x4b824;
 stock_set_version = 0x4b858;
 stock_reply = 0x3901c;
@@ -75,6 +82,10 @@ SECTIONS {
     .key_hook 0x2d490 : { KEEP(*(.key_hook)) }
     .led_hook 0x7580c : { KEEP(*(.led_hook)) }
     .native_hook 0x47838 : { KEEP(*(.native_hook)) }
+    .usb_receive_hook 0x7a27e : { KEEP(*(.usb_receive_hook)) }
+    .usb_send_hook 0x7a29c : { KEEP(*(.usb_send_hook)) }
+    .usb_response_hook 0x38f00 : { KEEP(*(.usb_response_hook)) }
+    .usb_connected_hook 0x387b2 : { KEEP(*(.usb_connected_hook)) }
     .bt_command_hook 0x138c76 : { KEEP(*(.bt_command_hook)) }
     .indicator_hook 0x2d6e8 : { KEEP(*(.indicator_hook)) }
     .noise_hook 0x72192 : { KEEP(*(.noise_hook)) }
@@ -104,6 +115,10 @@ ASSERT(SIZEOF(.key_hook) == 4, "key hook size")
 ASSERT(SIZEOF(.led_hook) == 4, "LED hook size")
 
 ASSERT(SIZEOF(.native_hook) == 4, "native hook size")
+ASSERT(SIZEOF(.usb_receive_hook) == 4, "USB receive hook size")
+ASSERT(SIZEOF(.usb_send_hook) == 4, "USB send hook size")
+ASSERT(SIZEOF(.usb_response_hook) == 4, "USB response hook size")
+ASSERT(SIZEOF(.usb_connected_hook) == 4, "USB notification hook size")
 ASSERT(SIZEOF(.bt_command_hook) == 4, "Bluetooth command hook size")
 ASSERT(SIZEOF(.indicator_hook) == 4, "indicator hook size")
 ASSERT(SIZEOF(.noise_hook) == 4, "noise hook size")

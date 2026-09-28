@@ -1,5 +1,8 @@
 # USB on Ditoo Pro
 
+Firmware 306019 supports [all native controller and Lua commands over USB](usb-control.md),
+including running-version verification after flashing.
+
 ## Flash firmware
 
 ```sh
@@ -33,8 +36,8 @@ libusb installation are not required for the USB transfer. The Rust `nusb`
 backend uses Linux usbfs directly. Linux is the tested host platform.
 
 The default `auto` transport retains the existing RFCOMM/BLE behavior; select
-`--transport usb` for USB flashing. USB currently supports `firmware-update`,
-not normal display commands or Lua source upload.
+`--transport usb` for USB control or flashing. Normal control and Lua upload
+require custom firmware 306019; stock USB flashing remains available.
 
 ### Permissions
 
@@ -57,7 +60,7 @@ The device reboot naturally interrupts its USB audio connection.
 ### What is written and how completion is checked
 
 Only SHA-256-pinned images accepted by `firmware::Image` can be flashed: stock
-306007, gate probe 306008, native-memory probe 306009 and Lua runtimes 306012–306018. The USB
+306007, gate probe 306008, native-memory probe 306009 and Lua runtimes 306012–306019. The USB
 updater extracts the MVA code payload and writes **only the application at
 `0x10000`**. The installed bootloader, its header, and the user-data partition
 starting at `0x1f0000` are preserved. This is not a byte-for-byte replacement of
@@ -81,8 +84,9 @@ Every 4 KiB block requires an acknowledgment **after device-side flash read-back
 and comparison**. Block zero, containing the application header, is committed
 last. The updater then sends the completion command and requires the normal
 Ditoo to reappear on the same port. `usb_complete` records those facts and timing.
-USB has no implemented running-version query: add `--device MAC` to require a
-separate live BLE version reply and emit `verified` as well. A write error,
+Firmware 306019 and later receive an automatic running-version query over USB
+and emit `verified` after matching the installed version. Earlier images have
+no USB control bridge: add `--device MAC` for an optional live BLE version check. A write error,
 missing/bad block acknowledgment or failed re-enumeration is an error exit.
 
 ### Recovery

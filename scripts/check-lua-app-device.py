@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run hostile scripts and independent recovery queries in one BLE session."""
+"""Run hostile scripts and independent recovery queries in one USB or BLE session."""
 import argparse
 import json
 from pathlib import Path
@@ -7,14 +7,21 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 p = argparse.ArgumentParser(description=__doc__)
-p.add_argument('device')
+p.add_argument('device', nargs='?')
+p.add_argument('--transport', choices=['ble','usb'], default='ble')
+p.add_argument('--usb-port')
 p.add_argument('--binary', type=Path, default=ROOT/'target/release/divoom-ditoo-pro-controller')
 p.add_argument('--output', type=Path, required=True)
-p.add_argument('--firmware', type=int, choices=[306013,306014,306015,306016,306017,306018], default=306018)
+p.add_argument('--firmware', type=int, choices=[306013,306014,306015,306016,306017,306018,306019], default=306019)
 a = p.parse_args()
+connection = ['--transport',a.transport]
+if a.transport == 'ble':
+    if not a.device: p.error('Bluetooth requires a device address')
+    connection += ['--device',a.device]
+if a.usb_port: connection += ['--usb-port',a.usb_port]
 a.output.mkdir(parents=True, exist_ok=False)
 # The CLI checks the installed firmware before using any extension selector.
-preflight = subprocess.run([str(a.binary),'--device',a.device,'--transport','ble',
+preflight = subprocess.run([str(a.binary),*connection,
     'lua','stop'],capture_output=True,text=True,timeout=40,check=True)
 assert json.loads(preflight.stdout)['abi'] == 2, 'Resident runtime required'
 cases = [
@@ -115,7 +122,7 @@ for name, source, state, value in cases:
 request(b'\0')
 (a.output/'requests.json').write_text(json.dumps(requests,indent=2)+'\n')
 with (a.output/'replies.jsonl').open('w') as out, (a.output/'stderr.log').open('w') as err:
-    run=subprocess.run([str(a.binary),'--device',a.device,'--transport','ble','raw','run',str(a.output/'requests.json')],stdout=out,stderr=err,timeout=300)
+    run=subprocess.run([str(a.binary),*connection,'raw','run',str(a.output/'requests.json')],stdout=out,stderr=err,timeout=300)
 rows=[json.loads(line) for line in (a.output/'replies.jsonl').read_text().splitlines()]
 results=[]
 for i,(name,source,state,value) in enumerate(cases):

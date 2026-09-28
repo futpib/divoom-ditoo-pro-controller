@@ -15,3 +15,8 @@ subprocess.run(['cc','-O1','-g','-fsanitize=address,undefined','-DLUAI_MAXCCALLS
     *[str(p) for p in sorted(source.glob('*.c')) if p.name not in skip],
     '-lm','-o',str(output)],check=True)
 subprocess.run([str(output)],check=True,timeout=30,cwd=ROOT)
+
+usb_output = output.with_name('test-usb-control')
+subprocess.run(['cc','-O1','-g','-fsanitize=address,undefined',
+    str(ROOT/'native/lua-app/test-usb-control.c'),'-o',str(usb_output)],check=True)
+subprocess.run([str(usb_output)],check=True,timeout=30,cwd=ROOT)

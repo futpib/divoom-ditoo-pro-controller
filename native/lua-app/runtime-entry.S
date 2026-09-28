@@ -88,7 +88,56 @@ native_service:
     smw.adm $r6, [$sp], $r6, 2
     jal stock_native_pump
     jal runtime_native_service
+    jal runtime_usb_service
     lmw.bim $r6, [$sp], $r6, 2
+    ret
+
+.section .usb_receive_hook,"ax"
+    jal runtime_usb_receive
+.section .usb_send_hook,"ax"
+    jal runtime_usb_send
+.section .usb_response_hook,"ax"
+    j runtime_usb_response
+.section .usb_connected_hook,"ax"
+    jal runtime_usb_connected
+
+.section .text.stock_response_original,"ax"
+.global stock_response_original
+stock_response_original:
+    smw.adm $r6, [$sp], $r12, 2
+    j stock_response_resume
+
+.section .text.runtime_usb_dispatch,"ax"
+.global runtime_usb_dispatch
+runtime_usb_dispatch:
+    /* Same frame as 0x398c8; bypass only Bluetooth envelope handling. */
+    smw.adm $r6, [$sp], $r9, 2
+    addi $sp, $sp, -220
+    move $r6, $r0
+    move $r8, $r1
+    addi $r0, $sp, 200
+    movi $r1, 0
+    movi $r2, 12
+    jal memset
+    movi $r0, 15
+    sbi $r0, [$sp + 204]
+    j stock_dispatch_command
+
+.section .text.runtime_irq_save,"ax"
+.global runtime_irq_save
+runtime_irq_save:
+    mfsr $r0, $PSW
+    setgie.d
+    dsb
+    ret
+.section .text.runtime_irq_restore,"ax"
+.global runtime_irq_restore
+runtime_irq_restore:
+    andi $r0, $r0, 1
+    beqz $r0, irq_restore_done
+    setgie.e
+    dsb
+irq_restore_done:
     ret
 
 .section .text.indicator_filter,"ax"

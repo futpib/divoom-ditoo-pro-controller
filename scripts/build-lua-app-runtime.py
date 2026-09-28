@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the pinned NDS32 Lua runtime and its installable 306018 firmware."""
+"""Build the pinned NDS32 Lua runtime and its installable 306019 firmware."""
 import binascii
 import hashlib
 import importlib.util
@@ -71,7 +71,7 @@ def build():
              '-I/usr/nds32le-elf/include/newlib-nano','-Dluai_makeseed(L)=((unsigned)(L)^0x44554c41)', '-I'+str(src)]
     skip = {'lua.c','luac.c','linit.c','liolib.c','loslib.c','loadlib.c','ldblib.c'}
     sources = sorted(p for p in src.glob('*.c') if p.name not in skip)
-    sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','runtime-entry.S']]
+    sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','usb-control.c','runtime-entry.S']]
     sources += [ROOT/'native/lua/libc.c']
     objects = []
     def run(*args): subprocess.run(args, cwd=ROOT, check=True)
@@ -88,7 +88,7 @@ def build():
         assert not any(line.split()[-1] == symbol for line in symbols.splitlines()), symbol
 
     sections = {}
-    for section in ['hook','init_hook','screen_hook','key_hook','led_hook','native_hook','indicator_hook','noise_hook','wake_select_hook','bt_command_hook','text','data']:
+    for section in ['hook','init_hook','screen_hook','key_hook','led_hook','native_hook','indicator_hook','noise_hook','wake_select_hook','bt_command_hook','usb_receive_hook','usb_send_hook','usb_response_hook','usb_connected_hook','text','data']:
         path = out/(section+'.bin')
         run('nds32le-elf-objcopy','-O','binary','-j','.'+section,str(out/'runtime.elf'),str(path))
         sections[section] = path.read_bytes()
@@ -106,7 +106,11 @@ def build():
         (0x1139e8,'3c0de560000000a6c008fc0084208041fa05490128bdfc80dd9e')]:
         expected = bytes.fromhex(expected)
         assert code[offset:offset+len(expected)] == expected
-    patches = [(0x3ab9c, bytes.fromhex('a639c805'), sections['hook']),
+    patches = [(0x387b2, bytes.fromhex('4900044b'), sections['usb_connected_hook']),
+               (0x7a27e, bytes.fromhex('49fd87e1'), sections['usb_receive_hook']),
+               (0x7a29c, bytes.fromhex('49008a1d'), sections['usb_send_hook']),
+               (0x38f00, bytes.fromhex('3a6fb0bc'), sections['usb_response_hook']),
+               (0x3ab9c, bytes.fromhex('a639c805'), sections['hook']),
                (0x2ec58, bytes.fromhex('4902b436'), sections['init_hook']),
                (0x854d0, bytes.fromhex('4602004c'), bytes.fromhex('4602004a')),
                (0x75dcc, bytes.fromhex('3a6f98bc'), sections['screen_hook']),
@@ -122,7 +126,7 @@ def build():
                # Remember the selected earliest slot, not the last eligible slot.
                (0x47eba, bytes.fromhex('3e177b1c'), bytes.fromhex('92009200')),
                (0x47eea, bytes.fromhex('3c0fdbd1'), sections['wake_select_hook']),
-               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab62')),
+               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab63')),
                (0x4b550, bytes.fromhex('c816'), bytes.fromhex('d516'))]
     for offset, before, after in patches:
         assert code[offset:offset+len(before)] == before
@@ -144,13 +148,13 @@ def build():
     struct.pack_into('<I', image,0x607,length+4)
     image.extend(code)
     image.extend(struct.pack('<I',binascii.crc_hqx(image,0)))
-    report = {'version':306018,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
+    report = {'version':306019,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
               'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':40960,'arena_page_unit':1024,'arena_page_slots':40,
               'task_stack_words':4096,'globals_reserved':8192,'source_limit':8192,
               'instruction_limit':100000,'callback_ms_limit':50,'boot_crc16':0x5f08,
               'status':'offline-built; hardware-unverified'}
-    (ROOT/'firmware/306018-lua.MVA').write_bytes(image)
-    (ROOT/'firmware/306018-lua.json').write_text(json.dumps(report,indent=2)+'\n')
+    (ROOT/'firmware/306019-lua.MVA').write_bytes(image)
+    (ROOT/'firmware/306019-lua.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 
 if __name__ == '__main__': build()

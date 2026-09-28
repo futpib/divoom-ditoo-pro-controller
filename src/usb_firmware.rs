@@ -112,7 +112,7 @@ fn metadata_reply(reply: &[u8]) -> Result<bool> {
   }
 }
 
-fn is_app(device: &DeviceInfo) -> bool {
+pub(crate) fn is_app(device: &DeviceInfo) -> bool {
   device.vendor_id() == 0x8888 && matches!(device.product_id(), 0x1719 | 0x171e)
 }
 
@@ -136,7 +136,18 @@ fn port(device: &DeviceInfo) -> String {
   format!("{bus}-{chain}")
 }
 
-async fn select(requested: Option<&str>) -> Result<DeviceInfo> {
+/// Enumerate attached Ditoos without opening them or consulting Bluetooth.
+pub async fn devices() -> Result<serde_json::Value> {
+  let devices: Vec<_> = nusb::list_devices().await?
+    .filter(|d| is_app(d) || is_boot(d))
+    .map(|d| json!({"usb_port":port(&d), "vendor_id":format!("{:04x}",d.vendor_id()),
+      "product_id":format!("{:04x}",d.product_id()),
+      "mode":if is_boot(&d) {"bootloader"} else {"application"}}))
+    .collect();
+  Ok(json!(devices))
+}
+
+pub(crate) async fn select(requested: Option<&str>) -> Result<DeviceInfo> {
   let devices: Vec<_> = nusb::list_devices()
     .await?
     .filter(|d| is_app(d) || is_boot(d))
@@ -200,7 +211,7 @@ async fn accessible(device: &DeviceInfo) -> Result<bool> {
   }
 }
 
-async fn claim(device: &DeviceInfo) -> Result<Interface> {
+pub(crate) async fn claim(device: &DeviceInfo) -> Result<Interface> {
   let opened = device.open().await.map_err(|e| {
     format!(
       "Cannot open USB port {}: {e}; see docs/usb.md for USB permissions",
@@ -253,7 +264,7 @@ async fn claim(device: &DeviceInfo) -> Result<Interface> {
   Ok(interface)
 }
 
-async fn output(
+pub(crate) async fn output(
   interface: &Interface,
   value: u16,
   data: &[u8],
@@ -274,7 +285,7 @@ async fn output(
     .await
 }
 
-async fn input(
+pub(crate) async fn input(
   interface: &Interface,
   value: u16,
   length: u16,
@@ -536,6 +547,19 @@ pub async fn flash(
   if let Some(address) = verify_address {
     verify_version(address, image.version()).await?;
   }
+  if image.version() >= crate::lua::USB_VERSION {
+    let mut connection = DeviceConnection::Usb(
+      crate::usb_control::UsbConnection::connect(Some(&physical_port)).await?);
+    let versions = crate::firmware::versions(&mut connection).await;
+    let cleanup = connection.disconnect().await;
+    let versions = versions?;
+    cleanup?;
+    if versions.first() != Some(&image.version()) {
+      return Err(format!("USB finished, but running firmware is {versions:?}").into());
+    }
+    println!("{}", json!({"event":"verified", "transport":"usb",
+      "verification_transport":"usb", "firmware_versions":versions}));
+  }
   Ok(())
 }
 
@@ -557,6 +581,7 @@ mod tests {
       ("306016-lua.MVA", 1_959_420, 479),
       ("306017-lua.MVA", 1_959_420, 479),
       ("306018-lua.MVA", 1_959_420, 479),
+      ("306019-lua.MVA", 1_959_420, 479),
     ] {
       let image = Image::load(
         &Path::new(env!("CARGO_MANIFEST_DIR"))

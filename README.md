@@ -1,6 +1,6 @@
 # divoom-ditoo-pro-controller
 
-A CLI tool to control a Divoom Ditoo Pro over Bluetooth (SPP/RFCOMM or BLE GATT).
+A CLI tool to control a Divoom Ditoo Pro over Bluetooth (SPP/RFCOMM or BLE GATT) or USB (custom firmware 306019+).
 The original app from the vendor is proprietary; this project reverse-engineers the protocol.
 
 # Features
@@ -48,6 +48,17 @@ cargo install --path . --no-default-features
 ```
 
 # How to run
+
+With custom firmware 306019, all device and Lua commands also use USB:
+
+```sh
+divoom-ditoo-pro-controller --transport usb devices
+divoom-ditoo-pro-controller --transport usb firmware
+divoom-ditoo-pro-controller --transport usb --usb-port 1-6 lua start examples/lua/clock.lua
+```
+
+No Bluetooth connection is needed. See [USB control](docs/usb-control.md) for
+installation, permissions, transport limits and verification.
 
 ## Find your device
 
@@ -280,13 +291,14 @@ USB flashing is supported, including reinstalling stock firmware and recovery
 from an interrupted application transfer:
 
 ```sh
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306018-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306019-lua.MVA
 # Reinstall the same image, or recover through the bootloader on this port:
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306018-lua.MVA --usb-port 1-6 --reflash
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306019-lua.MVA --usb-port 1-6 --reflash
 ```
 
 The updater preserves the bootloader and checks device read-back acknowledgments
-for every block. Bluetooth is optional; add `--device MAC` to also verify the
+for every block. Firmware 306019 also receives a running-version check over USB.
+Bluetooth is optional; add `--device MAC` to also verify the
 running version over BLE after USB completion. See [USB setup, protocol,
 performance and recovery](docs/usb.md).
 
@@ -294,7 +306,7 @@ performance and recovery](docs/usb.md).
 and prints metadata for the selected transport without connecting. Bluetooth
 flashing retains the Android protocol and version checks: stock rejects an
 equal-version announcement, even with `--reflash`. `--restore-stock` allows
-supported experimental versions 306008–306018 to return to pinned stock 306007.
+supported experimental versions 306008–306019 to return to pinned stock 306007.
 The Bluetooth 306007 → modified 306008 → stock 306007 round trip is verified by
 completion events and live version reads. See [Bluetooth protocol and
 evidence](docs/firmware-update.md).
@@ -313,7 +325,7 @@ documentation for subsequent flashing experiments.
 
 ### On-device Lua
 
-Firmware 306018 runs resident Lua apps with drawing, physical keys, keyboard
+Firmware 306019 runs resident Lua apps with drawing, physical keys, keyboard
 RGB lighting, timers and messages. It adds [battery/charging status and indicator
 control, native alarms and power schedules, playback, voice memos and microphone
 levels](docs/lua-peripherals.md), plus [native Bluetooth media connections](docs/lua-bluetooth.md). Use `lua start FILE`, `lua pause`, `lua resume`, `lua stop`, `lua send`,
