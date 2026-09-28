@@ -212,3 +212,14 @@ Library callers can select a transport with
 `with_transport(Transport::Ble, send_set_brightness(address, 0)).await`;
 unscoped calls default to automatic fallback. The selection applies to
 the scoped future and is not inherited by separately spawned Tokio tasks.
+
+## Android feature comparison and firmware archive
+
+The [Android feature audit](docs/android-feature-gaps.md) compares the inspected
+Divoom 3.8.40 app with this CLI, including device-specific versus phone/cloud
+features, partially implemented commands, and the alarm command's ignored
+boolean. It includes a source inventory for follow-up implementation work.
+
+The [firmware archive](firmware/README.md) contains the vendor image matching
+installed version 306007, also the latest returned by the checked test-channel
+endpoints, with verified hashes and saved API responses. No firmware was flashed.
