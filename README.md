@@ -140,7 +140,7 @@ divoom-ditoo-pro-controller mode special 0
 divoom-ditoo-pro-controller mode music 0
 
 # Raw mode payload for experimentation
-divoom-ditoo-pro-controller mode raw 06 00 00
+divoom-ditoo-pro-controller raw send 0x45 --data "06 00 00"
 ```
 
 ### Format conversion
@@ -224,12 +224,16 @@ including extended selectors; catalogue membership does not imply Ditoo support.
 divoom-ditoo-pro-controller --transport ble device firmware
 divoom-ditoo-pro-controller --transport ble device status
 divoom-ditoo-pro-controller --transport ble device setting hour24
-divoom-ditoo-pro-controller protocol list --filter ALARM
-divoom-ditoo-pro-controller protocol send 0x37 --data 00 --query
-divoom-ditoo-pro-controller protocol run examples/device-info.json
+divoom-ditoo-pro-controller raw list --filter ALARM
+divoom-ditoo-pro-controller raw send 0x37 --data 00 --query
+divoom-ditoo-pro-controller raw run examples/device-info.json
 divoom-ditoo-pro-controller device --dry-run scoreboard 12 34
 divoom-ditoo-pro-controller alarm on --time 07:30 --repeat 62 --dry-run
 ```
+
+Low-level commands live under `raw` (`list`, `send`, `run`, `monitor`), replacing
+the former `protocol` group. Use `raw send 0x45 --data "…"` for the former
+`mode raw` operation.
 
 Raw and symbolic commands support arbitrary binary payloads, explicit response
 opcodes/prefixes, JSON output, batch requests and bounded event collection.

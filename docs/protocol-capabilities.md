@@ -60,21 +60,21 @@ inventory of the inspected enums, not every feature in every app version.
 divoom-ditoo-pro-controller --device B1:21:81:DD:B8:9B --transport ble device firmware
 
 # List names, or send an opcode. --query waits for a reply with that opcode.
-divoom-ditoo-pro-controller protocol list --filter ALARM
-divoom-ditoo-pro-controller protocol send 0x37 --data 00 --query
+divoom-ditoo-pro-controller raw list --filter ALARM
+divoom-ditoo-pro-controller raw send 0x37 --data 00 --query
 
 # Extended names insert the selector in both request and expected response.
-divoom-ditoo-pro-controller protocol send SPP_SECOND_SET_SAVE_VOLUME_CFG --data ff --query
+divoom-ditoo-pro-controller raw send SPP_SECOND_SET_SAVE_VOLUME_CFG --data ff --query
 
 # Wait for a different response opcode or filter an extra response prefix.
-divoom-ditoo-pro-controller protocol send 0xbd --data 19ff --expect 0xbd --prefix 19
+divoom-ditoo-pro-controller raw send 0xbd --data 19ff --expect 0xbd --prefix 19
 
 # Collect replies/events after a command without assuming a reply opcode.
-divoom-ditoo-pro-controller protocol send 0xb4 --listen-ms 1500
+divoom-ditoo-pro-controller raw send 0xb4 --listen-ms 1500
 
 # One connection, JSON lines of results. All requests validated before connecting.
-divoom-ditoo-pro-controller protocol run examples/device-info.json
-divoom-ditoo-pro-controller protocol run examples/device-settings.json --dry-run
+divoom-ditoo-pro-controller raw run examples/device-info.json
+divoom-ditoo-pro-controller raw run examples/device-settings.json --dry-run
 
 # Inspect exact payloads without connecting or changing the device.
 divoom-ditoo-pro-controller device --dry-run scoreboard 12 34
@@ -97,7 +97,7 @@ Batch files are arrays of requests:
 selector, if any. Delay and listen duration each range from 0 to 60000 ms.
 Unknown JSON fields and invalid payloads fail before connecting. Batches stop
 on the first error; they are not transactions and do not undo earlier writes.
-`protocol monitor --seconds 10` prints incoming framed responses; it does not
+`raw monitor --seconds 10` prints incoming framed responses; it does not
 turn unsupported physical keys into events. BLE initialization synchronizes
 the device clock even when monitoring.
 

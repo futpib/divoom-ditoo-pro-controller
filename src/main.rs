@@ -46,7 +46,7 @@ pub struct Args {
 #[derive(Subcommand, Debug)]
 enum Command {
   /// Low-level protocol catalogue, commands, scripts and response monitoring
-  Protocol { #[command(subcommand)] action: control_cli::ProtocolCommand },
+  Raw { #[command(subcommand)] action: control_cli::RawCommand },
 
   /// Device protocol controls and queries, independent of phone UI
   Device {
@@ -253,11 +253,6 @@ enum BoxMode {
     /// Visualizer sub-type index
     sub_type: u8
   },
-  /// Raw payload (for experimentation)
-  Raw {
-    /// Payload bytes as hex (e.g. "06 00 00")
-    payload_hex: Vec<String>
-  },
 }
 
 #[derive(Subcommand, Debug)]
@@ -355,7 +350,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn run(args: Args) -> Result<(), Box<dyn Error>> {
   match args.command {
-    Command::Protocol { action } => control_cli::run(args.device, action).await?,
+    Command::Raw { action } => control_cli::run(args.device, action).await?,
     Command::Device { action, dry_run } => control_cli::run_requests(args.device, vec![action.request()?], dry_run).await?,
     Command::Scan => scan_devices().await?,
     Command::Devices => list_paired_devices().await?,
@@ -487,13 +482,7 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
           info!("Setting music visualizer mode (sub_type={})", sub_type);
           vec![0x04, sub_type, 0, 0, 0, 0, 0, 0, 0, 0]
         }
-        BoxMode::Raw { payload_hex } => {
-          let bytes: Vec<u8> = payload_hex.iter()
-            .map(|s| u8::from_str_radix(s, 16).map_err(|_| format!("Invalid hex byte: '{}'", s)))
-            .collect::<Result<_, _>>()?;
-          info!("Setting box mode with raw payload: {}", hex::encode(&bytes));
-          bytes
-        }
+
       };
       send_set_box_mode(mac, payload).await?
     }

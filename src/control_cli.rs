@@ -7,7 +7,7 @@ use std::{
 };
 
 #[derive(Debug, Subcommand)]
-pub enum ProtocolCommand {
+pub enum RawCommand {
   /// List Android protocol symbols; catalogue presence does not prove device support
   List {
     #[arg(long)]
@@ -256,9 +256,9 @@ pub async fn run_requests(
   cleanup
 }
 
-pub async fn run(device: Option<String>, action: ProtocolCommand) -> Result<(), Box<dyn Error>> {
+pub async fn run(device: Option<String>, action: RawCommand) -> Result<(), Box<dyn Error>> {
   match action {
-    ProtocolCommand::List { filter } => {
+    RawCommand::List { filter } => {
       let filter = filter.unwrap_or_default().to_lowercase();
       let items: Vec<_> = control::catalogue()?
         .into_iter()
@@ -267,7 +267,7 @@ pub async fn run(device: Option<String>, action: ProtocolCommand) -> Result<(), 
       println!("{}", serde_json::to_string_pretty(&items)?);
       Ok(())
     }
-    ProtocolCommand::Send {
+    RawCommand::Send {
       command,
       data,
       query,
@@ -291,7 +291,7 @@ pub async fn run(device: Option<String>, action: ProtocolCommand) -> Result<(), 
       )
       .await
     }
-    ProtocolCommand::Run { file, dry_run } => {
+    RawCommand::Run { file, dry_run } => {
       run_requests(
         device,
         serde_json::from_slice(&std::fs::read(file)?)?,
@@ -299,7 +299,7 @@ pub async fn run(device: Option<String>, action: ProtocolCommand) -> Result<(), 
       )
       .await
     }
-    ProtocolCommand::Monitor { seconds } => {
+    RawCommand::Monitor { seconds } => {
       let mut session = Session::connect(crate::resolve_device(device).await?).await?;
       let deadline = Instant::now() + Duration::from_secs(seconds);
       let result = async {

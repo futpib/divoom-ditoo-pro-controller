@@ -46,7 +46,7 @@ fn resolve(value: &str) -> Result<(u8, Vec<u8>), Box<dyn Error>> {
     u8::from_str_radix(hex, 16)?
   } else {
     value.parse::<u8>().map_err(|_| {
-      format!("Unknown command {value}; use protocol list or an opcode such as 0x37")
+      format!("Unknown command {value}; use raw list or an opcode such as 0x37")
     })?
   };
   Ok((code, Vec::new()))
