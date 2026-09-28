@@ -1,0 +1,3 @@
+[2026-09-28T14:01:38Z WARN  divoom_ditoo_pro_controller::transport] BLE write capacity unavailable (Err(Error { kind: Internal(DBus("org.freedesktop.DBus.Error.InvalidArgs")), message: "No such property 'MTU'" })); using 20-byte writes
+[2026-09-28T14:01:38Z INFO  divoom_ditoo_pro_controller::transport] BLE streaming write capacity: 20 bytes
+[2026-09-28T14:01:42Z INFO  divoom_ditoo_pro_controller::transport] Connected via BLE GATT (device clock synchronized)

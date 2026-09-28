@@ -4,8 +4,10 @@
 
 Firmware 306007 has no identified user-accessible shell, scripting interpreter,
 or native application loader. This is an evidence-limited finding, not a proof
-that every hidden command has been ruled out. No arbitrary code has been run on
-the device. This investigation was offline and sent no device commands.
+that every hidden command has been ruled out. The original investigation was
+offline. A subsequent [native instruction patch](firmware-update.md#reproducible-version-gate-experiment)
+booted as 306008 and accepted an older stock image through its patched version
+gate. A general code loader or interpreter has not been implemented.
 
 The related MVsilicon SDK includes a small UART diagnostic shell behind
 `CFG_FUNC_SHELL_EN`; its example configuration leaves that define commented out.
@@ -44,7 +46,8 @@ to `code.bin`; add `0x60f` for offsets in the MVA.
 The processor already runs NDS32 native code. The SDK also has RAM-code sections
 and remapping support. That makes native extensions an architectural possibility,
 but does not establish an accessible stock upload-and-execute command, executable
-heap memory, free RAM, a working custom-flash route, or recovery on this device.
+heap memory or free RAM. The narrowly patched image has now booted through the
+Bluetooth update path; recovery from an image that cannot boot remains unproven.
 USB PC-upgrade logic exists in the binary; it has not been shown to expose a
 shell or a general RAM loader. Debug log strings do not prove a bidirectional
 UART console is available on the board.
@@ -85,10 +88,9 @@ standalone programmable keyboard support.
 
 ## Required next proof
 
-First establish controlled native entry and a recovery method, then demonstrate
-a minimal callback without destabilizing the stock tasks. The known OTA version
-gate is only the first gate: an accepted announcement does not demonstrate that
-modified code will boot. Next measure memory, map key/display APIs, and prove a
+The version-gate probe establishes execution of modified native instructions.
+Next establish recovery from a failed boot and demonstrate a minimal new callback
+without destabilizing the stock tasks. Measure memory, map key/display APIs, and prove a
 second program can be uploaded and run without another firmware update. Building
 a PC-only interpreter first would not resolve these device-side unknowns.
 

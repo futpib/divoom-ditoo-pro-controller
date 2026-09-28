@@ -1,0 +1,4 @@
+[
+  {"command":"0x74","payload_hex":"00","delay_ms":200},
+  {"command":"0x46","response":"0x46"}
+]

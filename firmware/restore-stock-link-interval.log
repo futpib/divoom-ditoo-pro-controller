@@ -1,0 +1,7 @@
+> HCI Event: LE Meta Event (0x3e) plen 10                                                                                      #1029 2026-09-28 14:04:53.708312
+      LE Connection Update Complete (0x03)
+        Status: Success (0x00)
+        Handle: 3585
+        Connection interval: 15.00 msec (0x000c)
+        Connection latency: 0 (0x0000)
+        Supervision timeout: 5000 msec (0x01f4)

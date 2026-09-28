@@ -3,7 +3,7 @@
 The CLI implements the Android app's Bluetooth 98/99 updater. It currently
 accepts the exact archived vendor image for Ditoo Pro hardware family 306,
 version 306007, and the reproducible 306008 experiment described below.
-**A complete flash has not been verified on hardware.**
+**The 306007 → modified 306008 → stock 306007 round trip is verified on hardware.**
 
 ```sh
 # Offline image validation and packet metadata:
@@ -21,7 +21,7 @@ downgrades (except the explicit probe-to-stock restoration below) and
 hardware-family mismatches. Image size and SHA-256 are pinned
 before connecting; arbitrary images and other hardware families are unsupported.
 
-## Live result
+## Initial stock same-version attempts
 
 The current-version attempt on firmware 306007 reached the metadata handshake.
 The device responded with firmware file type 0 and ready status **2**. The
@@ -34,8 +34,8 @@ logging captured the same response: opcode 98, payload `00 02`. No update-succes
 event was received. Follow-up reads in `firmware/post-reflash-health.jsonl`
 confirm version 306007, brightness 0, volume 3 and normal command responses.
 Do not interpret the installed version remaining 306007 as proof of a reflash.
-The streaming, retransmission, completion and post-reboot paths are implemented
-but await a device-accepted update for E2E validation. Local tests cover the
+At that stage the streaming, retransmission, completion and post-reboot paths
+had not been exercised by a device-accepted update. Local tests cover the
 image metadata/checksum/padding, target-version guards and response decoding. RFCOMM connected during this session but timed out on a version
 query. The live update announcement used BLE.
 
@@ -141,6 +141,59 @@ prove that downstream bootloader checks permit reinstalling the same code.
 
 ## Reproducible version-gate experiment
 
+### Run from this repository
+
+Prerequisites: Linux with BlueZ running, a Rust/Cargo toolchain, Python 3,
+`pkg-config` and libdbus development files, and `systemd-inhibit` for the live
+run. The runner builds with `--locked --no-default-features`; fontconfig and
+libmpv are not required. Cargo may need network access to obtain locked crates
+on the first build. Both firmware images are committed; no firmware server,
+APK, SDK checkout, disassembler or files outside this repository are required.
+
+```sh
+# Build the host CLI and reproduce/validate both pinned images; no Bluetooth I/O:
+python3 scripts/firmware-roundtrip.py --dry-run
+
+# Actual two-flash round trip; use the explicit address of the family-306 device:
+python3 scripts/firmware-roundtrip.py B1:21:81:DD:B8:9B --kernel-disconnect
+```
+
+The runner refuses to start unless a live query reads 306007, then requires both
+completion and verified 306008 boot before restoring stock. The final phase
+requires completion and verified 306007 boot. Each run creates a new directory
+under `firmware/runs/` with stdout, stderr and `result.json`; use `--output` for
+another new directory. A sleep inhibitor covers the live run. An unverified
+flash stops the sequence instead of guessing the device's state.
+
+`--kernel-disconnect` uses `btmgmt` to clear the BlueZ disconnect stall observed
+on this host between phases. It requires root or passwordless `sudo`; omit it
+on hosts whose normal BlueZ disconnect works. A nonzero cleanup exit is logged
+separately, since an already disconnected bearer is harmless. This is a host
+workaround, not a change to the firmware protocol. If a run stops after verified
+306008, the manual `--restore-stock` command below remains the recovery path.
+
+The recorded transfers also used a manually negotiated 15 ms BLE connection
+interval. That optimization is not required by the runner. At this host's
+default interval, the corrected MTU-aware sender measured about 2.7 KB/s
+(roughly eleven minutes per full image); the recorded six-minute timings include
+the shorter interval. Both paths use complete acknowledged ATT writes.
+
+After a successful round trip, optional recorded checks can be repeated with:
+
+```sh
+target/firmware-roundtrip/release/divoom-ditoo-pro-controller \
+  --device B1:21:81:DD:B8:9B --transport ble \
+  raw run firmware/roundtrip-health-requests.json
+```
+
+That sends version/settings queries and one stock metadata announcement; it
+does not transmit firmware chunks. The expected stock gate reply is `00 02`.
+Firmware updates may reset display brightness. The recorded run restored
+brightness to 0 with `firmware/restore-brightness-requests.json`; the runner does
+not assume that value is appropriate for another owner.
+
+### Image construction
+
 `scripts/build-reflash-probe.py` takes the pinned 306007 image and builds
 `firmware/306008-reflash-probe.MVA`. Its JSON report records every changed byte.
 This is a binary patch, not a rebuild from vendor source. Eight bytes change
@@ -176,3 +229,36 @@ divoom-ditoo-pro-controller --device B1:21:81:DD:B8:9B --transport ble \
 depends on the patched firmware actually running. Each transfer requires a
 device success event followed by a live version check. Acceptance of the initial
 announcement alone is not evidence that the modified image booted.
+
+### Live probe result
+
+The corrected transfer sent all 7,334 chunks in 380.07 seconds and received
+`0x99` payload `00 01` (device completion). The automatic post-update check hit
+a BlueZ disconnect timeout. An independent query returned payload
+`01 58 ab 04 00`, decoded as **306008**, establishing that the modified image
+booted. Its command result was recorded before cleanup timed out.
+
+The subsequent stock restoration preflight independently read 306008 and
+received `0x98` payload `00 00 00 00` when announcing the older 306007 image.
+This establishes execution of the patched version-gate branch. Stock restoration
+sent all chunks in 353.60 seconds, received `0x99` payload `00 01`, and read
+**306007** on the first reconnect attempt. The updater recorded `verified` and
+exited successfully. A disconnect timeout was retained as a warning rather than
+discarding the already received version reply.
+
+A final independent query again read 306007. A metadata-only same-version
+announcement returned `0x98` payload `00 02`, confirming the stock gate was
+restored; that check sent no firmware data. Volume remained 3. Brightness had
+reset to 35 and was set back to its pre-experiment value of 0.
+
+Evidence: `firmware/flash-306008-probe.{jsonl,log}`,
+`firmware/post-probe-version.{jsonl,log}` and
+`firmware/restore-stock-306007.{jsonl,log}`. The interrupted slow attempt is
+preserved separately as `firmware/flash-306008-probe-slow.{jsonl,log}`.
+Final checks are in `firmware/post-roundtrip-health.{jsonl,log}` and
+`firmware/post-roundtrip-brightness.{jsonl,log}`. Their request arrays are retained.
+
+The updater now records a version reply before cleanup, bounds disconnect to
+ten seconds, and retains a successful version check if cleanup fails. It also
+refreshes streaming capacity after reconnect because cached GATT objects can
+temporarily lack the MTU property.

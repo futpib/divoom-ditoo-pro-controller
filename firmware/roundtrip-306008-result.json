@@ -1,0 +1,20 @@
+{
+  "roundtrip_verified": true,
+  "versions": [
+    306007,
+    306008,
+    306007
+  ],
+  "probe_transfer_seconds": 380.069660019,
+  "stock_transfer_seconds": 353.595665085,
+  "probe_boot_evidence": "post-probe-version.jsonl",
+  "stock_boot_evidence": "restore-stock-306007.jsonl",
+  "stock_gate_evidence": "post-roundtrip-health.jsonl",
+  "final_brightness_evidence": "post-roundtrip-brightness.jsonl",
+  "final_brightness": 0,
+  "final_volume": 3,
+  "artifacts": {
+    "306007.MVA": "fc16341c005b11d0ac476917dc2fd98c9bc7481b92a183e64bfe209801566544",
+    "306008-reflash-probe.MVA": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b"
+  }
+}

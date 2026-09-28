@@ -1,0 +1,29 @@
+python3[616307]: < HCI Command: LE Connection Update (0x08|0x0013) plen 14                                                       #29 2026-09-28 13:38:10.259705
+        Handle: 3585
+        Min connection interval: 15.00 msec (0x000c)
+        Max connection interval: 15.00 msec (0x000c)
+        Connection latency: 0 (0x0000)
+        Supervision timeout: 5000 msec (0x01f4)
+        Min connection length: 0.625 msec (0x0001)
+        Max connection length: 0.625 msec (0x0001)
+> HCI Event: Command Status (0x0f) plen 4                                                                                        #30 2026-09-28 13:38:10.260480
+      LE Connection Update (0x08|0x0013) ncmd 1
+        Status: Success (0x00)
+      LE Connection Update (0x08|0x0013) ncmd 1
+        Status: Success (0x00)
+bluetoothd[782]: < ACL: Handle 3585 flags 0x00 dlen 27                                                                           #31 2026-09-28 13:38:10.283308
+      ATT: Write Request (0x12) len 22
+        Handle: 0x000d
+          Data[20]:
+        41 fa 06 10 03 00 1b 80 06 fa 2c 49 ff eb e1 d5  A.........,I....
+        1f a6 40 5a                                      ..@Z            
+> HCI Event: Number of Completed Packets (0x13) plen 5                                                                           #32 2026-09-28 13:38:10.315502
+        Num handles: 1
+        Handle: 3585
+> HCI Event: LE Meta Event (0x3e) plen 10                                                                                        #40 2026-09-28 13:38:10.675531
+      LE Connection Update Complete (0x03)
+        Status: Success (0x00)
+        Handle: 3585
+        Connection interval: 15.00 msec (0x000c)
+        Connection latency: 0 (0x0000)
+        Supervision timeout: 5000 msec (0x01f4)

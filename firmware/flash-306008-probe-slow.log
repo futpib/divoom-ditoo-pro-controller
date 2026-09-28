@@ -1,0 +1,2 @@
+[2026-09-28T13:15:17Z INFO  divoom_ditoo_pro_controller::transport] Connected via BLE GATT (device clock synchronized)
+Error: Error { kind: Failed, message: "Not connected" }

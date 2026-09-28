@@ -1,0 +1,2 @@
+{"delivery":"transport_ack","events":[],"request":{"delay_ms":200,"listen_ms":0,"opcode":116,"payload_hex":"00","response":null,"rfcomm_frame_hex":"0104007400780002"},"response":null,"transport":"ble"}
+{"delivery":"command_reply","events":[],"request":{"delay_ms":0,"listen_ms":0,"opcode":70,"payload_hex":"","response":{"opcode":70,"prefix_hex":""},"rfcomm_frame_hex":"01030046490002"},"response":{"ack":true,"brightness":0,"data_hex":"000000ff5000000001030000ff50000601000000286e","mode":0,"opcode":70},"transport":"ble"}

@@ -300,9 +300,17 @@ pub async fn flash(
     tokio::time::sleep(Duration::from_secs(5)).await;
     if let Ok(mut connection) = DeviceConnection::connect(address).await {
       let result = versions(&mut connection).await;
+      if let Ok(versions) = &result {
+        println!(
+          "{}",
+          json!({"event":"post_update_version","firmware_versions":versions,"reconnect_attempt":attempt})
+        );
+      }
       let cleanup = connection.disconnect().await;
+      if let Err(error) = cleanup {
+        log::warn!("Disconnect after version query: {error}; retaining the query result");
+      }
       if let Ok(versions) = result {
-        cleanup?;
         if versions.first() == Some(&image.version) {
           println!(
             "{}",

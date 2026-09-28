@@ -1,0 +1,7 @@
+# Live negotiated-capacity firmware write, 2026-09-28; unrelated traffic omitted.
+bluetoothd[782]: < ACL: Handle 3585 flags 0x00 dlen 251                                                                           #3 2026-09-28 13:53:24.720886
+bluetoothd[782]: < ACL: Handle 3585 flags 0x01 dlen 28                                                                            #4 2026-09-28 13:53:24.720898
+      ATT: Write Request (0x12) len 274
+        Handle: 0x000d
+          Data[16]:
+        fe ef aa 55 0a 01 01 2a 00 00 00 99 25 02 0f b2  ...U...*....%...

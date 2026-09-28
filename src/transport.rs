@@ -172,8 +172,8 @@ impl DeviceLease {
 
   pub async fn release(&mut self) -> Result<(), Box<dyn Error>> {
     if self.owned {
-      self.device.disconnect().await?;
       self.owned = false;
+      tokio::time::timeout(Duration::from_secs(10), self.device.disconnect()).await??;
     }
     Ok(())
   }
@@ -282,18 +282,9 @@ impl BleConnection {
         }
       }
     });
-    // bluer's mtu() already subtracts ATT overhead; do not subtract it twice.
-    let stream_write_size = match write.mtu().await {
-      Ok(size) if size > 0 => size.min(512),
-      result => {
-        log::warn!("BLE write capacity unavailable ({result:?}); using 20-byte writes");
-        20
-      }
-    };
-    log::info!("BLE streaming write capacity: {stream_write_size} bytes");
     let mut connection = Self {
       write,
-      stream_write_size,
+      stream_write_size: 20,
       responses,
       pending: VecDeque::new(),
       reader,
@@ -319,8 +310,23 @@ impl BleConnection {
       connection.write_payload(init.as_bytes(), 1, false).await?;
     }
     tokio::time::sleep(Duration::from_secs(1)).await;
+    connection.refresh_stream_capacity().await;
     log::info!("Connected via BLE GATT (device clock synchronized)");
     Ok(connection)
+  }
+
+  async fn refresh_stream_capacity(&mut self) {
+    // bluer's mtu() already subtracts ATT overhead; do not subtract it twice.
+    // Cached GATT services may expose MTU only after the bearer reconnects.
+    if let Ok(size) = self.write.mtu().await {
+      if size > 0 && size.min(512) != self.stream_write_size {
+        self.stream_write_size = size.min(512);
+        log::info!(
+          "BLE streaming write capacity: {} bytes",
+          self.stream_write_size
+        );
+      }
+    }
   }
 
   async fn write_payload(
@@ -329,6 +335,9 @@ impl BleConnection {
     sequence: u16,
     streaming: bool,
   ) -> Result<(), Box<dyn Error>> {
+    if streaming && self.stream_write_size <= 20 {
+      self.refresh_stream_capacity().await;
+    }
     let capacity = if streaming {
       self.stream_write_size
     } else {

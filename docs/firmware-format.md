@@ -3,7 +3,8 @@
 The vendor MVA is a record container containing a small control record, an opaque
 flash-driver blob, and directly readable Andes NDS32 firmware. The main code does
 not need decryption or decompression. This analysis does not recover original C
-source or establish that the device accepts modified firmware.
+source. A subsequent [live probe](firmware-update.md#reproducible-version-gate-experiment)
+established that a narrowly modified image boots as version 306008.
 
 ## Reproduce offline
 
@@ -98,7 +99,9 @@ All three independent CRC checks pass on the archived file.
 The inspected package and bootloader paths show CRC and compatibility checks,
 not public-key signature verification. This does **not** prove that every
 ROM/flash-driver path accepts modified code: the opaque driver and on-chip ROM
-still need analysis. No modified image was flashed.
+still need analysis. The subsequent 306008 probe demonstrates acceptance and
+execution of its two patched instructions with recalculated CRCs. This does not
+establish that every image field or bootloader modification is accepted.
 
 ## Disassembly and evidence
 

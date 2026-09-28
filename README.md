@@ -279,9 +279,9 @@ the full slot. Library callers pass `&Alarm` to `send_alarm`.
 `firmware-update FILE --dry-run` validates the archived 306007 vendor image or
 the reproducible 306008 version-gate probe and
 prints update metadata. `firmware-update FILE --reflash` permits attempting the
-same version; it cannot override a device refusal. The live Ditoo rejected the
-announcement with status 2, before any firmware chunks were sent. A complete
-flash is **not hardware-verified**. `--restore-stock` permits only the probe's
+same version; it cannot override a device refusal. Stock rejects an equal-version
+announcement with status 2. The 306007 → modified 306008 → stock 306007 round
+trip is verified by completion events and live version reads. `--restore-stock` permits only the probe's
 306008 to pinned stock 306007 restoration. See [protocol and evidence](docs/firmware-update.md).
 
 ## Android feature comparison and firmware archive

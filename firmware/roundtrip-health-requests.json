@@ -1,0 +1,6 @@
+[
+  {"command":"0x37","payload_hex":"00","response":"0x37"},
+  {"command":"0x98","payload_hex":"0057ab040083a51c00c88fa109","response":"0x98"},
+  {"command":"0x46","response":"0x46"},
+  {"command":"0x09","response":"0x09"}
+]
