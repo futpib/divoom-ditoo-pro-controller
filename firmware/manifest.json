@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-09-28",
+  "hardware_flag": 306,
+  "installed_version_reported_by_device": 306007,
+  "current_version_download": "306007.MVA",
+  "latest_available_download": "306007.MVA",
+  "latest_available_version": 306007,
+  "latest_available_channel": "test (IsTest=true)",
+  "production_channel": {
+    "file": null,
+    "version_list_response": 306000
+  },
+  "file": {
+    "path": "306007.MVA",
+    "bytes": 1877379,
+    "sha1": "645521a92a2bfb1149239312dbb3cc2f9e1ebd81",
+    "sha256": "fc16341c005b11d0ac476917dc2fd98c9bc7481b92a183e64bfe209801566544",
+    "source_url": "https://f.divoom-gz.com/group1/M00/01/71/rBAAM2X9G_yEQp1wAAAAABB41K4367.MVA",
+    "vendor_sha1_verified": true,
+    "api_version": 306007,
+    "version_validation": "Vendor metadata matches the device version; no flash dump or embedded-version parser."
+  },
+  "scope": "Latest returned by queried public production/test endpoints, not a guarantee that no other regional/private firmware exists. Download only; nothing flashed."
+}
