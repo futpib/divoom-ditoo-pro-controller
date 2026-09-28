@@ -1,6 +1,6 @@
 # divoom-ditoo-pro-controller
 
-A CLI tool to control a Divoom Ditoo Pro over Bluetooth (SPP/RFCOMM).
+A CLI tool to control a Divoom Ditoo Pro over Bluetooth (SPP/RFCOMM or BLE GATT).
 The original app from the vendor is proprietary; this project reverse-engineers the protocol.
 
 # Features
@@ -179,3 +179,36 @@ See [Development.md](Development.md).
 # Pixel art
 
 - <https://pixeljoint.com/pixels/new_icons.asp?search=&dimo=%3D&dim=16&colorso=%3E%3D&colors=2&tran=&anim=&iso=&av=&owner=&d=&dosearch=1&ob=search&action=search>
+
+## Bluetooth transport
+
+`--transport auto` (the default) tries RFCOMM first, then falls back to BLE
+for the same device address if connection setup fails or a read-only volume
+probe receives no valid response. Each of the three
+RFCOMM attempts is limited to eight seconds. Commands are never retried on
+another transport after transmission, so a toggle cannot be sent twice.
+Use `--transport rfcomm` to disable fallback or `--transport ble` to skip
+RFCOMM entirely:
+
+```sh
+divoom-ditoo-pro-controller --device 11:22:33:44:55:66 --transport ble brightness 0
+divoom-ditoo-pro-controller --device 11:22:33:44:55:66 --transport ble keyboard-backlight toggle
+divoom-ditoo-pro-controller --device 11:22:33:44:55:66 volume get
+```
+
+Use the address advertised by your device's `DitooPro-Light` radio. BLE does
+not require pairing when an explicit address is supplied; automatic device
+selection still searches paired devices. Fallback does not search for a
+different radio address. BLE session setup synchronizes the device clock.
+
+BLE uses Divoom's wrapped packets, paced 20-byte GATT writes, and transport
+acknowledgments. An acknowledgment confirms delivery, not the physical
+result. Keyboard backlight control is a toggle, not an absolute off command.
+BLE lighting and volume queries are tested on a Ditoo with firmware 306007;
+image, animation, text, and video support on this transport is not yet
+verified on hardware, and paced writes limit throughput.
+
+Library callers can select a transport with
+`with_transport(Transport::Ble, send_set_brightness(address, 0)).await`;
+unscoped calls default to automatic fallback. The selection applies to
+the scoped future and is not inherited by separately spawned Tokio tasks.

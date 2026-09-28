@@ -34,6 +34,10 @@ pub struct Args {
   #[arg(long)]
   device: Option<String>,
 
+  /// Connection transport; auto falls back to BLE if RFCOMM cannot connect
+  #[arg(long, value_enum, default_value = "auto", global = true)]
+  transport: divoom_ditoo_pro_controller::Transport,
+
   #[command(subcommand)]
   command: Command
 }
@@ -325,6 +329,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   let args = Args::parse();
 
+  divoom_ditoo_pro_controller::with_transport(args.transport, run(args)).await
+}
+
+async fn run(args: Args) -> Result<(), Box<dyn Error>> {
   match args.command {
     Command::Scan => scan_devices().await?,
     Command::Devices => list_paired_devices().await?,

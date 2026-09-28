@@ -26,6 +26,9 @@ use crate::divoom_file_format::frame_header::FrameHeader;
 
 pub mod divoom_file_format;
 pub mod protocol;
+mod transport;
+pub use transport::{Transport, with_transport};
+use transport::DeviceConnection;
 
 use crate::protocol::alarm::Alarm;
 use crate::protocol::animation::{Animation, ControlWord};
@@ -135,33 +138,35 @@ async fn read_response(reader: &mut bluer::rfcomm::stream::OwnedReadHalf) -> Res
 const MAX_CONNECT_ATTEMPTS: u32 = 3;
 const INTER_PACKET_DELAY: Duration = Duration::from_millis(40);
 
-struct DeviceConnection {
+pub(crate) struct ClassicConnection {
   writer: bluer::rfcomm::stream::OwnedWriteHalf,
   _reader_handle: tokio::task::JoinHandle<()>,
   response_rx: mpsc::UnboundedReceiver<Response>,
   _session: bluer::Session,
   _profile_handle: bluer::rfcomm::ProfileHandle,
+  device: transport::DeviceLease,
 }
 
-impl DeviceConnection {
+impl ClassicConnection {
   async fn connect(mac_address: Address) -> Result<Self, Box<dyn Error>> {
     info!("Connecting to device with MAC address {}", mac_address);
 
+    let mut last_error = String::new();
     for attempt in 1..=MAX_CONNECT_ATTEMPTS {
       if attempt > 1 {
         info!("Retrying connection (attempt {}/{})..", attempt, MAX_CONNECT_ATTEMPTS);
         tokio::time::sleep(Duration::from_secs(1)).await;
       }
 
-      match Self::try_connect(mac_address).await {
-        Ok(conn) => return Ok(conn),
-        Err(e) => {
-          debug!("Connection attempt {} failed: {}", attempt, e);
-        }
+      match tokio::time::timeout(Duration::from_secs(8), Self::try_connect(mac_address)).await {
+        Ok(Ok(conn)) => return Ok(conn),
+        Ok(Err(error)) => last_error = error.to_string(),
+        Err(error) => last_error = format!("RFCOMM connection timed out: {error}"),
       }
+      debug!("Connection attempt {} failed: {}", attempt, last_error);
     }
 
-    Err("Failed to connect to device".into())
+    Err(format!("Failed to connect via RFCOMM: {last_error}").into())
   }
 
   async fn try_connect(mac_address: Address) -> Result<Self, Box<dyn Error>> {
@@ -183,6 +188,7 @@ impl DeviceConnection {
 
     let mut profile_handle = session.register_profile(profile).await?;
     let device = adapter.device(mac_address)?;
+    let lease = transport::DeviceLease::new(device.clone()).await?;
 
     if !device.is_connected().await? {
       debug!("Device not connected, connecting...");
@@ -225,12 +231,13 @@ impl DeviceConnection {
       }
     });
 
-    Ok(DeviceConnection {
+    Ok(ClassicConnection {
       writer,
       _reader_handle: reader_handle,
       response_rx: rx,
       _session: session,
       _profile_handle: profile_handle,
+      device: lease,
     })
   }
 
@@ -268,6 +275,7 @@ impl DeviceConnection {
     info!("Disconnecting from device");
     self._reader_handle.abort();
     self.writer.shutdown().await?;
+    self.device.release().await?;
     Ok(())
   }
 }
@@ -719,4 +727,8 @@ pub async fn send_video(
 
   conn.disconnect().await?;
   Ok(())
+}
+
+impl Drop for ClassicConnection {
+  fn drop(&mut self) { self._reader_handle.abort(); }
 }
