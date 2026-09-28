@@ -1,0 +1,77 @@
+
+Bus 001 Device 122: ID 8888:171e Divoom Ditoo usb audio
+Negotiated speed: Full Speed (12Mbps)
+Device Descriptor:
+  bLength                18
+  bDescriptorType         1
+  bcdUSB               1.10
+  bDeviceClass            0 [unknown]
+  bDeviceSubClass         0 [unknown]
+  bDeviceProtocol         0 
+  bMaxPacketSize0        64
+  idVendor           0x8888 Divoom
+  idProduct          0x171e Ditoo usb audio
+  bcdDevice            1.00
+  iManufacturer           1 Divoom
+  iProduct                2 Ditoo usb audio
+  iSerial                 3 20190808
+  bNumConfigurations      1
+  Configuration Descriptor:
+    bLength                 9
+    bDescriptorType         2
+    wTotalLength       0x001b
+    bNumInterfaces          1
+    bConfigurationValue     1
+    iConfiguration          0 
+    bmAttributes         0x80
+      (Bus Powered)
+    MaxPower              100mA
+    Interface Descriptor:
+      bLength                 9
+      bDescriptorType         4
+      bInterfaceNumber        0
+      bAlternateSetting       0
+      bNumEndpoints           0
+      bInterfaceClass         3 Human Interface Device
+      bInterfaceSubClass      0 [unknown]
+      bInterfaceProtocol      0 
+      iInterface              0 
+        HID Device Descriptor:
+          bLength                 9
+          bDescriptorType        33
+          bcdHID               2.01
+          bCountryCode            0 Not supported
+          bNumDescriptors         1
+          bDescriptorType        34 Report
+          wDescriptorLength      36
+          Report Descriptor: (length is 36)
+            Item(Global): Usage Page, data= [ 0x00 0xff ] 65280
+                            (null)
+            Item(Local ): Usage, data= [ 0xaa 0x55 ] 21930
+                            (null)
+            Item(Main  ): Collection, data= [ 0x01 ] 1
+                            Application
+            Item(Global): Logical Minimum, data= [ 0x00 ] 0
+            Item(Global): Logical Maximum, data= [ 0xff 0x00 ] 255
+            Item(Global): Report Size, data= [ 0x08 ] 8
+            Item(Global): Report Count, data= [ 0x00 0x01 ] 256
+            Item(Local ): Usage, data= [ 0x01 ] 1
+                            (null)
+            Item(Main  ): Input, data= [ 0x02 ] 2
+                            Data Variable Absolute No_Wrap Linear
+                            Preferred_State No_Null_Position Non_Volatile Bitfield
+            Item(Global): Report Count, data= [ 0x00 0x01 ] 256
+            Item(Local ): Usage, data= [ 0x01 ] 1
+                            (null)
+            Item(Main  ): Output, data= [ 0x02 ] 2
+                            Data Variable Absolute No_Wrap Linear
+                            Preferred_State No_Null_Position Non_Volatile Bitfield
+            Item(Global): Report Count, data= [ 0x08 ] 8
+            Item(Local ): Usage, data= [ 0x01 ] 1
+                            (null)
+            Item(Main  ): Feature, data= [ 0x02 ] 2
+                            Data Variable Absolute No_Wrap Linear
+                            Preferred_State No_Null_Position Non_Volatile Bitfield
+            Item(Main  ): End Collection, data=none
+Device Status:     0x0000
+  (Bus Powered)
