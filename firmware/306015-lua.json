@@ -1,0 +1,16 @@
+{
+  "version": 306015,
+  "sha256": "5e7aa25fd7ac511a655b14ce52049083d2372454f07b177b165dac51bf583e87",
+  "bytes": 2026511,
+  "checksum": 174013971,
+  "lua": "5.4.9",
+  "number_bits": 32,
+  "memory_limit": 40960,
+  "task_stack_words": 4096,
+  "globals_reserved": 16384,
+  "source_limit": 8192,
+  "instruction_limit": 100000,
+  "callback_ms_limit": 50,
+  "boot_crc16": 24328,
+  "status": "offline-built; hardware-unverified"
+}

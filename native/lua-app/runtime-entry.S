@@ -55,6 +55,13 @@ runtime_led_context:
     .byte 0x3c, 0x0d, 0xdf, 0x20
     ret
 
+.section .text.runtime_fs_context,"ax"
+.global runtime_fs_context
+runtime_fs_context:
+    /* Stock lwi.gp r0, [gp - 33692]. */
+    .byte 0x3c, 0x0d, 0xdf, 0x19
+    ret
+
 .section .text.led_filter,"ax"
 led_filter:
     smw.adm $r6, [$sp], $r6, 2

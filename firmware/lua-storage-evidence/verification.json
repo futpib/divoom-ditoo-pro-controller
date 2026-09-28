@@ -1,0 +1,111 @@
+{
+  "firmware": 306015,
+  "sha256": "5e7aa25fd7ac511a655b14ce52049083d2372454f07b177b165dac51bf583e87",
+  "bytes": 2026511,
+  "usb_flash": {
+    "application_reenumerated": true,
+    "ble_version_check_requested": false,
+    "blocks_verified": 479,
+    "erase_transfer_verify_seconds": 11.409396066,
+    "event": "usb_complete",
+    "total_usb_seconds": 19.023267622,
+    "usb_port": "1-6",
+    "version": 306015
+  },
+  "metadata_backup": {
+    "firmware": 306015,
+    "read_only": true,
+    "physical_start": 9437184,
+    "bytes": 131072,
+    "sha256": "76f83b37781820c436c13d4ff3f481d7574ac9e6cbb27a5bac3174d4b599e675",
+    "context_hex": "6b000000009200000090000029000000009100002800010015006b00e0060000",
+    "driver_statuses": [
+      0
+    ],
+    "used_blocks": 107,
+    "block_count": 1760,
+    "index_start_page": 40,
+    "index_pages": 1,
+    "models": {
+      "1": 13,
+      "8": 7,
+      "12": 1
+    },
+    "lua_model_0x4c55_unused": true
+  },
+  "runtime_checks": {
+    "passed": 43,
+    "failed": 0,
+    "check_names": [
+      "integer",
+      "float",
+      "libraries",
+      "loop",
+      "pcall",
+      "coroutine",
+      "nested-coroutine",
+      "finalizer",
+      "close",
+      "tostring",
+      "sort",
+      "gsub",
+      "pattern",
+      "oom",
+      "caught-oom",
+      "recursion",
+      "native-call-limit",
+      "syntax",
+      "binary",
+      "capabilities",
+      "stock-heap-headroom",
+      "led-frame",
+      "one-shot-present",
+      "resident-start",
+      "incoming-message",
+      "outgoing-message",
+      "outgoing-acknowledged",
+      "paused",
+      "resumed",
+      "stopped",
+      "update-loop",
+      "update-loop-recovery",
+      "timer-loop",
+      "timer-loop-recovery",
+      "message-loop",
+      "message-loop-recovery",
+      "full-8192-byte-upload",
+      "led-resident",
+      "led-paused",
+      "led-resumed",
+      "led-error-reclaimed",
+      "led-error-recovery",
+      "final-stop"
+    ],
+    "stock_version_afterwards": true,
+    "script": "scripts/check-lua-app-device.py"
+  },
+  "clock_restored": {
+    "state": "active",
+    "peak_memory_bytes": 17352,
+    "instructions": 10,
+    "result": "",
+    "abi": 2,
+    "memory_bytes": 17352,
+    "frames": 1,
+    "callbacks": 5,
+    "dropped_keys": 0,
+    "held_keys": 0,
+    "generation": 12
+  },
+  "isolated_rebuild": {
+    "isolated_rebuild_identical": true,
+    "sha256": "5e7aa25fd7ac511a655b14ce52049083d2372454f07b177b165dac51bf583e87"
+  },
+  "host_checks": {
+    "rust_tests": 49,
+    "native": "ASan/UBSan passed, including metadata range/layout rejection and read-only behavior.",
+    "clippy": "Production lib/bin with no default features passed with warnings denied."
+  },
+  "limits": "Read-only metadata backup, not file-content backup or persistent Lua storage. Native filesystem write serialization and crash recovery remain unresolved. Large BLE reply corruption remains unexplained; short replies verified. No new physical key/LED test beyond the prior confirmed 306014 behavior.",
+  "raw_logs": "Ignored firmware/runs/lua-storage. No raw JSONL or metadata bytes committed."
+}

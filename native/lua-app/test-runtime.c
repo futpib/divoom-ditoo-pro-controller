@@ -7,6 +7,7 @@
 #define __bss_start host__bss_start
 #define __bss_end host__bss_end
 #include "runtime.c"
+#include "storage.c"
 unsigned char __data_start[1], __data_end[1], __data_load[1], __bss_start[1], __bss_end[1];
 static unsigned clock_ms, allocations, frames;
 static unsigned free_heap = 100000, led_writes;
@@ -38,8 +39,15 @@ unsigned stock_screen_command(unsigned c,const void *p,unsigned n) { (void)c;(vo
 unsigned runtime_screen(const void *p) { assert(p == app.frame); ++frames; return 1; }
 void stock_version(unsigned c) { (void)c; }
 void stock_set_version(const unsigned char *p) { (void)p; }
-static unsigned char reply[256];
+static unsigned char reply[1200];
 static unsigned reply_size;
+static uint32_t fs_context[8] = {0,0x9200,0x9000,0,0x9100,0,0,1760};
+static unsigned page_reads;
+unsigned char *runtime_fs_context(void) { return (unsigned char *)fs_context; }
+unsigned stock_page_read(unsigned page, void *data, unsigned n) {
+    assert(page>=0x9000 && page+n<=0x9200 && n>0 && n<=4);
+    ++page_reads; memset(data,0xff,n*256);return 0;
+}
 void stock_reply(unsigned c,unsigned o,const void *p,unsigned n) {
     (void)c;assert(o == 0x37); assert(n <= sizeof reply); memcpy(reply,p,n);reply_size=n;
 }
@@ -160,5 +168,14 @@ int main(void) {
         request[6]=4;runtime_command(0,request,n);
     }
     assert(reply_size>=40);
+    request[6]=10;request[7]=0;request[8]=0;request[9]=1;
+    runtime_command(0,request,12);
+    assert(!memcmp(reply,"DFSP",4) && reply[5]==0 && reply_size==176 && page_reads==1);
+    assert(reply[48]==0xff && reply[175]==0xff);
+    request[7]=0;request[8]=4;
+    runtime_command(0,request,12);assert(reply[5]==1 && page_reads==1);
+    request[7]=0;request[8]=0;request[9]=0;
+    runtime_command(0,request,12);assert(reply[5]==0 && reply_size==48 && page_reads==1);
+    fs_context[2]=0;runtime_command(0,request,12);assert(reply[5]==4 && page_reads==1);
     puts("Resident lifecycle, upload, keys, arena reclamation, and adversarial guard checks passed");
 }

@@ -6,6 +6,10 @@ firmware. 306014 adds independent RGB control of 12 keyboard LED positions;
 306013 remains supported for the original resident app API. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
 and supported by the CLI.
 
+Firmware **306015** retains these app APIs and adds a host-only, read-only
+[filesystem metadata diagnostic](lua-storage.md). It does not yet provide
+persistent Lua files or autostart.
+
 ```sh
 # Install the runtime once; see docs/usb.md for USB permissions.
 divoom-ditoo-pro-controller --transport usb firmware-update firmware/306014-lua.MVA
@@ -149,7 +153,7 @@ python3 scripts/build-lua-app-runtime.py
 python3 scripts/test-lua-app-runtime.py
 cargo test --locked --no-default-features
 cargo build --locked --release --no-default-features
-# Requires an already-installed 306014; stops the current app, performs no flash writes.
+# Requires an already-installed 306015; stops the current app, performs no flash writes.
 python3 scripts/check-lua-app-device.py B1:21:81:DD:B8:9B \
   --output firmware/runs/lua-app-check
 ```
@@ -164,7 +168,8 @@ states offline status; [306013 hardware evidence](../firmware/lua-app-evidence/v
 are separate. Raw runs stay in ignored `firmware/runs/`.
 
 To reproduce the previous 306013 image exactly, build the source at commit
-`9a9d89c`; the current builder produces 306014. Both images remain pinned.
+`9a9d89c`; use `59b5e28` for 306014. The current builder produces 306015.
+All three images remain pinned.
 
 The image reserves 16 KiB of native globals below `0x2004c000`; text starts at
 `0x1ca000`, initialized data loads at `0x1ee000`, and neither crosses `0x1f0000`.

@@ -19,6 +19,7 @@ stock_adc_scan = 0x2bfb0;
 stock_screen_command = 0x75d60;
 stock_led_original = 0x75810;
 stock_led_write = 0x76aa0;
+stock_page_read = 0x7854c;
 _SDA_BASE_ = 0x2000d2f8;
 SECTIONS {
     .hook 0x3ab9c : { KEEP(*(.hook)) }

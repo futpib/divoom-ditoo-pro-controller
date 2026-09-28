@@ -294,7 +294,7 @@ performance and recovery](docs/usb.md).
 and prints metadata for the selected transport without connecting. Bluetooth
 flashing retains the Android protocol and version checks: stock rejects an
 equal-version announcement, even with `--reflash`. `--restore-stock` allows
-supported experimental versions 306008–306014 to return to pinned stock 306007.
+supported experimental versions 306008–306015 to return to pinned stock 306007.
 The Bluetooth 306007 → modified 306008 → stock 306007 round trip is verified by
 completion events and live version reads. See [Bluetooth protocol and
 evidence](docs/firmware-update.md).

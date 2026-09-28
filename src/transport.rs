@@ -271,6 +271,11 @@ impl BleConnection {
       tokio::pin!(notifications);
       let mut buffer = Vec::new();
       while let Some(bytes) = notifications.next().await {
+        log::trace!(
+          "BLE notification ({} bytes): {}",
+          bytes.len(),
+          hex::encode(&bytes)
+        );
         buffer.extend(bytes);
         match parse_frames(&mut buffer) {
           Ok(replies) => {

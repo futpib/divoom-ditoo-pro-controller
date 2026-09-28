@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the pinned NDS32 Lua runtime and its installable 306014 firmware."""
+"""Build the pinned NDS32 Lua runtime and its installable 306015 firmware."""
 import binascii
 import hashlib
 import importlib.util
@@ -71,7 +71,7 @@ def build():
              '-I/usr/nds32le-elf/include/newlib-nano','-Dluai_makeseed(L)=((unsigned)(L)^0x44554c41)', '-I'+str(src)]
     skip = {'lua.c','luac.c','linit.c','liolib.c','loslib.c','loadlib.c','ldblib.c'}
     sources = sorted(p for p in src.glob('*.c') if p.name not in skip)
-    sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','number.c','runtime-entry.S']]
+    sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','runtime-entry.S']]
     sources += [ROOT/'native/lua/libc.c']
     objects = []
     def run(*args): subprocess.run(args, cwd=ROOT, check=True)
@@ -101,7 +101,7 @@ def build():
                (0x75dcc, bytes.fromhex('3a6f98bc'), sections['screen_hook']),
                (0x2d490, bytes.fromhex('49fff590'), sections['key_hook']),
                (0x7580c, bytes.fromhex('3bfffcbc'), sections['led_hook']),
-               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab5e')),
+               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab5f')),
                (0x4b550, bytes.fromhex('c816'), bytes.fromhex('d516'))]
     for offset, before, after in patches:
         assert code[offset:offset+len(before)] == before
@@ -123,13 +123,13 @@ def build():
     struct.pack_into('<I', image,0x607,length+4)
     image.extend(code)
     image.extend(struct.pack('<I',binascii.crc_hqx(image,0)))
-    report = {'version':306014,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
+    report = {'version':306015,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
               'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':40960,
               'task_stack_words':4096,'globals_reserved':16384,'source_limit':8192,
               'instruction_limit':100000,'callback_ms_limit':50,'boot_crc16':0x5f08,
               'status':'offline-built; hardware-unverified'}
-    (ROOT/'firmware/306014-lua.MVA').write_bytes(image)
-    (ROOT/'firmware/306014-lua.json').write_text(json.dumps(report,indent=2)+'\n')
+    (ROOT/'firmware/306015-lua.MVA').write_bytes(image)
+    (ROOT/'firmware/306015-lua.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 
 if __name__ == '__main__': build()

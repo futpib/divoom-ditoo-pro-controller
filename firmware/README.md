@@ -62,6 +62,12 @@ working logs stay in ignored `firmware/runs/`.
 
 `306014-lua.MVA` adds independently controlled keyboard RGB LEDs, native heap
 telemetry and a launch headroom check. It also flushes one-shot display presents.
-The current `scripts/build-lua-app-runtime.py` builds this image; use source at
+Build this image from source at commit `59b5e28`; use source at
 commit `9a9d89c` for the earlier 306013 image. Its device evidence is in
 `lua-io-evidence/verification.json`.
+
+`306015-lua.MVA` retains the resident runtime and adds a bounded, read-only
+filesystem metadata diagnostic for persistence research. The current
+`scripts/build-lua-app-runtime.py` builds this image. It exposes no Lua file API
+and performs no filesystem writes. See [storage research](../docs/lua-storage.md)
+and `lua-storage-evidence/verification.json` for protocol and verification.

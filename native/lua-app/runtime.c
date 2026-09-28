@@ -40,6 +40,7 @@ extern void stock_set_version(const unsigned char *);
 extern void stock_reply(unsigned, unsigned, const void *, unsigned);
 extern void stock_heap_init(void);
 extern void runtime_worker_entry(void *);
+extern void runtime_storage_diagnostic(unsigned, const unsigned char *, unsigned);
 extern unsigned char __data_start[], __data_end[], __data_load[], __bss_start[], __bss_end[];
 
 enum { IDLE, RUNNING, DONE, ERROR, ACTIVE, PAUSED, UPLOADING };
@@ -569,6 +570,7 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         stock_set_version(data+2); return;
     }
     unsigned op = data[6], error = 0;
+    if (op == 10) { runtime_storage_diagnostic(context,data,length); return; }
     unsigned busy = app.state == RUNNING || app.state == ACTIVE || app.state == PAUSED;
     if (op == 1 || op == 3) {
         if (busy) error = 2;
