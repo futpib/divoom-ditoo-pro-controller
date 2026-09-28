@@ -14,4 +14,4 @@ subprocess.run(['cc','-O1','-g','-fsanitize=address,undefined','-DLUAI_MAXCCALLS
     str(ROOT/'native/lua-app/test-runtime.c'), str(ROOT/'native/lua-app/number.c'),
     *[str(p) for p in sorted(source.glob('*.c')) if p.name not in skip],
     '-lm','-o',str(output)],check=True)
-subprocess.run([str(output)],check=True,timeout=30)
+subprocess.run([str(output)],check=True,timeout=30,cwd=ROOT)

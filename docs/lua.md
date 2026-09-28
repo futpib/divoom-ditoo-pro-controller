@@ -1,6 +1,6 @@
 # Resident Lua apps
 
-Firmware **306016** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
+Firmware **306017** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
 over Bluetooth, disconnect, and it keeps running. Changing scripts does not flash
 firmware. 306014 adds independent RGB control of 12 keyboard LED positions;
 306013 remains supported for the original resident app API. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
@@ -15,7 +15,7 @@ persistent Lua files or autostart.
 
 ```sh
 # Install the runtime once; see docs/usb.md for USB permissions.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306016-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306017-lua.MVA
 
 # Subsequent changes only upload source into RAM.
 divoom-ditoo-pro-controller --transport ble lua start examples/lua/clock.lua
@@ -156,7 +156,7 @@ python3 scripts/build-lua-app-runtime.py
 python3 scripts/test-lua-app-runtime.py
 cargo test --locked --no-default-features
 cargo build --locked --release --no-default-features
-# Requires an already-installed 306016; stops the current app, performs no flash writes.
+# Requires an already-installed 306017; stops the current app, performs no flash writes.
 python3 scripts/check-lua-app-device.py B1:21:81:DD:B8:9B \
   --output firmware/runs/lua-app-check
 ```
@@ -173,7 +173,9 @@ are separate. Raw runs stay in ignored `firmware/runs/`.
 
 To reproduce the previous 306013 image exactly, build the source at commit
 `9a9d89c`; use `59b5e28` for 306014 and `842115b` for 306015.
-The current builder produces 306016. All four images remain pinned.
+Use `ae62a69` for 306016. The current builder produces 306017, adding
+[native Bluetooth media connection APIs](lua-bluetooth.md). Previous images
+remain pinned.
 
 The image reserves 8 KiB of native globals below `0x2004c000`; text starts at
 `0x1ca000`, initialized data loads at `0x1ee000`, and neither crosses `0x1f0000`.

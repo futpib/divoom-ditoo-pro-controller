@@ -55,6 +55,15 @@ stock_alarm_state = 0x2000d2f8 - 34131;
 stock_alarm_slot = 0x2000d2f8 - 34125;
 stock_noise_context = 0x2000d2f8 - 33684;
 stock_memo_context = 0x2000d2f8 - 34040;
+stock_bt_context = 0x2000d2f8 - 27264;
+stock_bt_manager = 0x2000d2f8 + 0x5104;
+stock_ble_connected = 0x2000d2f8 - 30420;
+stock_avrcp_state = 0x7c954;
+stock_a2dp_state = 0x7bac0;
+stock_avrcp_connect = 0x1139b0;
+stock_avrcp_disconnect = 0x1139c0;
+stock_avrcp_play = 0x1139ce;
+stock_avrcp_pause = 0x1139e8;
 _SDA_BASE_ = 0x2000d2f8;
 SECTIONS {
     .hook 0x3ab9c : { KEEP(*(.hook)) }

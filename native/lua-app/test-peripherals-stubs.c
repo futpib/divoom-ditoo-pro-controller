@@ -49,3 +49,14 @@ unsigned stock_get_source(void) { return 0; }
 unsigned stock_sd_present(void) { return 0; }
 
 void *stock_sd_queue(void) { return NULL; }
+
+void *volatile stock_bt_context=(void *)1;
+volatile unsigned char stock_bt_manager[0x1c4],stock_ble_connected=1;
+static unsigned bt_media_state,bt_audio_state,bt_connects,bt_commands,bt_queue_ok=1,bt_last_action;
+static unsigned char bt_address[6];
+unsigned stock_avrcp_state(void) { return bt_media_state; }
+unsigned stock_a2dp_state(void) { return bt_audio_state; }
+unsigned stock_avrcp_connect(const unsigned char *p) { ++bt_connects;memcpy(bt_address,p,6);return bt_queue_ok; }
+unsigned stock_avrcp_disconnect(void) { ++bt_commands;return bt_queue_ok; }
+unsigned stock_avrcp_play(void) { ++bt_commands;bt_last_action=1;return bt_queue_ok; }
+unsigned stock_avrcp_pause(void) { ++bt_commands;bt_last_action=2;return bt_queue_ok; }

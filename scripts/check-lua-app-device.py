@@ -10,7 +10,7 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('device')
 p.add_argument('--binary', type=Path, default=ROOT/'target/release/divoom-ditoo-pro-controller')
 p.add_argument('--output', type=Path, required=True)
-p.add_argument('--firmware', type=int, choices=[306013,306014,306015,306016], default=306016)
+p.add_argument('--firmware', type=int, choices=[306013,306014,306015,306016,306017], default=306017)
 a = p.parse_args()
 a.output.mkdir(parents=True, exist_ok=False)
 # The CLI checks the installed firmware before using any extension selector.

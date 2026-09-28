@@ -75,6 +75,11 @@ and `lua-storage-evidence/verification.json` for protocol and verification.
 `306016-lua.MVA` adds native battery/charging status, indicator control, alarms,
 power schedules, player controls, voice memos and microphone noise readings.
 It fixes native wake-table persistence/selection and returns unused Lua memory
-to the native audio heap. The current `scripts/build-lua-app-runtime.py` builds
-this image. See the [peripheral API](../docs/lua-peripherals.md) and
+to the native audio heap. Build it from source at commit `ae62a69`.
+See the [peripheral API](../docs/lua-peripherals.md) and
 `lua-peripherals-evidence/verification.json`. Raw transport logs remain ignored.
+
+`306017-lua.MVA` adds bounded native AVRCP connections and explicit play/pause
+commands for Lua. The current `scripts/build-lua-app-runtime.py` builds this image.
+See the [Bluetooth API and TV example](../docs/lua-bluetooth.md) and
+`lua-bluetooth-evidence/verification.json` for verified behavior and limitations.

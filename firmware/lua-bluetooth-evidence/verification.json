@@ -1,0 +1,89 @@
+{
+  "firmware": 306017,
+  "sha256": "00fd46616ad27bc3db0c30bf8c19668f884dc22bb052b04f378180dfb27a4bce",
+  "date": "2026-09-28",
+  "usb_flash": {
+    "application_reenumerated": true,
+    "ble_version_check_requested": false,
+    "blocks_verified": 479,
+    "erase_transfer_verify_seconds": 11.335023833,
+    "event": "usb_complete",
+    "total_usb_seconds": 20.551758833,
+    "usb_port": "1-6",
+    "version": 306017
+  },
+  "rebuild_identical": true,
+  "host_checks": {
+    "rust_tests_no_default_features": 40,
+    "clippy": "lib and bins, no default features, warnings denied: passed",
+    "native": "ASan/UBSan runtime and Bluetooth validation, queue/cancellation/peer isolation, actual TV app key/icon and existing-peer timeout regression: passed"
+  },
+  "tv_connection": {
+    "peer": "0C:CD:B4:D0:0C:26",
+    "media_state": 2,
+    "audio_state": 0,
+    "ble_connected": true,
+    "pairing": "Owner accepted TV pairing prompt",
+    "simultaneous_ble_replies": 27
+  },
+  "physical_test": {
+    "keyboard_and_display": "Owner confirmed Ditoo behavior after fixes",
+    "tv_play_pause": "Owner reports no response in SmartTube; not working"
+  },
+  "fixed_app_bugs": [
+    "Unsupported font character produced blank play icon; primitive drawing replaces it",
+    "Local audio playing state remains false without A2DP; app alternates explicit pause/play",
+    "Existing AVRCP link was missed after selecting target, causing false timeout after 20 seconds; regression reproduced and fixed, live 27-reply check passed"
+  ],
+  "host_bluetooth": {
+    "bluez": "5.87",
+    "experimental_enabled": true,
+    "cli": "Explicit Bearer.LE1 connect, status and disconnect preserve classic profile; ConnectDevice fallback for older BlueZ",
+    "limitation": "Per-bearer cleanup and concurrency passed. One subsequent BLE reconnect timed out waiting for service discovery; explicit LE disconnect and reconnect recovered it.",
+    "test_cleanup": "Silent player unregistered; Pairable and Discoverable restored false; TV target restored. A laptop bond was created during testing but its persistent retention was not established; the BlueZ device object was absent at the final check."
+  },
+  "limits": [
+    "AVRCP queue acceptance does not establish delivery or TV action",
+    "No HID remote profile exposed",
+    "TV audio profile remained disconnected",
+    "Final firmware has native guard host coverage; full 43-case on-device hostile-script suite was last run on earlier runtime"
+  ],
+  "raw_logs": "Ignored firmware/runs and target/bluetooth-investigation; no new JSONL traces committed",
+  "laptop_media_test": {
+    "script": "scripts/bluetooth-media-target.py",
+    "peer": "84:5C:F3:EF:87:78",
+    "a2dp_state": 0,
+    "accepted_avrcp_operations": [
+      "0x46 PAUSE press",
+      "0xc6 PAUSE release",
+      "0x44 PLAY press",
+      "0xc4 PLAY release"
+    ],
+    "player_callbacks": [
+      "Pause",
+      "Play"
+    ],
+    "ble_concurrent": true,
+    "bearer_cleanup": {
+      "cli_exit_code": 0,
+      "host_le_connected_after": false,
+      "host_bredr_connected_after": true
+    },
+    "scope": "Real Ditoo AVRCP packets and BlueZ player dispatch on laptop; no sound produced; not proof of TV behavior"
+  },
+  "transport_test": {
+    "ble_replies": 25,
+    "ble_replies_during_classic": 4,
+    "classic_sdp_replies": 5,
+    "scope": "same computer, two transports",
+    "script": "scripts/check-bluetooth-concurrency.py"
+  },
+  "tv_diagnosis": "Android AVRCP target source gates pause on active A2DP device; plausible explanation of AVRCP-only SmartTube failure, not verified in TV logs. User declined TV ADB; disconnected it and tested on laptop instead.",
+  "tv_restored": {
+    "state": "active",
+    "peer": "0C:CD:B4:D0:0C:26",
+    "media_state": 2,
+    "audio_state": 0,
+    "ble_connected": true
+  }
+}

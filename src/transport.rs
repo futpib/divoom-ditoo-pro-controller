@@ -167,18 +167,110 @@ fn parse_frames(buffer: &mut Vec<u8>) -> Result<Vec<Response>, Box<dyn Error + S
 pub(crate) struct DeviceLease {
   device: bluer::Device,
   owned: bool,
+  le_only: bool,
+}
+
+#[derive(Clone, Copy)]
+enum LeOperation {
+  Connected,
+  Connect,
+  Disconnect,
+}
+
+// bluer does not yet expose BlueZ's per-bearer API. Keep blocking D-Bus work
+// off the async executor; each call owns and closes its system-bus connection.
+async fn le_bearer(
+  device: &bluer::Device,
+  operation: LeOperation,
+) -> Result<Option<bool>, Box<dyn Error>> {
+  let path = format!(
+    "/org/bluez/{}/dev_{}",
+    device.adapter_name(),
+    device.address().to_string().replace(':', "_")
+  );
+  let result = tokio::task::spawn_blocking(move || -> Result<bool, dbus::Error> {
+    use dbus::blocking::stdintf::org_freedesktop_dbus::Properties;
+    let connection = dbus::blocking::Connection::new_system()?;
+    let proxy = connection.with_proxy("org.bluez", path, Duration::from_secs(10));
+    let interface = "org.bluez.Bearer.LE1";
+    match operation {
+      LeOperation::Connected => proxy.get(interface, "Connected"),
+      LeOperation::Connect | LeOperation::Disconnect => {
+        let method = if matches!(operation, LeOperation::Connect) {
+          "Connect"
+        } else {
+          "Disconnect"
+        };
+        proxy.method_call::<(), _, _, _>(interface, method, ())?;
+        Ok(true)
+      }
+    }
+  })
+  .await?;
+  match result {
+    Ok(value) => Ok(Some(value)),
+    Err(error)
+      if matches!(
+        error.name(),
+        Some(
+          "org.freedesktop.DBus.Error.UnknownMethod"
+            | "org.freedesktop.DBus.Error.UnknownInterface"
+            | "org.freedesktop.DBus.Error.UnknownProperty"
+        )
+      ) =>
+    {
+      Ok(None)
+    }
+    Err(error) => Err(error.into()),
+  }
+}
+
+async fn disconnect_lease(device: &bluer::Device, le_only: bool) -> Result<(), Box<dyn Error>> {
+  if le_only {
+    if le_bearer(device, LeOperation::Disconnect).await?.is_some() {
+      return Ok(());
+    }
+    if device.class().await?.is_some() {
+      // Older BlueZ can connect LE explicitly but cannot disconnect only LE.
+      // Retain that connection rather than tear down another classic profile.
+      log::debug!("Leaving BLE connected: BlueZ lacks per-bearer disconnect");
+      return Ok(());
+    }
+  }
+  device.disconnect().await?;
+  Ok(())
 }
 
 impl DeviceLease {
   pub async fn new(device: bluer::Device) -> Result<Self, Box<dyn Error>> {
     let owned = !device.is_connected().await?;
-    Ok(Self { device, owned })
+    Ok(Self {
+      device,
+      owned,
+      le_only: false,
+    })
+  }
+
+  async fn new_ble(device: bluer::Device) -> Result<Self, Box<dyn Error>> {
+    let connected = match le_bearer(&device, LeOperation::Connected).await? {
+      Some(connected) => connected,
+      None => device.is_connected().await?,
+    };
+    Ok(Self {
+      device,
+      owned: !connected,
+      le_only: true,
+    })
   }
 
   pub async fn release(&mut self) -> Result<(), Box<dyn Error>> {
     if self.owned {
       self.owned = false;
-      tokio::time::timeout(Duration::from_secs(10), self.device.disconnect()).await??;
+      tokio::time::timeout(
+        Duration::from_secs(12),
+        disconnect_lease(&self.device, self.le_only),
+      )
+      .await??;
     }
     Ok(())
   }
@@ -188,9 +280,10 @@ impl Drop for DeviceLease {
   fn drop(&mut self) {
     if self.owned {
       let device = self.device.clone();
+      let le_only = self.le_only;
       if let Ok(runtime) = tokio::runtime::Handle::try_current() {
         runtime.spawn(async move {
-          let _ = device.disconnect().await;
+          let _ = disconnect_lease(&device, le_only).await;
         });
       }
     }
@@ -218,16 +311,43 @@ async fn connect_ble_bearer(
   adapter: &bluer::Adapter,
   device: &bluer::Device,
 ) -> Result<(), Box<dyn Error>> {
-  adapter
-    .set_discovery_filter(bluer::DiscoveryFilter {
-      transport: bluer::DiscoveryTransport::Le,
-      ..Default::default()
-    })
-    .await?;
-  let discovery = adapter.discover_devices().await?;
-  tokio::time::sleep(Duration::from_secs(2)).await;
-  device.connect().await?;
-  drop(discovery);
+  if let Some(connected) = le_bearer(device, LeOperation::Connected).await? {
+    if !connected {
+      le_bearer(device, LeOperation::Connect).await?;
+    }
+    while !device.is_services_resolved().await? {
+      tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    return Ok(());
+  }
+  // Device1.Connect may choose BR/EDR for a dual-mode Ditoo and claim its
+  // audio connection. ConnectDevice's explicit address type selects LE.
+  let address_type = match device.address_type().await? {
+    bluer::AddressType::LeRandom => bluer::AddressType::LeRandom,
+    _ => bluer::AddressType::LePublic,
+  };
+  match adapter.connect_device(device.address(), address_type).await {
+    Ok(_) => (),
+    Err(error) if error.kind == bluer::ErrorKind::AlreadyConnected => (),
+    Err(error)
+      if matches!(&error.kind,
+      bluer::ErrorKind::Internal(bluer::InternalErrorKind::DBus(name))
+        if name == "org.freedesktop.DBus.Error.UnknownMethod") =>
+    {
+      // Keep older BlueZ installations usable for LE-only discovery, but do
+      // not silently switch a known audio device to the classic bearer.
+      if device.class().await?.is_some() {
+        return Err("Explicit BLE selection requires BlueZ Experimental=true in /etc/bluetooth/main.conf; generic Connect could take the Ditoo audio connection".into());
+      }
+      if !device.is_connected().await? {
+        device.connect().await?;
+      }
+    }
+    Err(error) => return Err(error.into()),
+  }
+  while !device.is_services_resolved().await? {
+    tokio::time::sleep(Duration::from_millis(50)).await;
+  }
   Ok(())
 }
 
@@ -236,11 +356,20 @@ impl BleConnection {
     let session = bluer::Session::new().await?;
     let adapter = session.default_adapter().await?;
     adapter.set_powered(true).await?;
+    // Discover before reading Device1 properties: BlueZ can remove an
+    // unpaired device object after the previous connection ends.
+    adapter
+      .set_discovery_filter(bluer::DiscoveryFilter {
+        transport: bluer::DiscoveryTransport::Le,
+        ..Default::default()
+      })
+      .await?;
+    let discovery = adapter.discover_devices().await?;
+    tokio::time::sleep(Duration::from_secs(2)).await;
     let device = adapter.device(address)?;
-    let lease = DeviceLease::new(device.clone()).await?;
-    if !device.is_connected().await? || !device.is_services_resolved().await? {
-      connect_ble_bearer(&adapter, &device).await?;
-    }
+    let lease = DeviceLease::new_ble(device.clone()).await?;
+    connect_ble_bearer(&adapter, &device).await?;
+    drop(discovery);
     let mut write = None;
     let mut notify = None;
     for service in device.services().await? {

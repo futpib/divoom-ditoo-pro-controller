@@ -30,12 +30,18 @@ extern void stock_sound_stop(void);
 extern unsigned stock_sound_playing(void);
 extern unsigned stock_fs_free(void);
 extern void stock_fs_delete(unsigned, unsigned);
+extern void *volatile stock_bt_context;
+extern volatile unsigned char stock_bt_manager[], stock_ble_connected;
+extern unsigned stock_avrcp_state(void), stock_a2dp_state(void);
+extern unsigned stock_avrcp_connect(const unsigned char *);
+extern unsigned stock_avrcp_disconnect(void), stock_avrcp_play(void), stock_avrcp_pause(void);
 
 enum { JOB_EMPTY, JOB_QUEUED, JOB_RUNNING, JOB_DONE };
 enum { ALARM_GET=1, ALARM_SET, WAKE_GET, WAKE_SET, ALARM_CANCEL,
        ALARM_SNOOZE, AUDIO_PLAY, AUDIO_DIRECTION, AUDIO_TRACK, AUDIO_SEEK,
        AUDIO_REPEAT, AUDIO_PREVIEW, AUDIO_STOP, NOISE_ENABLE,
-       MEMO_START, MEMO_STOP, MEMO_PLAY, MEMO_DELETE, AUDIO_SOURCE };
+       MEMO_START, MEMO_STOP, MEMO_PLAY, MEMO_DELETE, AUDIO_SOURCE,
+       BT_CONNECT, BT_DISCONNECT, BT_MEDIA };
 static struct {
     volatile unsigned state, epoch, cleanup;
     unsigned ticket, sequence, job_epoch, op, slot, mask, value;
@@ -46,6 +52,7 @@ static struct {
     volatile unsigned noise_value, noise_time, noise_samples;
     unsigned noise_owned, noise_previous, recording, record_started, preview_owned;
     volatile unsigned recorded_bytes;
+    unsigned bt_attempts, bt_last_attempt;
 } peripheral;
 
 static unsigned native_priority(void) {
@@ -146,6 +153,34 @@ static const char *perform_job(void) {
             (stock_get_source() != 3 || !stock_sd_present() || !stock_sd_queue()))
         return "SD playback unavailable";
     switch (op) {
+    case BT_CONNECT: {
+        if (!stock_bt_context) return "Bluetooth unavailable";
+        unsigned state = stock_avrcp_state(), audio = stock_a2dp_state();
+        if (state || audio) {
+            for (unsigned i=0;i<6;++i)
+                if (stock_bt_manager[0xe0+i] != peripheral.data[i])
+                    return "another Bluetooth peer is active";
+            if (state == 2) return NULL;
+            if (state) return "Bluetooth connection pending";
+        }
+        unsigned now = stock_ticks();
+        if (peripheral.bt_attempts >= 32) return "32 connection attempts per boot exceeded";
+        if (peripheral.bt_attempts && (unsigned)(now-peripheral.bt_last_attempt)<10000)
+            return "Bluetooth connection rate limited";
+        if (stock_free_heap() < 16384) return "insufficient native heap";
+        ++peripheral.bt_attempts; peripheral.bt_last_attempt = now;
+        /* The stock command queue copies the six address bytes before return. */
+        if (!stock_avrcp_connect(peripheral.data)) return "Bluetooth queue full";
+        break;
+    }
+    case BT_DISCONNECT:
+        if (!stock_bt_context) return "Bluetooth unavailable";
+        if (!stock_avrcp_disconnect()) return "Bluetooth queue full";
+        break;
+    case BT_MEDIA:
+        if (!stock_bt_context || stock_avrcp_state()!=2) return "media peer not connected";
+        if (!(n ? stock_avrcp_play() : stock_avrcp_pause())) return "Bluetooth queue full";
+        break;
     case AUDIO_SOURCE:
         if (peripheral.recording) return "recording is active";
         if (n == 3 && !stock_sd_present()) return "no SD card";
@@ -389,7 +424,53 @@ static int audio_status(lua_State *L) {
     field(L,"recorded_bytes",peripheral.recorded_bytes); flag(L,"recording",peripheral.recording); flag(L,"sound_playing",stock_sound_playing());
     return 1;
 }
+static int hex_digit(unsigned char c) {
+    if (c>='0' && c<='9') return c-'0';
+    if (c>='a' && c<='f') return c-'a'+10;
+    if (c>='A' && c<='F') return c-'A'+10;
+    return -1;
+}
+static int bt_connect(lua_State *L) {
+    size_t len; const char *s=luaL_checklstring(L,1,&len);
+    unsigned char address[16]={0}; unsigned any=0,all=255;
+    luaL_argcheck(L,len==17,1,"expected XX:XX:XX:XX:XX:XX");
+    for (unsigned i=0;i<6;++i) {
+        int hi=hex_digit(s[i*3]),lo=hex_digit(s[i*3+1]);
+        luaL_argcheck(L,hi>=0 && lo>=0 && (i==5 || s[i*3+2]==':'),1,"invalid Bluetooth address");
+        /* Native BdAddr stores the least significant address byte first. */
+        address[5-i]=(hi<<4)|lo; any|=address[5-i]; all&=address[5-i];
+    }
+    luaL_argcheck(L,any && all!=255,1,"invalid Bluetooth address");
+    return submit(L,BT_CONNECT,0,0,address,0);
+}
+static int bt_disconnect(lua_State *L) { return submit(L,BT_DISCONNECT,0,0,NULL,0); }
+static int bt_media(lua_State *L) {
+    const char *actions[]={"pause","play",NULL};
+    return submit(L,BT_MEDIA,0,luaL_checkoption(L,1,NULL,actions),NULL,0);
+}
+static int bt_status(lua_State *L) {
+    unsigned available=stock_bt_context!=NULL;
+    unsigned media=available ? stock_avrcp_state() : 0;
+    unsigned audio=available ? stock_a2dp_state() : 0;
+    lua_createtable(L,0,7);
+    flag(L,"available",available); flag(L,"ble_connected",stock_ble_connected);
+    field(L,"media_state",media); field(L,"audio_state",audio);
+    flag(L,"media_connected",media==2); flag(L,"audio_connected",audio>=2);
+    field(L,"access_mode",available ? stock_bt_manager[0xdc] : 0);
+    if (media==2 || audio>=2) {
+        const char *digits="0123456789ABCDEF"; char address[18];
+        for (unsigned i=0;i<6;++i) {
+            unsigned b=stock_bt_manager[0xe0+5-i];
+            address[i*3]=digits[b>>4];address[i*3+1]=digits[b&15];address[i*3+2]=':';
+        }
+        address[17]=0;lua_pushstring(L,address);lua_setfield(L,-2,"peer");
+    }
+    return 1;
+}
 static void peripherals_modules(lua_State *L) {
+    static const luaL_Reg bluetooth[] = {{"status",bt_status},{"connect_media",bt_connect},
+        {"disconnect_media",bt_disconnect},{"media",bt_media},{NULL,NULL}};
+    luaL_newlib(L,bluetooth); lua_setglobal(L,"bluetooth");
     static const luaL_Reg power[] = {{"battery",battery},{"indicator",indicator},
         {"get_schedule",get_wake},{"set_schedule",set_wake},{NULL,NULL}};
     static const luaL_Reg alarms[] = {{"get",get_alarm},{"set",set_alarm},{"status",alarm_status},

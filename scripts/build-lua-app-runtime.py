@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the pinned NDS32 Lua runtime and its installable 306016 firmware."""
+"""Build the pinned NDS32 Lua runtime and its installable 306017 firmware."""
 import binascii
 import hashlib
 import importlib.util
@@ -95,6 +95,14 @@ def build():
     stock = (ROOT/'firmware/306007.MVA').read_bytes()
     assert hashlib.sha256(stock).hexdigest() == base.STOCK_SHA
     code = bytearray(stock[base.CODE:-4])
+    # Match the native queue wrappers used by the bounded Bluetooth API.
+    for offset, expected in [
+        (0x1139b0,'fc01f081f1018446fa02490128ddfc81'),
+        (0x1139c0,'fc0084208041fa03490128d6fc80'),
+        (0x1139ce,'3c0de560000000a6c008fc0084208041fa04490128cafc80dd9e'),
+        (0x1139e8,'3c0de560000000a6c008fc0084208041fa05490128bdfc80dd9e')]:
+        expected = bytes.fromhex(expected)
+        assert code[offset:offset+len(expected)] == expected
     patches = [(0x3ab9c, bytes.fromhex('a639c805'), sections['hook']),
                (0x2ec58, bytes.fromhex('4902b436'), sections['init_hook']),
                (0x854d0, bytes.fromhex('4602004c'), bytes.fromhex('4602004a')),
@@ -110,7 +118,7 @@ def build():
                # Remember the selected earliest slot, not the last eligible slot.
                (0x47eba, bytes.fromhex('3e177b1c'), bytes.fromhex('92009200')),
                (0x47eea, bytes.fromhex('3c0fdbd1'), sections['wake_select_hook']),
-               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab60')),
+               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab61')),
                (0x4b550, bytes.fromhex('c816'), bytes.fromhex('d516'))]
     for offset, before, after in patches:
         assert code[offset:offset+len(before)] == before
@@ -132,13 +140,13 @@ def build():
     struct.pack_into('<I', image,0x607,length+4)
     image.extend(code)
     image.extend(struct.pack('<I',binascii.crc_hqx(image,0)))
-    report = {'version':306016,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
+    report = {'version':306017,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
               'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':40960,'arena_page_unit':1024,'arena_page_slots':40,
               'task_stack_words':4096,'globals_reserved':8192,'source_limit':8192,
               'instruction_limit':100000,'callback_ms_limit':50,'boot_crc16':0x5f08,
               'status':'offline-built; hardware-unverified'}
-    (ROOT/'firmware/306016-lua.MVA').write_bytes(image)
-    (ROOT/'firmware/306016-lua.json').write_text(json.dumps(report,indent=2)+'\n')
+    (ROOT/'firmware/306017-lua.MVA').write_bytes(image)
+    (ROOT/'firmware/306017-lua.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 
 if __name__ == '__main__': build()

@@ -57,7 +57,7 @@ The device reboot naturally interrupts its USB audio connection.
 ### What is written and how completion is checked
 
 Only SHA-256-pinned images accepted by `firmware::Image` can be flashed: stock
-306007, gate probe 306008, native-memory probe 306009 and Lua runtimes 306012–306016. The USB
+306007, gate probe 306008, native-memory probe 306009 and Lua runtimes 306012–306017. The USB
 updater extracts the MVA code payload and writes **only the application at
 `0x10000`**. The installed bootloader, its header, and the user-data partition
 starting at `0x1f0000` are preserved. This is not a byte-for-byte replacement of
