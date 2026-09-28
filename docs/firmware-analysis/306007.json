@@ -1,0 +1,60 @@
+{
+  "bytes": 1877379,
+  "code": {
+    "address": 0,
+    "application_address": 65536,
+    "application_bytes": 1810288,
+    "application_file_offset": 67087,
+    "architecture": "Andes NDS32",
+    "bootloader_crc16": "5f08",
+    "bootloader_region_bytes": 65536,
+    "bootloader_used_bytes": 40576,
+    "bytes": 1875824,
+    "code_crc16": "97e8",
+    "data_endian": "little",
+    "driver_matches_bootloader_copy": true,
+    "encryption_flag_byte": 255,
+    "file_offset": 1551,
+    "instruction_endian": "big",
+    "internal_crcs_valid": true
+  },
+  "format": "MVsilicon B1 MVA",
+  "known_ditoo_306007": true,
+  "package_crc16": "f9b6",
+  "package_crc_valid": true,
+  "record_count": 3,
+  "records": [
+    {
+      "control_hex": "35ba69",
+      "file": "record-1-type-1.bin",
+      "payload_bytes": 3,
+      "payload_offset": 10,
+      "payload_sha256": "b531db4e6ce91a5c3f370c7f4114fd3487d7a55bf42de3c494227d6c7e30653e",
+      "record_offset": 5,
+      "type": 1
+    },
+    {
+      "address": 0,
+      "data_bytes": 1520,
+      "data_offset": 22,
+      "file": "record-2-type-3.bin",
+      "payload_bytes": 1524,
+      "payload_offset": 18,
+      "payload_sha256": "5c4f2fc4d734ca199fdd57a375bfb38e88ce843c0511474f29f4a996a6a8969a",
+      "record_offset": 13,
+      "type": 3
+    },
+    {
+      "address": 0,
+      "data_bytes": 1875824,
+      "data_offset": 1551,
+      "file": "record-3-type-2.bin",
+      "payload_bytes": 1875828,
+      "payload_offset": 1547,
+      "payload_sha256": "7f756405972bb9c0c320002ad6ce43b3e6c0e3a91e772aac17f214514cc39bd6",
+      "record_offset": 1542,
+      "type": 2
+    }
+  ],
+  "sha256": "fc16341c005b11d0ac476917dc2fd98c9bc7481b92a183e64bfe209801566544"
+}

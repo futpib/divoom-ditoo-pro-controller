@@ -45,6 +45,13 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+  /// Decode and validate an MVA firmware package without connecting to a device
+  FirmwareDecode {
+    file: PathBuf,
+    /// Extract records, code and strings into a new directory
+    #[arg(long)] output: Option<PathBuf>,
+  },
+
   /// Experimental vendor-image updater; same-version writes may be refused by firmware
   FirmwareUpdate {
     file: PathBuf,
@@ -369,6 +376,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn run(args: Args) -> Result<(), Box<dyn Error>> {
   match args.command {
+    Command::FirmwareDecode { file, output } => {
+      let report = divoom_ditoo_pro_controller::firmware_decode::decode(&file, output.as_deref())?;
+      println!("{}", serde_json::to_string_pretty(&report)?);
+    }
     Command::FirmwareUpdate { file, reflash, dry_run } => {
       let image = divoom_ditoo_pro_controller::firmware::Image::load(&file)?;
       if dry_run { println!("{}", image.describe()); }

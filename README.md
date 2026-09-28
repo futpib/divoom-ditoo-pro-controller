@@ -65,6 +65,17 @@ List already-paired Ditoo Pro devices:
 divoom-ditoo-pro-controller devices
 ```
 
+## Decode firmware offline
+
+```sh
+divoom-ditoo-pro-controller firmware-decode firmware/306007.MVA
+divoom-ditoo-pro-controller firmware-decode firmware/306007.MVA --output firmware/decoded/306007
+```
+
+Validates the MVA package CRC and extracts records, firmware code and strings.
+Use a new output directory. See [the decoded format and findings](docs/firmware-format.md).
+This command does not connect to the device.
+
 ## Look up numeric IDs
 
 ```sh
