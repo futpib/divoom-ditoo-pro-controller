@@ -1,6 +1,8 @@
 # Firmware for hardware family 306
 
 Downloaded on 2026-09-28 from Divoom's own file server. Nothing was flashed.
+A subsequent [same-version update attempt](../docs/firmware-update.md) was rejected
+by the device with ready status 2 before any firmware data chunks were sent.
 
 The installed version and the newest image returned by the checked endpoints
 are both **306007**, so [306007.MVA](306007.MVA) satisfies both requests.

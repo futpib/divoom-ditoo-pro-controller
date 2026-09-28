@@ -263,6 +263,14 @@ The library exposes `control::{Request, Session}` for programs. Alarm writes
 now honor the supplied fields; `--time` is required because a write replaces
 the full slot. Library callers pass `&Alarm` to `send_alarm`.
 
+## Firmware updates (experimental)
+
+`firmware-update FILE --dry-run` validates the archived 306007 vendor image and
+prints update metadata. `firmware-update FILE --reflash` permits attempting the
+same version; it cannot override a device refusal. The live Ditoo rejected the
+announcement with status 2, before any firmware chunks were sent. A complete
+flash is **not hardware-verified**. See [protocol and evidence](docs/firmware-update.md).
+
 ## Android feature comparison and firmware archive
 
 The [Android feature audit](docs/android-feature-gaps.md) compares the inspected

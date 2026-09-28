@@ -1,0 +1,2 @@
+[2026-09-28T11:39:17Z INFO  divoom_ditoo_pro_controller::transport] Connected via BLE GATT (device clock synchronized)
+Error: "Device not ready for update (status 2); no chunks sent"

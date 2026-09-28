@@ -1,0 +1,1 @@
+{"event":"preflight","image":{"bytes":1877379,"checksum":161583048,"chunk_bytes":256,"chunks":7334,"final_chunk_zero_padded":true,"hardware_family":306,"metadata_hex":"0057ab040083a51c00c88fa109","sha256":"fc16341c005b11d0ac476917dc2fd98c9bc7481b92a183e64bfe209801566544","version":306007},"installed_versions":[306007],"transport":"ble"}

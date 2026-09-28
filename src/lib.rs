@@ -28,6 +28,7 @@ pub mod divoom_file_format;
 pub mod protocol;
 mod transport;
 pub mod control;
+pub mod firmware;
 pub use transport::{Transport, with_transport};
 use transport::DeviceConnection;
 

@@ -3,7 +3,6 @@ mod ids;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-#[cfg(feature = "text")]
 use std::path::PathBuf;
 use bluer::Address;
 use chrono::NaiveDateTime;
@@ -46,6 +45,15 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+  /// Experimental vendor-image updater; same-version writes may be refused by firmware
+  FirmwareUpdate {
+    file: PathBuf,
+    /// Permit a same-version attempt; cannot override device rejection
+    #[arg(long)] reflash: bool,
+    /// Validate image and show metadata without connecting or writing
+    #[arg(long)] dry_run: bool,
+  },
+
   /// List known game IDs and other selectors without connecting to a device
   Ids {
     /// Category to inspect; omit to list categories
@@ -361,6 +369,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn run(args: Args) -> Result<(), Box<dyn Error>> {
   match args.command {
+    Command::FirmwareUpdate { file, reflash, dry_run } => {
+      let image = divoom_ditoo_pro_controller::firmware::Image::load(&file)?;
+      if dry_run { println!("{}", image.describe()); }
+      else { divoom_ditoo_pro_controller::firmware::flash(resolve_device(args.device).await?, &image, reflash).await?; }
+    }
+
     Command::Ids { category, json } => ids::show(category.as_deref(), json)?,
     Command::Raw { action } => control_cli::run(args.device, action).await?,
     Command::Device(action) => control_cli::run_requests(args.device, vec![action.request()?], action.dry_run()).await?,

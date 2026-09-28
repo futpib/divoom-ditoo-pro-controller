@@ -44,7 +44,7 @@ are retained; their BLE transfer path has not been exercised on hardware.
 | 23 | FM tuner, presets, region and scan | 60,61,63,64,67–70 | Raw; no evidence this unit has the required FM hardware. |
 | 24 | Multi-screen drawing, orientation, mirroring | 3A,3B,49,77; BD/23,24 | Raw, model-dependent. Do not infer Ditoo support from the shared app. |
 | 25 | Device name, connection flags, Bluetooth password | 75,AF,B0,27 | Raw; state codecs and model-specific behavior unverified. |
-| 26 | Firmware, hot-content, fonts and resource transfers | 48,7C,93–99,9B,9D–9F,F7,BE; BD/28,29,2D,30,31,37,38,3A | Firmware version read and vendor image archive available. Update packaging, negotiation, resume and flashing workflow remain unimplemented. Raw packet access is not a firmware updater. |
+| 26 | Firmware, hot-content, fonts and resource transfers | 48,7C,93–99,9B,9D–9F,F7,BE; BD/28,29,2D,30,31,37,38,3A | Firmware version read and vendor image archive available. Experimental `firmware-update` implements the app 98/99 transfer for the pinned 306007 image. Live handshake rejected status 2; no chunks sent and complete flashing remains unverified. Other resource transfers remain raw. |
 | 27 | Wi-Fi provisioning, JSON command API, factory/configuration reset | 01,F0–F4; BD/25,2C | Shared app catalogue only. Device-specific JSON framing and provisioning workflow not implemented; resets untested. |
 
 The complete [196-symbol catalogue](../data/protocol-commands.json) contains

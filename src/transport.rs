@@ -7,7 +7,7 @@ use bluer::{
   Address,
 };
 use futures::StreamExt;
-use std::{error::Error, future::Future, time::Duration};
+use std::{collections::VecDeque, error::Error, future::Future, time::Duration};
 use tokio::sync::mpsc;
 
 #[derive(Clone, Copy, Debug, Default, clap::ValueEnum)]
@@ -70,6 +70,14 @@ impl DeviceConnection {
     }
   }
 
+  /// Send a stream packet without discarding asynchronous device update events.
+  pub async fn stream_write(&mut self, packet: &Packet) -> Result<(), Box<dyn Error>> {
+    match self {
+      Self::Classic(c) => c.fire_and_forget(packet).await,
+      Self::Ble(c) => c.send_inner(packet, None, true).await.map(|_| ()),
+    }
+  }
+
   pub async fn send_and_receive(&mut self, packet: &Packet) -> Result<Response, Box<dyn Error>> {
     self.exchange(packet, packet.command.value(), &[]).await
   }
@@ -97,6 +105,11 @@ impl DeviceConnection {
   }
 
   pub async fn receive(&mut self, timeout: Duration) -> Result<Option<Response>, Box<dyn Error>> {
+    if let Self::Ble(c) = self {
+      if let Some(reply) = c.pending.pop_front() {
+        return Ok(Some(reply));
+      }
+    }
     let rx = match self {
       Self::Classic(c) => &mut c.response_rx,
       Self::Ble(c) => &mut c.responses,
@@ -182,6 +195,7 @@ impl Drop for DeviceLease {
 pub(crate) struct BleConnection {
   write: Characteristic,
   responses: mpsc::UnboundedReceiver<Response>,
+  pending: VecDeque<Response>,
   reader: tokio::task::JoinHandle<()>,
   sequence: u16,
   _session: bluer::Session,
@@ -270,6 +284,7 @@ impl BleConnection {
     let mut connection = Self {
       write,
       responses,
+      pending: VecDeque::new(),
       reader,
       sequence: 0x0101,
       _session: session,
@@ -319,7 +334,19 @@ impl BleConnection {
     packet: &Packet,
     expected: Option<(u8, &[u8])>,
   ) -> Result<Option<Response>, Box<dyn Error>> {
-    while self.responses.try_recv().is_ok() {}
+    self.send_inner(packet, expected, false).await
+  }
+
+  async fn send_inner(
+    &mut self,
+    packet: &Packet,
+    expected: Option<(u8, &[u8])>,
+    preserve: bool,
+  ) -> Result<Option<Response>, Box<dyn Error>> {
+    if !preserve {
+      self.pending.clear();
+      while self.responses.try_recv().is_ok() {}
+    }
     let sequence = self.sequence;
     self.sequence = if sequence == 0x01ff {
       0x0101
@@ -349,6 +376,8 @@ impl BleConnection {
           return Err("Device rejected command".into());
         }
         command_response = Some(reply);
+      } else if preserve {
+        self.pending.push_back(reply);
       }
       if acknowledged && (expected.is_none() || command_response.is_some()) {
         return Ok(command_response);
