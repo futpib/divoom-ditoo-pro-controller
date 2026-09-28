@@ -1,10 +1,10 @@
 # Firmware for hardware family 306
 
-Downloaded on 2026-09-28 from Divoom's own file server. Nothing was flashed.
+Downloaded on 2026-09-28 from Divoom's own file server.
 A subsequent [same-version update attempt](../docs/firmware-update.md) was rejected
 by the device with ready status 2 before any firmware data chunks were sent.
 
-The installed version and the newest image returned by the checked endpoints
+The installed version at download and the newest image returned by the checked endpoints
 are both **306007**, so [306007.MVA](306007.MVA) satisfies both requests.
 
 - Device version evidence: `37 00` reply `01 0a 00 04 37 55 01 57 ab 04 00 a1 01 02`.
@@ -23,7 +23,8 @@ The returned changelog decodes to `fixbug!`.
 
 This is a vendor image **matching the installed version number**, not a
 byte-for-byte backup read from this particular device. The internal MVA
-format has not been decoded or validated for flashing. It does not have the
+format was subsequently [decoded](../docs/firmware-format.md), including package
+and code CRCs. This alone does not establish flashing success. It does not have the
 Ditoo Plus `DIVOOMUPDATE` trailer, so the Plus container parser is not applied.
 A test-channel lookup does not prove the shipped device runs beta firmware.
 No newer image was exposed by this bounded set of public queries; regional,
@@ -42,3 +43,8 @@ curl --fail --json '{"Hardware":306,"IsTest":true,"Language":"EN","UpdateFlag":2
 The downloaded bytes remain proprietary vendor material, separate from this
 repository's controller code license. They are preserved here for local
 analysis; this commit has not been pushed.
+
+`306008-reflash-probe.MVA` is a locally patched experiment, not a vendor release.
+Its adjacent JSON report and `scripts/build-reflash-probe.py` specify its exact
+changes and provenance. See [the update experiment](../docs/firmware-update.md#reproducible-version-gate-experiment)
+for verification limits and the stock restoration procedure.

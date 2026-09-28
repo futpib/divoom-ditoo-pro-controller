@@ -1,8 +1,9 @@
 # Experimental firmware updater
 
 The CLI implements the Android app's Bluetooth 98/99 updater. It currently
-accepts only the exact archived vendor image for Ditoo Pro hardware family 306,
-version 306007. **A complete flash has not been verified on hardware.**
+accepts the exact archived vendor image for Ditoo Pro hardware family 306,
+version 306007, and the reproducible 306008 experiment described below.
+**A complete flash has not been verified on hardware.**
 
 ```sh
 # Offline image validation and packet metadata:
@@ -16,7 +17,8 @@ divoom-ditoo-pro-controller --device B1:21:81:DD:B8:9B --transport ble \
 `--reflash` removes only the host's same-version check. It does not override
 a device rejection, change the advertised version, or modify the image.
 Without it, the command refuses to reinstall an equal version. It also rejects
-downgrades and hardware-family mismatches. Image size and SHA-256 are pinned
+downgrades (except the explicit probe-to-stock restoration below) and
+hardware-family mismatches. Image size and SHA-256 are pinned
 before connecting; arbitrary images and other hardware families are unsupported.
 
 ## Live result
@@ -84,8 +86,8 @@ would take over an hour at nominal pacing. The implementation does not increase
 transfer speed by assuming a larger writable packet size.
 
 The [offline decoder](firmware-format.md) now extracts the MVA container and
-verifies its package and internal CRCs. The updater still requires exact equality
-to the pinned vendor image and uses the app's transfer checksum; decoding does
+verifies its package and internal CRCs. The updater requires exact equality
+to one of the two pinned images and uses the app's transfer checksum; decoding does
 not enable arbitrary-image flashing or establish signature enforcement.
 
 ## Device-side rejection decoded
@@ -125,3 +127,41 @@ See [the retained disassembly](firmware-analysis/306007-update-gates.nds32.S).
 No advertised version was falsified and no gate was bypassed during the retry.
 Changing only the advertised version might pass the first gates, but does not
 prove that downstream bootloader checks permit reinstalling the same code.
+
+## Reproducible version-gate experiment
+
+`scripts/build-reflash-probe.py` takes the pinned 306007 image and builds
+`firmware/306008-reflash-probe.MVA`. Its JSON report records every changed byte.
+This is a binary patch, not a rebuild from vendor source. Eight bytes change
+across five fields:
+
+- The instruction at code offset `0x47924` returns 306008 instead of 306007.
+- The conditional branch at `0x4b550` becomes an unconditional branch to
+  `0x4b57c`, bypassing the equal/older-version rejection. The family gate remains.
+- The application header change marker at `0x100cc` changes from `0xe05a` to
+  `0x4a59`. The inspected bootloader compares this word for inequality; the
+  vendor's original marker algorithm has not been established. The replacement
+  is content-derived, but is not claimed to reproduce that algorithm.
+- The full-code CRC becomes `0x4751`; the package CRC becomes `0xd5c5`.
+
+The bootloader's executable bytes and CRC `0x5f08` remain unchanged. The script
+checks the stock hash, instruction bytes, allowed differences, length, and
+package/bootloader/full-code CRCs. The output SHA-256 is
+`6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b`.
+
+```sh
+python3 scripts/build-reflash-probe.py
+divoom-ditoo-pro-controller firmware-update firmware/306008-reflash-probe.MVA --dry-run
+divoom-ditoo-pro-controller --device B1:21:81:DD:B8:9B --transport ble \
+  firmware-update firmware/306008-reflash-probe.MVA
+
+# Only after successful completion and a live version read of 306008:
+divoom-ditoo-pro-controller --device B1:21:81:DD:B8:9B --transport ble \
+  firmware-update firmware/306007.MVA --restore-stock
+```
+
+`--restore-stock` permits only installed version 306008 to the exact pinned
+306007 image. It cannot override the device's gate: successful restoration
+depends on the patched firmware actually running. Each transfer requires a
+device success event followed by a live version check. Acceptance of the initial
+announcement alone is not evidence that the modified image booted.

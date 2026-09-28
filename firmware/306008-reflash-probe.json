@@ -1,0 +1,61 @@
+{
+  "stock_sha256": "fc16341c005b11d0ac476917dc2fd98c9bc7481b92a183e64bfe209801566544",
+  "patched_sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+  "version": 306008,
+  "bytes": 1877379,
+  "application_change_marker": 19033,
+  "application_marker_vendor_algorithm_known": false,
+  "changes": [
+    {
+      "file_offset": 1755,
+      "code_offset": 204,
+      "before": 232,
+      "after": 81
+    },
+    {
+      "file_offset": 1756,
+      "code_offset": 205,
+      "before": 151,
+      "after": 71
+    },
+    {
+      "file_offset": 67291,
+      "code_offset": 65740,
+      "before": 90,
+      "after": 89
+    },
+    {
+      "file_offset": 67292,
+      "code_offset": 65741,
+      "before": 224,
+      "after": 74
+    },
+    {
+      "file_offset": 294710,
+      "code_offset": 293159,
+      "before": 87,
+      "after": 88
+    },
+    {
+      "file_offset": 310111,
+      "code_offset": 308560,
+      "before": 200,
+      "after": 213
+    },
+    {
+      "file_offset": 1877375,
+      "code_offset": 1875824,
+      "before": 182,
+      "after": 197
+    },
+    {
+      "file_offset": 1877376,
+      "code_offset": 1875825,
+      "before": 249,
+      "after": 213
+    }
+  ],
+  "package_crc16": 54725,
+  "code_crc16": 18257,
+  "bootloader_crc16": 24328
+}

@@ -57,6 +57,8 @@ enum Command {
     file: PathBuf,
     /// Permit a same-version attempt; cannot override device rejection
     #[arg(long)] reflash: bool,
+    /// Restore pinned stock 306007 only from the experimental 306008 firmware
+    #[arg(long)] restore_stock: bool,
     /// Validate image and show metadata without connecting or writing
     #[arg(long)] dry_run: bool,
   },
@@ -380,10 +382,10 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
       let report = divoom_ditoo_pro_controller::firmware_decode::decode(&file, output.as_deref())?;
       println!("{}", serde_json::to_string_pretty(&report)?);
     }
-    Command::FirmwareUpdate { file, reflash, dry_run } => {
+    Command::FirmwareUpdate { file, reflash, restore_stock, dry_run } => {
       let image = divoom_ditoo_pro_controller::firmware::Image::load(&file)?;
       if dry_run { println!("{}", image.describe()); }
-      else { divoom_ditoo_pro_controller::firmware::flash(resolve_device(args.device).await?, &image, reflash).await?; }
+      else { divoom_ditoo_pro_controller::firmware::flash(resolve_device(args.device).await?, &image, reflash, restore_stock).await?; }
     }
 
     Command::Ids { category, json } => ids::show(category.as_deref(), json)?,

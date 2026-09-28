@@ -276,11 +276,13 @@ the full slot. Library callers pass `&Alarm` to `send_alarm`.
 
 ## Firmware updates (experimental)
 
-`firmware-update FILE --dry-run` validates the archived 306007 vendor image and
+`firmware-update FILE --dry-run` validates the archived 306007 vendor image or
+the reproducible 306008 version-gate probe and
 prints update metadata. `firmware-update FILE --reflash` permits attempting the
 same version; it cannot override a device refusal. The live Ditoo rejected the
 announcement with status 2, before any firmware chunks were sent. A complete
-flash is **not hardware-verified**. See [protocol and evidence](docs/firmware-update.md).
+flash is **not hardware-verified**. `--restore-stock` permits only the probe's
+306008 to pinned stock 306007 restoration. See [protocol and evidence](docs/firmware-update.md).
 
 ## Android feature comparison and firmware archive
 
@@ -291,4 +293,5 @@ The alarm defect found there is fixed by the subsequent protocol work.
 
 The [firmware archive](firmware/README.md) contains the vendor image matching
 installed version 306007, also the latest returned by the checked test-channel
-endpoints, with verified hashes and saved API responses. No firmware was flashed.
+endpoints, with verified hashes and saved API responses. See the updater
+documentation for subsequent flashing experiments.

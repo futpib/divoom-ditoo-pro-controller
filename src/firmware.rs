@@ -14,23 +14,38 @@ use std::{collections::VecDeque, error::Error, path::Path, time::Duration};
 const VERSION: u32 = 306007;
 const IMAGE_SIZE: usize = 1_877_379;
 const SHA256: &str = "fc16341c005b11d0ac476917dc2fd98c9bc7481b92a183e64bfe209801566544";
+const PROBE_VERSION: u32 = 306008;
+const PROBE_SHA256: &str = "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b";
 const CHUNK_SIZE: usize = 256;
 const EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub struct Image {
   bytes: Vec<u8>,
   checksum: u32,
+  version: u32,
+  sha256: String,
 }
 
 impl Image {
-  /// Restrict writes to the exact vendor image whose model and provenance were checked.
+  /// Restrict writes to pinned stock and the reproducible, narrowly patched probe.
   pub fn load(path: &Path) -> Result<Self, Box<dyn Error>> {
     let bytes = std::fs::read(path)?;
-    if bytes.len() != IMAGE_SIZE || hex::encode(Sha256::digest(&bytes)) != SHA256 {
-      return Err("Unrecognized firmware image: this updater currently supports only the verified vendor 306007.MVA image".into());
+    let sha256 = hex::encode(Sha256::digest(&bytes));
+    let version = match sha256.as_str() {
+      SHA256 => VERSION,
+      PROBE_SHA256 => PROBE_VERSION,
+      _ => return Err("Unrecognized firmware image: only pinned stock 306007 and the reproducible 306008 reflash probe are supported".into()),
+    };
+    if bytes.len() != IMAGE_SIZE {
+      return Err("Unexpected firmware image size".into());
     }
     let checksum = bytes.iter().map(|b| u32::from(*b)).sum();
-    Ok(Self { bytes, checksum })
+    Ok(Self {
+      bytes,
+      checksum,
+      version,
+      sha256,
+    })
   }
 
   fn count(&self) -> usize {
@@ -39,7 +54,7 @@ impl Image {
 
   fn metadata(&self) -> Packet {
     let mut payload = vec![0];
-    payload.extend(VERSION.to_le_bytes());
+    payload.extend(self.version.to_le_bytes());
     payload.extend((self.bytes.len() as u32).to_le_bytes());
     payload.extend(self.checksum.to_le_bytes());
     Packet {
@@ -64,8 +79,8 @@ impl Image {
   }
 
   pub fn describe(&self) -> serde_json::Value {
-    json!({"version":VERSION,"hardware_family":VERSION/1000,"bytes":self.bytes.len(),
-      "sha256":SHA256,"checksum":self.checksum,"chunk_bytes":CHUNK_SIZE,"chunks":self.count(),
+    json!({"version":self.version,"hardware_family":self.version/1000,"bytes":self.bytes.len(),
+      "sha256":self.sha256,"checksum":self.checksum,"chunk_bytes":CHUNK_SIZE,"chunks":self.count(),
       "metadata_hex":hex::encode(self.metadata().payload),"final_chunk_zero_padded":true})
   }
 }
@@ -160,14 +175,22 @@ async fn versions(conn: &mut DeviceConnection) -> Result<Vec<u32>, Box<dyn Error
   Err(format!("Could not read firmware version: {error}").into())
 }
 
-fn validate_target(installed: u32, reflash: bool) -> Result<(), Box<dyn Error>> {
-  if installed / 1000 != VERSION / 1000 {
-    return Err(format!("Hardware mismatch: device {installed}, image {VERSION}").into());
+fn validate_target(
+  installed: u32,
+  version: u32,
+  reflash: bool,
+  restore_stock: bool,
+) -> Result<(), Box<dyn Error>> {
+  if restore_stock && !(installed == PROBE_VERSION && version == VERSION) {
+    return Err("--restore-stock requires device 306008 and pinned stock 306007".into());
   }
-  if installed > VERSION {
+  if installed / 1000 != version / 1000 {
+    return Err(format!("Hardware mismatch: device {installed}, image {version}").into());
+  }
+  if installed > version && !restore_stock {
     return Err("Firmware downgrade is not supported".into());
   }
-  if installed == VERSION && !reflash {
+  if installed == version && !reflash {
     return Err("Version already installed; use --reflash to explicitly reinstall it".into());
   }
   Ok(())
@@ -177,12 +200,13 @@ async fn transfer(
   conn: &mut DeviceConnection,
   image: &Image,
   reflash: bool,
+  restore_stock: bool,
 ) -> Result<(), Box<dyn Error>> {
   let current = versions(conn).await?;
   let installed = *current
     .first()
     .ok_or("Device reported no firmware version")?;
-  validate_target(installed, reflash)?;
+  validate_target(installed, image.version, reflash, restore_stock)?;
   println!(
     "{}",
     json!({"event":"preflight","installed_versions":current,"transport":conn.transport_name(),"image":image.describe()})
@@ -212,7 +236,7 @@ async fn transfer(
           }
           println!(
             "{}",
-            json!({"event":"device_update_complete","version":VERSION})
+            json!({"event":"device_update_complete","version":image.version})
           );
           return Ok(());
         }
@@ -255,9 +279,14 @@ async fn transfer(
 }
 
 /// Flash a validated image, require explicit device completion, then verify after reconnecting.
-pub async fn flash(address: Address, image: &Image, reflash: bool) -> Result<(), Box<dyn Error>> {
+pub async fn flash(
+  address: Address,
+  image: &Image,
+  reflash: bool,
+  restore_stock: bool,
+) -> Result<(), Box<dyn Error>> {
   let mut connection = DeviceConnection::connect(address).await?;
-  let result = transfer(&mut connection, image, reflash).await;
+  let result = transfer(&mut connection, image, reflash, restore_stock).await;
   let cleanup = connection.disconnect().await;
   result?;
   if let Err(error) = cleanup {
@@ -270,7 +299,7 @@ pub async fn flash(address: Address, image: &Image, reflash: bool) -> Result<(),
       let cleanup = connection.disconnect().await;
       if let Ok(versions) = result {
         cleanup?;
-        if versions.first() == Some(&VERSION) {
+        if versions.first() == Some(&image.version) {
           println!(
             "{}",
             json!({"event":"verified","firmware_versions":versions,"reconnect_attempt":attempt})
@@ -311,12 +340,32 @@ mod tests {
     Ok(())
   }
   #[test]
+  fn probe_image_has_its_own_version_and_wire_checksum() -> Result<(), Box<dyn Error>> {
+    let image = Image::load(Path::new(concat!(
+      env!("CARGO_MANIFEST_DIR"),
+      "/firmware/306008-reflash-probe.MVA"
+    )))?;
+    assert_eq!(image.version, PROBE_VERSION);
+    assert_eq!(image.checksum, 161582659);
+    assert_eq!(
+      image.metadata().payload,
+      hex::decode("0058ab040083a51c00438ea109")?
+    );
+    Ok(())
+  }
+
+  #[test]
   fn target_validation_rejects_wrong_hardware_and_implicit_reflash() {
-    assert!(validate_target(306006, false).is_ok());
-    assert!(validate_target(306007, false).is_err());
-    assert!(validate_target(306007, true).is_ok());
-    assert!(validate_target(306008, true).is_err());
-    assert!(validate_target(41007, true).is_err());
+    assert!(validate_target(306007, PROBE_VERSION, false, false).is_ok());
+    assert!(validate_target(306008, VERSION, false, true).is_ok());
+    assert!(validate_target(306009, VERSION, false, true).is_err());
+    assert!(validate_target(306007, VERSION, false, true).is_err());
+    assert!(validate_target(306008, PROBE_VERSION, false, true).is_err());
+    assert!(validate_target(306006, VERSION, false, false).is_ok());
+    assert!(validate_target(306007, VERSION, false, false).is_err());
+    assert!(validate_target(306007, VERSION, true, false).is_ok());
+    assert!(validate_target(306008, VERSION, true, false).is_err());
+    assert!(validate_target(41007, VERSION, true, false).is_err());
   }
 
   #[test]
