@@ -306,7 +306,7 @@ performance and recovery](docs/usb.md).
 and prints metadata for the selected transport without connecting. Bluetooth
 flashing retains the Android protocol and version checks: stock rejects an
 equal-version announcement, even with `--reflash`. `--restore-stock` allows
-supported experimental versions 306008–306019 to return to pinned stock 306007.
+supported experimental versions 306008–306020 to return to pinned stock 306007.
 The Bluetooth 306007 → modified 306008 → stock 306007 round trip is verified by
 completion events and live version reads. See [Bluetooth protocol and
 evidence](docs/firmware-update.md).
@@ -330,9 +330,13 @@ documentation for subsequent flashing experiments.
 
 ### On-device Lua
 
-Firmware 306019 runs resident Lua apps with drawing, physical keys, keyboard
+Firmware 306020 runs resident Lua apps with drawing, physical keys, keyboard
 RGB lighting, timers and messages. It adds [battery/charging status and indicator
 control, native alarms and power schedules, playback, voice memos and microphone
 levels](docs/lua-peripherals.md), plus [native Bluetooth media connections](docs/lua-bluetooth.md). Use `lua start FILE`, `lua pause`, `lua resume`, `lua stop`, `lua send`,
 `lua receive`, or `lua status`. One-shot `lua run FILE` and `lua eval SOURCE` remain
 available. See [installation, APIs, limits and verification](docs/lua.md).
+
+Firmware 306020 also provides [Bluetooth keyboard and media keys from Lua](docs/lua-keyboard.md).
+Use `examples/lua/tv-keyboard.lua` for three physical buttons: Play/Pause, Mute,
+and Space. Each press is released by native code even if the Lua app fails.

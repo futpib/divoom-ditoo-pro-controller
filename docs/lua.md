@@ -1,6 +1,6 @@
 # Resident Lua apps
 
-Firmware **306019** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
+Firmware **306020** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
 over Bluetooth, disconnect, and it keeps running. Changing scripts does not flash
 firmware. 306014 adds independent RGB control of 12 keyboard LED positions;
 306013 remains supported for the original resident app API. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
@@ -15,7 +15,7 @@ persistent Lua files or autostart.
 
 ```sh
 # Install the runtime once; see docs/usb.md for USB permissions.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306019-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306020-lua.MVA
 
 # Subsequent changes only upload source into RAM.
 divoom-ditoo-pro-controller --transport ble lua start examples/lua/clock.lua
@@ -30,8 +30,11 @@ divoom-ditoo-pro-controller --transport ble lua stop
 
 Add `--device B1:21:81:DD:B8:9B` if discovery is ambiguous. `lua run FILE` and
 `lua eval SOURCE` execute one-shot programs and return a scalar. `lua cancel`
-is an alias for stopping. Start/run replace the previous app. The CLI checks
-the installed firmware before sending any extension command.
+is an alias for stopping. The runtime has one app slot and one Lua VM;
+start/run/eval stop the previous app before uploading. Coroutines and timers
+belong to that same app and share its limits. Native Bluetooth connections can
+remain connected after the app stops. The CLI checks the installed firmware
+before sending any extension command.
 
 The clock cycles colors on each key-down. Use `examples/lua/key-monitor.lua`
 to see physical key IDs and event numbers. **Hold a keyboard key for five seconds
@@ -156,7 +159,7 @@ python3 scripts/build-lua-app-runtime.py
 python3 scripts/test-lua-app-runtime.py
 cargo test --locked --no-default-features
 cargo build --locked --release --no-default-features
-# Requires an already-installed 306019; stops the current app, performs no flash writes.
+# Requires an already-installed 306020; stops the current app, performs no flash writes.
 python3 scripts/check-lua-app-device.py B1:21:81:DD:B8:9B \
   --output firmware/runs/lua-app-check
 ```
@@ -174,7 +177,8 @@ are separate. Raw runs stay in ignored `firmware/runs/`.
 To reproduce the previous 306013 image exactly, build the source at commit
 `9a9d89c`; use `59b5e28` for 306014 and `842115b` for 306015.
 Use `ae62a69` for 306016, `95d7f6e` for 306017 and `ac82bb9` for 306018.
-The current builder produces 306019 with full USB control, retaining the queued AVRCP mute toggle and
+Use `606eb91` to reproduce 306019. The current builder produces 306020 with
+[Bluetooth HID keyboard support](lua-keyboard.md) and full USB control, retaining the queued AVRCP mute toggle and
 [native Bluetooth media connection APIs](lua-bluetooth.md). Previous images
 remain pinned.
 

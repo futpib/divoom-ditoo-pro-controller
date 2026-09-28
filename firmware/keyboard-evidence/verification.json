@@ -1,0 +1,319 @@
+{
+  "firmware": 306020,
+  "sha256": "3bc22855f5480f529c5bb4aafa04ac918e0eb4774fd4eeca8f7f9a76fa00132f",
+  "bytes": 2026739,
+  "rebuild_identical": true,
+  "flash": [
+    {
+      "application_reenumerated": true,
+      "ble_version_check_requested": false,
+      "blocks_verified": 479,
+      "erase_transfer_verify_seconds": 11.137520828,
+      "event": "usb_complete",
+      "total_usb_seconds": 17.025148484,
+      "usb_port": "1-6",
+      "version": 306020
+    },
+    {
+      "event": "verified",
+      "firmware_versions": [
+        306020
+      ],
+      "transport": "usb",
+      "verification_transport": "usb"
+    }
+  ],
+  "reboot_for_bond_test": [
+    {
+      "application_reenumerated": true,
+      "ble_version_check_requested": false,
+      "blocks_verified": 479,
+      "erase_transfer_verify_seconds": 11.024693859,
+      "event": "usb_complete",
+      "total_usb_seconds": 25.951708914,
+      "usb_port": "1-6",
+      "version": 306020
+    },
+    {
+      "event": "verified",
+      "firmware_versions": [
+        306020
+      ],
+      "transport": "usb",
+      "verification_transport": "usb"
+    }
+  ],
+  "linux_input": {
+    "transport": "Classic Bluetooth HID; USB for Lua control",
+    "host_kernel": "6.12.96-1-MANJARO",
+    "input_grabbed": true,
+    "checks": [
+      {
+        "check": "toggle",
+        "events": [
+          [
+            164,
+            1
+          ],
+          [
+            164,
+            0
+          ]
+        ],
+        "passed": true
+      },
+      {
+        "check": "mute",
+        "events": [
+          [
+            113,
+            1
+          ],
+          [
+            113,
+            0
+          ]
+        ],
+        "passed": true
+      },
+      {
+        "check": "space",
+        "events": [
+          [
+            57,
+            1
+          ],
+          [
+            57,
+            0
+          ]
+        ],
+        "passed": true
+      },
+      {
+        "check": "infinite-loop-release",
+        "events": [
+          [
+            57,
+            1
+          ],
+          [
+            57,
+            0
+          ]
+        ],
+        "state": "error",
+        "result": "instruction budget exceeded",
+        "passed": true
+      }
+    ]
+  },
+  "hid_only_bond": {
+    "before_reboot": "hid=2 bonds=1 error=0 audio=0 media=0 BLE=false",
+    "reconnected_after_reboot": true,
+    "hci_event_counts": {
+      "Link Key Request": 2,
+      "Link Key Notification": 0,
+      "User Confirmation Request": 0,
+      "IO Capability Request": 0,
+      "IO Capability Response": 0,
+      "Simple Pairing Complete": 0,
+      "Encryption Change": 2
+    },
+    "positive_link_key_replies": 2,
+    "fresh_pairing_required": false
+  },
+  "lua_guards": {
+    "checks": [
+      {
+        "name": "integer",
+        "passed": true
+      },
+      {
+        "name": "float",
+        "passed": true
+      },
+      {
+        "name": "libraries",
+        "passed": true
+      },
+      {
+        "name": "loop",
+        "passed": true
+      },
+      {
+        "name": "pcall",
+        "passed": true
+      },
+      {
+        "name": "coroutine",
+        "passed": true
+      },
+      {
+        "name": "nested-coroutine",
+        "passed": true
+      },
+      {
+        "name": "finalizer",
+        "passed": true
+      },
+      {
+        "name": "close",
+        "passed": true
+      },
+      {
+        "name": "tostring",
+        "passed": true
+      },
+      {
+        "name": "sort",
+        "passed": true
+      },
+      {
+        "name": "gsub",
+        "passed": true
+      },
+      {
+        "name": "pattern",
+        "passed": true
+      },
+      {
+        "name": "oom",
+        "passed": true
+      },
+      {
+        "name": "caught-oom",
+        "passed": true
+      },
+      {
+        "name": "recursion",
+        "passed": true
+      },
+      {
+        "name": "native-call-limit",
+        "passed": true
+      },
+      {
+        "name": "syntax",
+        "passed": true
+      },
+      {
+        "name": "binary",
+        "passed": true
+      },
+      {
+        "name": "capabilities",
+        "passed": true
+      },
+      {
+        "name": "stock-heap-headroom",
+        "passed": true
+      },
+      {
+        "name": "led-frame",
+        "passed": true
+      },
+      {
+        "name": "one-shot-present",
+        "passed": true
+      },
+      {
+        "name": "resident-start",
+        "passed": true
+      },
+      {
+        "name": "incoming-message",
+        "passed": true
+      },
+      {
+        "name": "outgoing-message",
+        "passed": true
+      },
+      {
+        "name": "outgoing-acknowledged",
+        "passed": true
+      },
+      {
+        "name": "paused",
+        "passed": true
+      },
+      {
+        "name": "resumed",
+        "passed": true
+      },
+      {
+        "name": "stopped",
+        "passed": true
+      },
+      {
+        "name": "update-loop",
+        "passed": true
+      },
+      {
+        "name": "update-loop-recovery",
+        "passed": true
+      },
+      {
+        "name": "timer-loop",
+        "passed": true
+      },
+      {
+        "name": "timer-loop-recovery",
+        "passed": true
+      },
+      {
+        "name": "message-loop",
+        "passed": true
+      },
+      {
+        "name": "message-loop-recovery",
+        "passed": true
+      },
+      {
+        "name": "full-8192-byte-upload",
+        "passed": true
+      },
+      {
+        "name": "led-resident",
+        "passed": true
+      },
+      {
+        "name": "led-paused",
+        "passed": true
+      },
+      {
+        "name": "led-resumed",
+        "passed": true
+      },
+      {
+        "name": "led-error-reclaimed",
+        "passed": true
+      },
+      {
+        "name": "led-error-recovery",
+        "passed": true
+      },
+      {
+        "name": "final-stop",
+        "passed": true
+      }
+    ],
+    "stock_version_afterwards": true,
+    "exit_code": 0
+  },
+  "host_tests": {
+    "native_asan_ubsan": "passed: runtime, USB, HID, physical three-key bindings, bond-save wear limits",
+    "rust": {
+      "library": 51,
+      "binary": 5,
+      "cli": 2,
+      "failed": 0
+    },
+    "clippy": "passed: --lib --bins --no-default-features -- -D warnings"
+  },
+  "tv": {
+    "verified": false,
+    "status": "Connection attempt returned to disconnected; TV pairing and application behavior require an on-TV check."
+  },
+  "raw_evidence": "Ignored firmware/runs/306020-keyboard; Bluetooth captures can contain link keys and are not committed."
+}

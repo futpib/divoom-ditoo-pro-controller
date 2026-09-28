@@ -197,3 +197,7 @@ This is a source-backed explanation; persistent TV reconnection has not yet
 been verified. The USB bridge preserves flash partitions and does not clear
 bonds. A separate fix must persist authenticated AVRCP-only bonds without
 pretending an A2DP connection exists or writing on every reconnect.
+
+Firmware 306020 implements that dirty-record flush for **HID-only** connections;
+see [Bluetooth keyboard support](lua-keyboard.md). AVRCP-only connections retain
+the stock persistence behavior described above.

@@ -74,6 +74,19 @@ stock_avrcp_pause = 0x1139e8;
 stock_bt_peek = 0x138bf6;
 stock_bt_enqueue = 0x138b74;
 stock_avrcp_panel = 0x11c52e;
+stock_bt_core = 0x2000d2f8 - 35356;
+stock_l2_register = 0x12288e;
+stock_l2_connect = 0x122e3a;
+stock_l2_accept = 0x122d44;
+stock_l2_disconnect = 0x122ab6;
+stock_l2_send = 0x1229b2;
+stock_sdp_add = 0x12eafa;
+stock_cmgr_register = 0x11dd34;
+stock_cmgr_connect = 0x11ddac;
+stock_cmgr_remove = 0x11df44;
+stock_bt_class = 0x128914;
+stock_bt_record_count = 0x7cc84;
+stock_bt_save_records = 0x7d570;
 _SDA_BASE_ = 0x2000d2f8;
 SECTIONS {
     .hook 0x3ab9c : { KEEP(*(.hook)) }

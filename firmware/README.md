@@ -88,5 +88,12 @@ See the [Bluetooth API and TV example](../docs/lua-bluetooth.md) and
 see `lua-mute-evidence/verification.json`.
 
 `306019-lua.MVA` adds full USB native protocol control and Lua upload/messages.
-The current `scripts/build-lua-app-runtime.py` builds this image. See
+Build it from `606eb91` with `scripts/build-lua-app-runtime.py`. See
 [USB control](../docs/usb-control.md) and `usb-control-evidence/verification.json`.
+
+`306020-lua.MVA` adds the native Bluetooth HID keyboard and consumer-key profile,
+automatic key release, and dirty-bond saving for HID-only connections. The
+current `scripts/build-lua-app-runtime.py` builds it from pinned stock 306007.
+See [API and verification](../docs/lua-keyboard.md) and
+`keyboard-evidence/verification.json` for Linux input, loop recovery and bond
+persistence results. TV behavior remains unverified.

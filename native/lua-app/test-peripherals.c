@@ -198,3 +198,52 @@ static void test_peripherals(void) {
     puts("Bluetooth address validation, connection rate limits, cancellation, peer isolation and queue errors passed");
     puts("Native job cancellation, config readback, wear limits, alarm priority, indicator and microphone cleanup passed");
 }
+
+static void test_keyboard_bonds(void) {
+    unsigned before=saved_bonds;
+    peripheral.writes=0;stock_bt_manager[0]=1;stock_bt_manager[0x125]=0;
+    fake_hid_status.state=0;save_keyboard_bond();clock_ms+=3000;save_keyboard_bond();
+    assert(saved_bonds==before);
+    fake_hid_status.state=2;save_keyboard_bond();clock_ms+=1999;save_keyboard_bond();
+    assert(saved_bonds==before && stock_bt_manager[0]);
+    ++clock_ms;save_keyboard_bond();assert(saved_bonds==before+1 && !stock_bt_manager[0]);
+    clock_ms+=5000;save_keyboard_bond();assert(saved_bonds==before+1);
+    stock_bt_manager[0]=1;save_keyboard_bond();clock_ms+=2000;
+    peripheral.writes=64;save_keyboard_bond();assert(saved_bonds==before+1 && stock_bt_manager[0]);
+    peripheral.writes=1;peripheral.last_write=clock_ms;save_keyboard_bond();
+    assert(saved_bonds==before+1 && stock_bt_manager[0]);
+    clock_ms+=1000;bond_count=9;save_keyboard_bond();assert(saved_bonds==before+1);
+    bond_count=0;save_keyboard_bond();assert(saved_bonds==before+1);
+    bond_count=1;stock_bt_manager[0x125]=1;save_keyboard_bond();assert(saved_bonds==before+1);
+    stock_bt_manager[0x125]=0;save_keyboard_bond();clock_ms+=1999;save_keyboard_bond();
+    assert(saved_bonds==before+1);++clock_ms;save_keyboard_bond();
+    assert(saved_bonds==before+2 && !stock_bt_manager[0]);
+    fake_hid_status.state=0;
+    puts("HID-only bond flush is delayed, bounded and skips unchanged records");
+}
+
+static void test_tv_keyboard(void) {
+    char source[8193];
+    FILE *file=fopen("examples/lua/tv-keyboard.lua","rb");assert(file);
+    size_t n=fread(source,1,sizeof source-1,file);assert(!ferror(file));fclose(file);source[n]=0;
+    fake_hid_status=(struct hid_status){.state=2,.enabled=1};bt_queued.op=0;
+    load(source,1);assert(app.state==ACTIVE);
+    for (unsigned key=2;key<=4;++key) {
+        runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);tick();
+        assert(!bt_queued.op); /* Binding is silent. */
+    }
+    for (unsigned key=2;key<=4;++key) {
+        clock_ms+=600;runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);
+        for (unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
+        unsigned values[4];memcpy(values,bt_payload,sizeof values);
+        assert(bt_queued.op==BT_HID_COMMAND && bt_queued.length==32);
+        assert(values[2]==(key==4 ? HID_KEY : HID_CONSUMER));
+        assert(values[3]==(key==2 ? 0xcd : key==3 ? 0xe2 : 44));
+        bt_queued.op=0;
+        runtime_adc_result(4U<<16 | key);tick();runtime_adc_result(5U<<16 | key);tick();
+        assert(!bt_queued.op);
+    }
+    runtime_adc_result(1U<<16 | 5);tick();runtime_adc_result(2U<<16 | 5);tick();assert(!bt_queued.op);
+    app.cancel=1;service();runtime_native_service();assert(!allocations);fake_hid_status.state=0;
+    puts("TV keyboard binds three silent keys and sends play/pause, mute and Space once per press");
+}

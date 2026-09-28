@@ -195,5 +195,7 @@ int main(void) {
     runtime_command(0,request,12);assert(reply[5]==0 && reply_size==48 && page_reads==1);
     fs_context[2]=0;runtime_command(0,request,12);assert(reply[5]==4 && page_reads==1);
     test_peripherals();
+    test_keyboard_bonds();
+    test_tv_keyboard();
     puts("Resident lifecycle, upload, keys, arena reclamation, and adversarial guard checks passed");
 }

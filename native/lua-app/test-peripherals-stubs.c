@@ -51,13 +51,13 @@ unsigned stock_sd_present(void) { return 0; }
 void *stock_sd_queue(void) { return NULL; }
 
 static unsigned bt_media_state,bt_audio_state,bt_connects,bt_commands,bt_queue_ok=1,bt_last_action;
-static unsigned char bt_context[256],bt_channel[0x1038],bt_payload[10];
+static unsigned char bt_context[256],bt_channel[0x1038],bt_payload[32];
 void *volatile stock_bt_context=bt_context;
 static struct bt_command bt_queued;
 static unsigned bt_panel_calls,bt_panel_ok=1,bt_pressed[2];
 void stock_bt_peek(struct bt_command *p) { *p=bt_queued; }
 unsigned stock_bt_enqueue(unsigned op,const void *p,unsigned n) {
-    assert(op==BT_MUTE_COMMAND && n==sizeof bt_payload);
+    assert((op==BT_MUTE_COMMAND && n==10) || (op==BT_HID_COMMAND && n==32));
     if (!bt_queue_ok) return 0;
     memcpy(bt_payload,p,n);bt_queued=(struct bt_command){op,n,0,bt_payload};return 1;
 }
@@ -73,3 +73,13 @@ unsigned stock_avrcp_connect(const unsigned char *p) { ++bt_connects;memcpy(bt_a
 unsigned stock_avrcp_disconnect(void) { ++bt_commands;return bt_queue_ok; }
 unsigned stock_avrcp_play(void) { ++bt_commands;bt_last_action=1;return bt_queue_ok; }
 unsigned stock_avrcp_pause(void) { ++bt_commands;bt_last_action=2;return bt_queue_ok; }
+
+void runtime_hid_service(unsigned epoch) { (void)epoch; }
+void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,unsigned epoch,unsigned generation) {
+    (void)op;(void)value;(void)data;(void)epoch;(void)generation;
+}
+static struct hid_status fake_hid_status;
+static unsigned saved_bonds,bond_count=1;
+void runtime_hid_status(struct hid_status *s) { *s=fake_hid_status; }
+unsigned stock_bt_record_count(void) { return bond_count; }
+void stock_bt_save_records(unsigned size,unsigned count) { assert(size==0x1f9 && count==bond_count);++saved_bonds; }

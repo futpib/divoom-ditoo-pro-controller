@@ -33,20 +33,23 @@ extern void stock_fs_delete(unsigned, unsigned);
 extern void *volatile stock_bt_context;
 extern volatile unsigned char stock_bt_manager[], stock_ble_connected;
 extern unsigned stock_avrcp_state(void), stock_a2dp_state(void);
+extern unsigned stock_bt_record_count(void);
+extern void stock_bt_save_records(unsigned, unsigned);
 extern unsigned stock_avrcp_connect(const unsigned char *);
 extern unsigned stock_avrcp_disconnect(void), stock_avrcp_play(void), stock_avrcp_pause(void);
 struct bt_command { unsigned op; uint16_t length, reserved; unsigned char *data; };
 extern void stock_bt_peek(struct bt_command *);
 extern unsigned stock_bt_enqueue(unsigned, const void *, unsigned);
 extern unsigned stock_avrcp_panel(void *, unsigned, unsigned);
-enum { BT_MUTE_COMMAND = 0x80 };
+#include "bluetooth-hid.h"
+enum { BT_MUTE_COMMAND = 0x80, BT_HID_COMMAND = 0x81 };
 
 enum { JOB_EMPTY, JOB_QUEUED, JOB_RUNNING, JOB_DONE };
 enum { ALARM_GET=1, ALARM_SET, WAKE_GET, WAKE_SET, ALARM_CANCEL,
        ALARM_SNOOZE, AUDIO_PLAY, AUDIO_DIRECTION, AUDIO_TRACK, AUDIO_SEEK,
        AUDIO_REPEAT, AUDIO_PREVIEW, AUDIO_STOP, NOISE_ENABLE,
        MEMO_START, MEMO_STOP, MEMO_PLAY, MEMO_DELETE, AUDIO_SOURCE,
-       BT_CONNECT, BT_DISCONNECT, BT_MEDIA, BT_MUTE };
+       BT_CONNECT, BT_DISCONNECT, BT_MEDIA, BT_MUTE, BT_HID };
 static struct {
     volatile unsigned state, epoch, cleanup;
     unsigned ticket, sequence, job_epoch, op, slot, mask, value;
@@ -57,13 +60,20 @@ static struct {
     volatile unsigned noise_value, noise_time, noise_samples;
     unsigned noise_owned, noise_previous, recording, record_started, preview_owned;
     volatile unsigned recorded_bytes;
-    unsigned bt_attempts, bt_last_attempt;
+    unsigned bt_attempts, bt_last_attempt, bt_bond_since, bt_bond_pending, bt_bonds_saved;
 } peripheral;
 
 /* Called only on the stock Bluetooth task. Unknown commands still pass through
  * its normal dispatcher/pop path; no Lua pointer enters this queue. */
 void runtime_bt_peek(struct bt_command *command) {
+    runtime_hid_service(peripheral.epoch);
     stock_bt_peek(command);
+    if (command->op==BT_HID_COMMAND && command->length==32 && command->data) {
+        unsigned values[4]; memcpy(values,command->data,16);
+        if (values[0]==peripheral.epoch)
+            runtime_hid_command(values[2],values[3],command->data+16,values[0],values[1]);
+        return;
+    }
     if (command->op != BT_MUTE_COMMAND || command->length != 10 || !command->data) return;
     unsigned epoch;
     memcpy(&epoch,command->data,4);
@@ -178,6 +188,30 @@ static const char *perform_job(void) {
             (stock_get_source() != 3 || !stock_sd_present() || !stock_sd_queue()))
         return "SD playback unavailable";
     switch (op) {
+    case BT_HID: {
+        if (!stock_bt_context) return "Bluetooth unavailable";
+        struct hid_status status; runtime_hid_status(&status);
+        if (peripheral.slot==HID_CONNECT) {
+            if (status.state==2 && !memcmp(status.peer,peripheral.data,6)) return NULL;
+            if (status.state) return "disconnect the previous keyboard peer first";
+            if (stock_avrcp_state() || stock_a2dp_state())
+                for (unsigned i=0;i<6;++i)
+                    if (stock_bt_manager[0xe0+i]!=peripheral.data[i])
+                        return "disconnect the previous Bluetooth peer first";
+            if (stock_free_heap()<16384) return "insufficient native heap";
+            unsigned now=stock_ticks();
+            if (peripheral.bt_attempts>=32) return "32 connection attempts per boot exceeded";
+            if (peripheral.bt_attempts && (unsigned)(now-peripheral.bt_last_attempt)<10000)
+                return "Bluetooth connection rate limited";
+            ++peripheral.bt_attempts;peripheral.bt_last_attempt=now;
+        } else if (peripheral.slot!=HID_DISCONNECT && (status.state!=2 || status.busy))
+            return "keyboard disconnected or busy";
+        unsigned char data[32];
+        unsigned values[4]={peripheral.epoch,status.generation,peripheral.slot,n};
+        memcpy(data,values,16);memcpy(data+16,peripheral.data,16);
+        if (!stock_bt_enqueue(BT_HID_COMMAND,data,sizeof data)) return "Bluetooth queue full";
+        break;
+    }
     case BT_CONNECT: {
         if (!stock_bt_context) return "Bluetooth unavailable";
         unsigned state = stock_avrcp_state(), audio = stock_a2dp_state();
@@ -279,7 +313,29 @@ static const char *perform_job(void) {
     return NULL;
 }
 
+/* Stock persists bonds only with both AVRCP and A2DP connected. HID-only peers
+ * need the same dirty-record flush; never rewrite an unchanged bond. */
+static void save_keyboard_bond(void) {
+    struct hid_status s;runtime_hid_status(&s);
+    if (s.state!=2 || !stock_bt_context || !stock_bt_manager[0] || stock_bt_manager[0x125]) {
+        peripheral.bt_bond_pending=0;return;
+    }
+    unsigned now=stock_ticks();
+    if (!peripheral.bt_bond_pending) {
+        peripheral.bt_bond_pending=1;peripheral.bt_bond_since=now;return;
+    }
+    if ((unsigned)(now-peripheral.bt_bond_since)<2000 || peripheral.writes>=64 ||
+            (peripheral.writes && (unsigned)(now-peripheral.last_write)<1000)) return;
+    unsigned count=stock_bt_record_count();
+    if (!count || count>8) return;
+    stock_bt_manager[0]=0;
+    ++peripheral.writes;peripheral.last_write=now;
+    stock_bt_save_records(0x1f9,count);++peripheral.bt_bonds_saved;
+    peripheral.bt_bond_pending=0;
+}
+
 void runtime_native_service(void) {
+    save_keyboard_bond();
     if (peripheral.recording && stock_memo_context) {
         unsigned count; memcpy(&count,stock_memo_context+12,4);
         peripheral.recorded_bytes = count;
@@ -464,7 +520,7 @@ static int hex_digit(unsigned char c) {
     if (c>='A' && c<='F') return c-'A'+10;
     return -1;
 }
-static int bt_connect(lua_State *L) {
+static int bt_address_connect(lua_State *L,unsigned hid) {
     size_t len; const char *s=luaL_checklstring(L,1,&len);
     unsigned char address[16]={0}; unsigned any=0,all=255;
     luaL_argcheck(L,len==17,1,"expected XX:XX:XX:XX:XX:XX");
@@ -475,7 +531,36 @@ static int bt_connect(lua_State *L) {
         address[5-i]=(hi<<4)|lo; any|=address[5-i]; all&=address[5-i];
     }
     luaL_argcheck(L,any && all!=255,1,"invalid Bluetooth address");
-    return submit(L,BT_CONNECT,0,0,address,0);
+    return submit(L,hid ? BT_HID : BT_CONNECT,hid ? HID_CONNECT : 0,0,address,0);
+}
+static int bt_connect(lua_State *L) { return bt_address_connect(L,0); }
+static int keyboard_connect(lua_State *L) { return bt_address_connect(L,1); }
+static int keyboard_disconnect(lua_State *L) { return submit(L,BT_HID,HID_DISCONNECT,0,NULL,0); }
+static int keyboard_tap(lua_State *L) {
+    unsigned key=luaL_checkinteger(L,1),modifiers=luaL_optinteger(L,2,0);
+    luaL_argcheck(L,key>=4 && key<=0xe7,1,"keyboard usage must be 4..231");
+    luaL_argcheck(L,modifiers<=255,2,"modifiers must be 0..255");
+    unsigned char data[16]={0};data[0]=modifiers;
+    return submit(L,BT_HID,HID_KEY,key,data,0);
+}
+static int keyboard_media(lua_State *L) {
+    const char *names[]={"play_pause","mute","volume_up","volume_down","next","previous","stop",NULL};
+    static const unsigned usages[]={0xcd,0xe2,0xe9,0xea,0xb5,0xb6,0xb7};
+    return submit(L,BT_HID,HID_CONSUMER,usages[luaL_checkoption(L,1,NULL,names)],NULL,0);
+}
+static int keyboard_status(lua_State *L) {
+    struct hid_status s;runtime_hid_status(&s);
+    lua_createtable(L,0,9);field(L,"state",s.state);flag(L,"connected",s.state==2);
+    flag(L,"enabled",s.enabled==1);flag(L,"busy",s.busy);field(L,"sent",s.sent);
+    field(L,"released",s.released);field(L,"errors",s.errors);field(L,"error",s.error);
+    field(L,"bonds_saved",peripheral.bt_bonds_saved);
+    if (s.enabled) {
+        const char *digits="0123456789ABCDEF";char address[18];
+        for (unsigned i=0;i<6;++i) { unsigned b=s.peer[5-i];
+            address[i*3]=digits[b>>4];address[i*3+1]=digits[b&15];address[i*3+2]=':'; }
+        address[17]=0;lua_pushstring(L,address);lua_setfield(L,-2,"peer");
+    }
+    return 1;
 }
 static int bt_disconnect(lua_State *L) { return submit(L,BT_DISCONNECT,0,0,NULL,0); }
 static int bt_mute(lua_State *L) { return submit(L,BT_MUTE,0,0,NULL,0); }
@@ -503,6 +588,9 @@ static int bt_status(lua_State *L) {
     return 1;
 }
 static void peripherals_modules(lua_State *L) {
+    static const luaL_Reg keyboard[]={{"connect",keyboard_connect},{"disconnect",keyboard_disconnect},
+        {"tap",keyboard_tap},{"media",keyboard_media},{"status",keyboard_status},{NULL,NULL}};
+    luaL_newlib(L,keyboard);lua_setglobal(L,"keyboard");
     static const luaL_Reg bluetooth[] = {{"status",bt_status},{"connect_media",bt_connect},
         {"disconnect_media",bt_disconnect},{"media",bt_media},{"mute",bt_mute},{NULL,NULL}};
     luaL_newlib(L,bluetooth); lua_setglobal(L,"bluetooth");

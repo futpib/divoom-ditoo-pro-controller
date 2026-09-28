@@ -19,6 +19,7 @@ pub const DEVICE_VERSION: u32 = 306016;
 pub const BLUETOOTH_VERSION: u32 = 306017;
 pub const MUTE_VERSION: u32 = 306018;
 pub const USB_VERSION: u32 = 306019;
+pub const KEYBOARD_VERSION: u32 = 306020;
 pub const APP_SOURCE_LIMIT: usize = 8192;
 
 #[derive(Debug, Serialize)]
@@ -207,10 +208,10 @@ pub(crate) async fn execute(
       | STORAGE_VERSION
       | DEVICE_VERSION
       | BLUETOOTH_VERSION
-      | MUTE_VERSION | USB_VERSION
+      | MUTE_VERSION | USB_VERSION | KEYBOARD_VERSION
   ) {
     return Err(
-      format!("Lua requires firmware {VERSION}, {APP_VERSION}, {IO_VERSION}, {STORAGE_VERSION}, {DEVICE_VERSION}, {BLUETOOTH_VERSION}, {MUTE_VERSION} or {USB_VERSION}; no program sent")
+      format!("Lua requires firmware {VERSION}, {APP_VERSION}, {IO_VERSION}, {STORAGE_VERSION}, {DEVICE_VERSION}, {BLUETOOTH_VERSION}, {MUTE_VERSION}, {USB_VERSION} or {KEYBOARD_VERSION}; no program sent")
         .into(),
     );
   }
