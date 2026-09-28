@@ -1,0 +1,3120 @@
+[
+  {
+    "name": "SPP_JSON",
+    "opcode": 1,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 172,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_COMMAND_CHECK",
+    "opcode": 4,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 173,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_CHANGE_MODE",
+    "opcode": 5,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 174,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] x3(SppProc$WORK_MODE r8)",
+        "line": 2126
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_SD_MUSIC_LIST",
+    "opcode": 7,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 175,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] q0(int r8, int r9)",
+        "line": 1876
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SD_PLAY_MUSIC_ID",
+    "opcode": 17,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 176,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] e3(int r8)",
+        "line": 1447
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_LAST_NEXT",
+    "opcode": 18,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 177,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] T2(boolean r8)",
+        "line": 1139
+      }
+    ]
+  },
+  {
+    "name": "SPP_SEND_SD_LIST_OVER",
+    "opcode": 20,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 178,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SEND_SD_TF_STATUS",
+    "opcode": 21,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 179,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] s0()",
+        "line": 1952
+      }
+    ]
+  },
+  {
+    "name": "SPP_APP_EQ_GIF",
+    "opcode": 27,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 180,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "final enum MultiShowEnum extends Enum<MultiShowEnum>",
+        "line": 163
+      }
+    ]
+  },
+  {
+    "name": "SPP_DEVICE_TO_APP_GIF",
+    "opcode": 30,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 181,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_GET_SD_MUSIC_LIST_TOTAL_NUM",
+    "opcode": 125,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 182,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] r0()",
+        "line": 1912
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_SD_MUSIC_INFO",
+    "opcode": 180,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 183,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] p0()",
+        "line": 1848
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SD_MUSIC_POSITION",
+    "opcode": 184,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 184,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] f3(int r8)",
+        "line": 1488
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SD_MUSIC_PLAY_MODE",
+    "opcode": 185,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 185,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] R2(int r8)",
+        "line": 1089
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_VOL",
+    "opcode": 8,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 186,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] V2(byte r8)",
+        "line": 1175
+      },
+      {
+        "signature": "byte[] Z2(int r8)",
+        "line": 1293
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_VOL",
+    "opcode": 9,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 187,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] e0()",
+        "line": 1435
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_PLAY_STATUS",
+    "opcode": 10,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 188,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] S2(boolean r8)",
+        "line": 1115
+      },
+      {
+        "signature": "byte[] Y2(boolean r8)",
+        "line": 1274
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_PLAY_STATUS",
+    "opcode": 11,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 189,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] c0()",
+        "line": 1378
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_STDB_MODE",
+    "opcode": 19,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 190,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] e1()",
+        "line": 1439
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_POWERON_VOICE_CTRL",
+    "opcode": 28,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 191,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] V1(byte r8)",
+        "line": 1169
+      }
+    ]
+  },
+  {
+    "name": "SPP_LIEGHT_SET_25DOTS_PIC",
+    "opcode": 29,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 192,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void G1(byte[] r8, int r9)",
+        "line": 559
+      },
+      {
+        "signature": "int Q2(PixelBean r8)",
+        "line": 1033
+      }
+    ]
+  },
+  {
+    "name": "SPP_LIEGHT_SET_25DOTS_ATTR",
+    "opcode": 30,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 193,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SET_GIF_SPEED_CMD",
+    "opcode": 22,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 194,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void S1(int r8)",
+        "line": 1108
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SYSTEM_TIME",
+    "opcode": 24,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 195,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] X0()",
+        "line": 1219
+      }
+    ]
+  },
+  {
+    "name": "SPP_DEVICE_UPDATE_GIF",
+    "opcode": 25,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 196,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void h2(boolean r8)",
+        "line": 1544
+      }
+    ]
+  },
+  {
+    "name": "SPP_STOP_SEND_GIF",
+    "opcode": 26,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 197,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SET_TEMP_TYPE",
+    "opcode": 43,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 198,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] V0()",
+        "line": 1165
+      },
+      {
+        "signature": "byte[] q3(boolean r8)",
+        "line": 1898
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_HPUR_TYPE",
+    "opcode": 45,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 199,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] Y0()",
+        "line": 1266
+      },
+      {
+        "signature": "byte[] r3(boolean r8)",
+        "line": 1938
+      }
+    ]
+  },
+  {
+    "name": "SPP_LIGHT_CURRENT_LEVEL",
+    "opcode": 49,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 200,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] M()",
+        "line": 784
+      }
+    ]
+  },
+  {
+    "name": "SPP_LIGHT_ADJUST_LEVEL",
+    "opcode": 50,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 201,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] E0(byte[] r8)",
+        "line": 490
+      }
+    ]
+  },
+  {
+    "name": "SPP_SAND_PAINT_CTRL",
+    "opcode": 52,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 202,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] T(int r8, byte[] r9)",
+        "line": 1119
+      },
+      {
+        "signature": "byte[] j0()",
+        "line": 1598
+      }
+    ]
+  },
+  {
+    "name": "SPP_SCROLL",
+    "opcode": 53,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 203,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void d3(int r8, int r9)",
+        "line": 1425
+      },
+      {
+        "signature": "List o0(PixelBean r8)",
+        "line": 1813
+      }
+    ]
+  },
+  {
+    "name": "SPP_DRAWING_MUL_PAD_CTRL",
+    "opcode": 58,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 204,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] M2(int r8, H1.a r9, int r10)",
+        "line": 801
+      }
+    ]
+  },
+  {
+    "name": "SPP_DRAWING_BIG_PAD_CTRL",
+    "opcode": 59,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 205,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] M2(int r8, H1.a r9, int r10)",
+        "line": 801
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_ANCS_NOTICE_PIC",
+    "opcode": 60,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 206,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] X(int r8, int r9)",
+        "line": 1214
+      },
+      {
+        "signature": "List Y(int r8, PixelBean r9)",
+        "line": 1245
+      }
+    ]
+  },
+  {
+    "name": "SPP_MOVE_RESET_IFRAME",
+    "opcode": 62,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 207,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SET_SLEEP_TIME",
+    "opcode": 64,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 208,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] J0(byte[] r8)",
+        "line": 695
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SLEEP_SCENE",
+    "opcode": 65,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 209,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] H0(byte[] r8)",
+        "line": 575
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_ALARM_TIME_SCENE",
+    "opcode": 66,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 210,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] k()",
+        "line": 1619
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_ALARM_TIME_SCENE",
+    "opcode": 67,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 211,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] y0(p157r1.a r8)",
+        "line": 2136
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_BOX_MODE",
+    "opcode": 69,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 212,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] A2(int r8, int r9, int r10, int r11, int r12, boolean r13)",
+        "line": 329
+      },
+      {
+        "signature": "byte[] D2(int r8)",
+        "line": 473
+      },
+      {
+        "signature": "byte[] E2(int r8, int r9, int r10, int r11, int r12, byte[] r13)",
+        "line": 509
+      },
+      {
+        "signature": "byte[] G2(int r8)",
+        "line": 567
+      },
+      {
+        "signature": "byte[] t2(SppProc$LIGHT_MODE r8)",
+        "line": 1995
+      },
+      {
+        "signature": "byte[] u2(SppProc$LIGHT_MODE r8, byte r9)",
+        "line": 2029
+      },
+      {
+        "signature": "byte[] v2(SppProc$LIGHT_MODE r8, byte r9, byte r10, byte r11, byte r12)",
+        "line": 2081
+      },
+      {
+        "signature": "byte[] w2(SppProc$LIGHT_MODE r8, byte r9, byte r10, byte r11, byte r12, byte r13, byte r14, byte r15)",
+        "line": 2102
+      },
+      {
+        "signature": "byte[] x2(SppProc$LIGHT_MODE r8, byte r9, byte r10, byte r11, byte r12, byte r13)",
+        "line": 2122
+      },
+      {
+        "signature": "byte[] y2()",
+        "line": 2172
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_BOX_MODE",
+    "opcode": 70,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 213,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] A()",
+        "line": 311
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_BOX_COLOR",
+    "opcode": 68,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 214,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] A0(PixelBean r8)",
+        "line": 315
+      }
+    ]
+  },
+  {
+    "name": "SPP_APP_NEED_GET_MUSIC_LIST",
+    "opcode": 71,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 215,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] h0()",
+        "line": 1531
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_MUL_BOX_COLOR",
+    "opcode": 73,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 216,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] m(byte[] r8, int r9, long r10)",
+        "line": 1668
+      },
+      {
+        "signature": "List o(PixelBean r8)",
+        "line": 1807
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_ANDROID_ANCS",
+    "opcode": 80,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 217,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] W(int r8, String r9)",
+        "line": 1179
+      },
+      {
+        "signature": "byte[] b0(int r8)",
+        "line": 1333
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_ALARM_TIME_GIF",
+    "opcode": 81,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 218,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] t0(byte r8, int r9)",
+        "line": 1986
+      },
+      {
+        "signature": "List u0(byte r8, byte r9, int r10, List r11)",
+        "line": 2007
+      },
+      {
+        "signature": "List v0(byte r10, byte r11, int r12, List r13)",
+        "line": 2044
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_BOOT_GIF",
+    "opcode": 82,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 219,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void g3(boolean r8, PixelBean r9)",
+        "line": 1508
+      },
+      {
+        "signature": "List z0(boolean r14, PixelBean r15)",
+        "line": 2184
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_DIALY_TIME_EXT2",
+    "opcode": 83,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 220,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] O()",
+        "line": 884
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_DIALY_TIME_EXT2",
+    "opcode": 84,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 221,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] I2(byte r8, byte r9, byte r10, byte r11, byte r12, byte r13, byte r14, String r15)",
+        "line": 641
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_DIALY_TIME_GIF",
+    "opcode": 85,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 222,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "List H2(byte r10, byte r11, int r12, List r13)",
+        "line": 588
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_TIME_MANAGE_INFO",
+    "opcode": 86,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 223,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void O2(T1.p r13, PixelBean r14)",
+        "line": 899
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_TIME_MANAGE_CTRL",
+    "opcode": 87,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 224,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] W0(byte r8)",
+        "line": 1202
+      }
+    ]
+  },
+  {
+    "name": "SPP_DRAWING_PAD_CTRL",
+    "opcode": 88,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 225,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] i2(H1.a r8)",
+        "line": 1566
+      }
+    ]
+  },
+  {
+    "name": "SPP_DRAWING_PAD_EXIT",
+    "opcode": 90,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 226,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] j2()",
+        "line": 1611
+      }
+    ]
+  },
+  {
+    "name": "SPP_DRAWING_ENCODE_PIC",
+    "opcode": 91,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 227,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] S(int r8, byte[] r9)",
+        "line": 1093
+      }
+    ]
+  },
+  {
+    "name": "SPP_DRAWING_ENCODE_PLAY",
+    "opcode": 92,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 228,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "List R(int r9, byte[] r10, int r11, int r12)",
+        "line": 1047
+      }
+    ]
+  },
+  {
+    "name": "SPP_SEND_NET_TEMP_INFO",
+    "opcode": 93,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 229,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] N2(NetTemp r8)",
+        "line": 851
+      }
+    ]
+  },
+  {
+    "name": "SPP_SEND_NET_TEMP_DISP_INFO",
+    "opcode": 94,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 230,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] E1(byte r8, byte r9, byte r10, byte r11, byte r12, int r13)",
+        "line": 494
+      }
+    ]
+  },
+  {
+    "name": "SPP_SEND_CUR_NET_TEMP",
+    "opcode": 95,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 231,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] r1(byte r8, byte r9)",
+        "line": 1916
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_DEVICE_TEMP_INFO",
+    "opcode": 89,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 232,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SET_MIX_MUISE_MODE",
+    "opcode": 106,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 233,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void J2(byte r8)",
+        "line": 706
+      },
+      {
+        "signature": "void L2(int r8, int r9, boolean r10)",
+        "line": 780
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_NEW_MIX_MUSIC_MODE",
+    "opcode": 188,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 234,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void K2(int r8, int r9)",
+        "line": 757
+      },
+      {
+        "signature": "void d(int r8)",
+        "line": 1396
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_FM_CURRENT_FREQ",
+    "opcode": 96,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 235,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] H()",
+        "line": 571
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_FM_CURRENT_FREQ",
+    "opcode": 97,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 236,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] n2(float r8)",
+        "line": 1798
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_FM_AUTOMATIC_SEARCH",
+    "opcode": 99,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 237,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] m2()",
+        "line": 1720
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_FM_COUNT_OR_FREQ",
+    "opcode": 100,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 238,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] G()",
+        "line": 551
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_FM_FAVOURITE",
+    "opcode": 103,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 239,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] o2(float r8, boolean r9)",
+        "line": 1825
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_FM_AUTOMATIC_SEARCH_STATUS",
+    "opcode": 104,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 240,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_DRAWING_MUL_ENCODE_GIF_PLAY",
+    "opcode": 107,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 241,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] z3()",
+        "line": 2269
+      }
+    ]
+  },
+  {
+    "name": "SPP_DRAWING_MUL_PAD_ENTER",
+    "opcode": 111,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 242,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] y3(int r8)",
+        "line": 2176
+      }
+    ]
+  },
+  {
+    "name": "SPP_DRAWING_ENCODE_MOVIE_PLAY",
+    "opcode": 108,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 243,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void f1(int r8, byte[] r9)",
+        "line": 1459
+      }
+    ]
+  },
+  {
+    "name": "SPP_DRAWING_MUL_ENCODE_MOVIE_PLAY",
+    "opcode": 109,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 244,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_DRAWING_CTRL_MOVIE_PLAY",
+    "opcode": 110,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 245,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] g1(boolean r8)",
+        "line": 1500
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_FM_REGION",
+    "opcode": 105,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 246,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] p2(byte r8)",
+        "line": 1856
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_FM_REGION",
+    "opcode": 112,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 247,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] I()",
+        "line": 627
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_TOOL_INFO",
+    "opcode": 113,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 248,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] Z0(int r8)",
+        "line": 1284
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_TOOL_INFO",
+    "opcode": 114,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 249,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] s3(boolean r8, int r9, int r10)",
+        "line": 1974
+      },
+      {
+        "signature": "byte[] t3(int r8)",
+        "line": 1999
+      },
+      {
+        "signature": "byte[] u3(boolean r8, int r9, int r10)",
+        "line": 2033
+      },
+      {
+        "signature": "byte[] v3(int r8)",
+        "line": 2085
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_NET_TEMP_DISP_INFO",
+    "opcode": 115,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 250,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] U()",
+        "line": 1143
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SYSTEM_BRIGHT",
+    "opcode": 116,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 251,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] z2(byte r8)",
+        "line": 2264
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_DEVICE_NAME",
+    "opcode": 117,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 252,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] B0(String r8)",
+        "line": 342
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_MUL_DEVICE_CTRL",
+    "opcode": 119,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 253,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] B3(boolean r8)",
+        "line": 376
+      },
+      {
+        "signature": "byte[] e(MultiModeEnum r8)",
+        "line": 1431
+      },
+      {
+        "signature": "byte[] f(MultiShowEnum r8)",
+        "line": 1451
+      },
+      {
+        "signature": "byte[] h()",
+        "line": 1527
+      },
+      {
+        "signature": "byte[] l()",
+        "line": 1647
+      }
+    ]
+  },
+  {
+    "name": "SPP_LED_UPDATE_FONT_INFO",
+    "opcode": 124,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 254,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SET_DIVOOM_LEAVE_MSG_GIF",
+    "opcode": 126,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 255,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "List L(PixelBean r8)",
+        "line": 761
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_ALARM_VOICE_CTRL",
+    "opcode": 130,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 256,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] R1(byte r8, byte r9)",
+        "line": 1083
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SONG_DIS_CTRL",
+    "opcode": 131,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 257,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] O0()",
+        "line": 888
+      },
+      {
+        "signature": "byte[] k3(boolean r8)",
+        "line": 1637
+      }
+    ]
+  },
+  {
+    "name": "SPP_RESET_NOTIFICATIONS",
+    "opcode": 132,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 258,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] l1()",
+        "line": 1656
+      }
+    ]
+  },
+  {
+    "name": "SPP_SEND_HOTCTRL",
+    "opcode": 133,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 259,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] x1(int r8, int r9)",
+        "line": 2118
+      }
+    ]
+  },
+  {
+    "name": "SPP_SEND_LED_WORD_CMD",
+    "opcode": 134,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 260,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void B1(String r8)",
+        "line": 352
+      },
+      {
+        "signature": "byte[] C1(int r8)",
+        "line": 396
+      }
+    ]
+  },
+  {
+    "name": "SPP_SEND_GAME_SHARK",
+    "opcode": 136,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 261,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] w1()",
+        "line": 2098
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_FILE_VERSION",
+    "opcode": 151,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 262,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] B(int r8)",
+        "line": 338
+      }
+    ]
+  },
+  {
+    "name": "SPP_APP_UPDATE_FILE_INFO",
+    "opcode": 152,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 263,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] b1(byte[] r8)",
+        "line": 1342
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_FILE_VERSION2",
+    "opcode": 54,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 264,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] D()",
+        "line": 409
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_FILE_VERSION2_LIST",
+    "opcode": 55,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 265,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] C()",
+        "line": 387
+      },
+      {
+        "signature": "void s1(List r8)",
+        "line": 1957
+      }
+    ]
+  },
+  {
+    "name": "SPP_APP_SEND_FILE_DATA",
+    "opcode": 153,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 266,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] a1(int r8, byte[] r9)",
+        "line": 1313
+      }
+    ]
+  },
+  {
+    "name": "SPP_PAUSE_SYS_UPDATE_DATA",
+    "opcode": 72,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 267,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SEND_HOT_FILE_LIST",
+    "opcode": 155,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 268,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] z1(List r8)",
+        "line": 2230
+      }
+    ]
+  },
+  {
+    "name": "SPP_HOT_UPDATE_FILE_INFO",
+    "opcode": 157,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 269,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] y1(p166s1.c r12)",
+        "line": 2166
+      }
+    ]
+  },
+  {
+    "name": "SPP_HOT_SEND_FILE_DATA",
+    "opcode": 158,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 270,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] J(int r8, byte[] r9)",
+        "line": 687
+      }
+    ]
+  },
+  {
+    "name": "SPP_HOT_PAUSE_FILE_SEND",
+    "opcode": 159,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 271,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void F1()",
+        "line": 542
+      }
+    ]
+  },
+  {
+    "name": "SPP_SYS_DEVICE_UPDATE",
+    "opcode": 147,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 272,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SYS_UPDATE_DATA",
+    "opcode": 148,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 273,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SYS_CONTINUE_UPDATE_DATA",
+    "opcode": 149,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 274,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SYS_GET_UPDATE_ADDR",
+    "opcode": 150,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 275,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SET_GAME",
+    "opcode": 160,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 276,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] q2(boolean r8, byte r9)",
+        "line": 1886
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_TALK",
+    "opcode": 161,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 277,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] p3(boolean r8, byte r9)",
+        "line": 1860
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_SCENE",
+    "opcode": 162,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 278,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] I0()",
+        "line": 631
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SCENE_LISTEN",
+    "opcode": 163,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 279,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] F0(boolean r8, byte r9, byte r10)",
+        "line": 538
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SCENE_LISTEN_VOLUME",
+    "opcode": 164,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 280,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] G0(byte r8)",
+        "line": 555
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_ALARM_LISTEN",
+    "opcode": 165,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 281,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] w0(boolean r8, byte r9, byte r10)",
+        "line": 2094
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_ALARM_LISTEN_VOLUME",
+    "opcode": 166,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 282,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] x0(byte r8)",
+        "line": 2114
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SOUND_CTRL",
+    "opcode": 167,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 283,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] l3(boolean r8)",
+        "line": 1664
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_SOUND_CTRL",
+    "opcode": 168,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 284,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] P0()",
+        "line": 970
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_PLAY_STOP_VOICE",
+    "opcode": 169,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 285,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] U2(byte r8)",
+        "line": 1155
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_PLAY_VOICE_STATUS",
+    "opcode": 170,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 286,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] d0()",
+        "line": 1400
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_AUTO_POWER_OFF",
+    "opcode": 171,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 287,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] T1(short r8)",
+        "line": 1135
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_AUTO_POWER_OFF",
+    "opcode": 172,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 288,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] p()",
+        "line": 1844
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SLEEP_COLOR",
+    "opcode": 173,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 289,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] h3(byte r8, byte r9, byte r10)",
+        "line": 1548
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SLEEP_LIGHT",
+    "opcode": 174,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 290,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] j3(byte r8)",
+        "line": 1615
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_CONNECTED_FLAG",
+    "opcode": 175,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 291,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] Y1(byte r8)",
+        "line": 1270
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_CONNECTED_FLAG",
+    "opcode": 176,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 292,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] t()",
+        "line": 1981
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_USER_GIF",
+    "opcode": 177,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 293,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "final enum MultiShowEnum extends Enum<MultiShowEnum>",
+        "line": 163
+      },
+      {
+        "signature": "byte[] D0(int r8, int r9, int r10, int r11)",
+        "line": 413
+      },
+      {
+        "signature": "List K0(byte r9, int r10, List r11)",
+        "line": 714
+      },
+      {
+        "signature": "byte[] L0()",
+        "line": 766
+      },
+      {
+        "signature": "byte[] M0(int r8)",
+        "line": 789
+      },
+      {
+        "signature": "byte[] P2(int r8, List r9)",
+        "line": 991
+      },
+      {
+        "signature": "byte[] c(String r8, int r9, int r10)",
+        "line": 1354
+      },
+      {
+        "signature": "byte[] n1(byte[] r8)",
+        "line": 1785
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_ENERGY_CTRL",
+    "opcode": 178,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 294,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] k2(boolean r8)",
+        "line": 1633
+      }
+    ]
+  },
+  {
+    "name": "SPP_GET_ENERGY_CTRL",
+    "opcode": 179,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 295,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] E()",
+        "line": 486
+      }
+    ]
+  },
+  {
+    "name": "SPP_MODIFY_RHYTHM_ITEMS",
+    "opcode": 182,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 296,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] Q()",
+        "line": 1021
+      },
+      {
+        "signature": "byte[] a2(int r8)",
+        "line": 1321
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_RHYTHM_GIF",
+    "opcode": 183,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 297,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void H1(PixelBean r8, int r9)",
+        "line": 579
+      }
+    ]
+  },
+  {
+    "name": "SPP_DEL_LEAVE_MSG_GIF",
+    "opcode": 127,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 298,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] b2()",
+        "line": 1346
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_SLEEP_CTRL_MODE",
+    "opcode": 121,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 299,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] N0()",
+        "line": 842
+      },
+      {
+        "signature": "byte[] i3(int r8)",
+        "line": 1590
+      }
+    ]
+  },
+  {
+    "name": "COMMAND_CHECK",
+    "opcode": 4,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 300,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "START_BOND_BLE_COMMAND",
+    "opcode": 240,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 301,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "EXIT_BOND_BLE_COMMAND",
+    "opcode": 241,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 302,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "WIFI_CONFIG_BLE_COMMAND",
+    "opcode": 242,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 303,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "WIFI_STATUS_BLE_COMMAND",
+    "opcode": 243,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 304,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_WIFI_SERVER_TYPE_COMMAND",
+    "opcode": 244,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 305,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SPP_POWER_ON_OFF_INFO",
+    "opcode": 31,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 306,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] C0(PowerSetInfo r8)",
+        "line": 391
+      },
+      {
+        "signature": "byte[] f0()",
+        "line": 1455
+      }
+    ]
+  },
+  {
+    "name": "SPP_SPP_LIGHT_ARROW_SWITCH",
+    "opcode": 35,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 307,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] s2(byte r8)",
+        "line": 1969
+      }
+    ]
+  },
+  {
+    "name": "SPP_SPP_SET_MIC_SWITCH",
+    "opcode": 32,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 308,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void B2(byte r8)",
+        "line": 372
+      }
+    ]
+  },
+  {
+    "name": "SPP_SEND_GAME_CTRL_INFO",
+    "opcode": 23,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 309,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] u1(int r8)",
+        "line": 2025
+      }
+    ]
+  },
+  {
+    "name": "SPP_SEND_GAME_CTRL_KEY_UP_INFO",
+    "opcode": 33,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 310,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] v1(int r8)",
+        "line": 2077
+      }
+    ]
+  },
+  {
+    "name": "SPP_SYSTEM_TRY_COLOR",
+    "opcode": 36,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 311,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] o3(int r8)",
+        "line": 1840
+      }
+    ]
+  },
+  {
+    "name": "SPP_EYE_GUARD_INFO",
+    "opcode": 34,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 312,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void F()",
+        "line": 534
+      },
+      {
+        "signature": "void l2(boolean r8)",
+        "line": 1660
+      }
+    ]
+  },
+  {
+    "name": "SPP_SEND_APP_NEW_PIC_INFO",
+    "opcode": 37,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 313,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SEND_APP_NEWEST_TIME",
+    "opcode": 38,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 314,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] F2(boolean r8)",
+        "line": 547
+      },
+      {
+        "signature": "byte[] b()",
+        "line": 1329
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_APP_BR_PASSWORD",
+    "opcode": 39,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 315,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_LIEGHT_PHONE_GIF32_WORD_ATTR",
+    "opcode": 135,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 316,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void K1(int r8)",
+        "line": 752
+      },
+      {
+        "signature": "void L1(int r8)",
+        "line": 775
+      },
+      {
+        "signature": "void M1(int r8, int r9, int r10, int r11)",
+        "line": 796
+      },
+      {
+        "signature": "void N1(int r8)",
+        "line": 846
+      },
+      {
+        "signature": "void O1(int r8)",
+        "line": 892
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_POWERON_VOICE_VOL",
+    "opcode": 187,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 317,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void I1(int r8)",
+        "line": 635
+      },
+      {
+        "signature": "void S0()",
+        "line": 1104
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_POWER_CHANNEL",
+    "opcode": 138,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 318,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void W2(int r8)",
+        "line": 1210
+      },
+      {
+        "signature": "void g0()",
+        "line": 1496
+      }
+    ]
+  },
+  {
+    "name": "SPP_REQUEST_NEW_FILE_INFO",
+    "opcode": 247,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 319,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_DIVOOM_EXTERN_CMD",
+    "opcode": 189,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 320,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void A3()",
+        "line": 333
+      },
+      {
+        "signature": "void C2(byte r8, byte r9, byte r10, byte r11)",
+        "line": 400
+      },
+      {
+        "signature": "void K()",
+        "line": 710
+      },
+      {
+        "signature": "void N()",
+        "line": 838
+      },
+      {
+        "signature": "void P()",
+        "line": 966
+      },
+      {
+        "signature": "void Q0()",
+        "line": 1025
+      },
+      {
+        "signature": "byte[] Q1(boolean r8)",
+        "line": 1029
+      },
+      {
+        "signature": "void R0()",
+        "line": 1079
+      },
+      {
+        "signature": "void T0()",
+        "line": 1131
+      },
+      {
+        "signature": "void U0()",
+        "line": 1147
+      },
+      {
+        "signature": "void U1(boolean r8)",
+        "line": 1151
+      },
+      {
+        "signature": "void V()",
+        "line": 1161
+      },
+      {
+        "signature": "void W1(boolean r8)",
+        "line": 1206
+      },
+      {
+        "signature": "void X1(int r8)",
+        "line": 1237
+      },
+      {
+        "signature": "void X2()",
+        "line": 1241
+      },
+      {
+        "signature": "void Z1(int r8)",
+        "line": 1289
+      },
+      {
+        "signature": "void a3(int r8)",
+        "line": 1325
+      },
+      {
+        "signature": "void b3(byte r8)",
+        "line": 1350
+      },
+      {
+        "signature": "byte[] c1()",
+        "line": 1382
+      },
+      {
+        "signature": "void c3(byte r8)",
+        "line": 1392
+      },
+      {
+        "signature": "void d1()",
+        "line": 1404
+      },
+      {
+        "signature": "void d2(K1.b r8)",
+        "line": 1408
+      },
+      {
+        "signature": "void e2(long r8, int r9)",
+        "line": 1443
+      },
+      {
+        "signature": "void f2()",
+        "line": 1470
+      },
+      {
+        "signature": "void g(int r8)",
+        "line": 1492
+      },
+      {
+        "signature": "void g2(K1.a r9)",
+        "line": 1504
+      },
+      {
+        "signature": "void i0()",
+        "line": 1556
+      },
+      {
+        "signature": "void k1()",
+        "line": 1629
+      },
+      {
+        "signature": "void l0()",
+        "line": 1652
+      },
+      {
+        "signature": "void m0()",
+        "line": 1711
+      },
+      {
+        "signature": "void m3(int[] r8)",
+        "line": 1724
+      },
+      {
+        "signature": "void n0()",
+        "line": 1781
+      },
+      {
+        "signature": "void n3(byte r8)",
+        "line": 1803
+      },
+      {
+        "signature": "void o1(boolean r8)",
+        "line": 1821
+      },
+      {
+        "signature": "void q()",
+        "line": 1872
+      },
+      {
+        "signature": "void q1(int r8)",
+        "line": 1882
+      },
+      {
+        "signature": "void r()",
+        "line": 1908
+      },
+      {
+        "signature": "boolean r2(byte[] r8)",
+        "line": 1921
+      },
+      {
+        "signature": "void s()",
+        "line": 1948
+      },
+      {
+        "signature": "void u()",
+        "line": 2003
+      },
+      {
+        "signature": "void v()",
+        "line": 2040
+      },
+      {
+        "signature": "byte[] w3(int r8)",
+        "line": 2106
+      },
+      {
+        "signature": "void x()",
+        "line": 2110
+      },
+      {
+        "signature": "void y()",
+        "line": 2132
+      },
+      {
+        "signature": "void z()",
+        "line": 2180
+      }
+    ]
+  },
+  {
+    "name": "SPP_SET_PERIPHERALS_DEVICE_CTRL",
+    "opcode": 137,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 321,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void Z()",
+        "line": 1278
+      },
+      {
+        "signature": "void i()",
+        "line": 1552
+      },
+      {
+        "signature": "void p1(boolean r8)",
+        "line": 1852
+      }
+    ]
+  },
+  {
+    "name": "SPP_APP_NEW_GIF_CMD2020",
+    "opcode": 139,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 322,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "synchronized List n(PixelBean r11)",
+        "line": 1739
+      }
+    ]
+  },
+  {
+    "name": "SPP_APP_NEW_USER_DEFINE2020",
+    "opcode": 140,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 323,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] L0()",
+        "line": 766
+      },
+      {
+        "signature": "byte[] P2(int r8, List r9)",
+        "line": 991
+      }
+    ]
+  },
+  {
+    "name": "SPP_APP_BIG64_USER_DEFINE",
+    "opcode": 141,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 324,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void C3()",
+        "line": 404
+      },
+      {
+        "signature": "int P1(int r8, PixelBean r9, int r10)",
+        "line": 974
+      },
+      {
+        "signature": "void h1(int r8, int r9)",
+        "line": 1535
+      },
+      {
+        "signature": "void i1(int r8)",
+        "line": 1560
+      },
+      {
+        "signature": "void j1(int r8, int r9)",
+        "line": 1602
+      }
+    ]
+  },
+  {
+    "name": "SPP_APP_GET_USER_DEFINE_INFO",
+    "opcode": 142,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 325,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void j(int r8)",
+        "line": 1594
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SEND_SERVER_FILE_INFO",
+    "opcode": 190,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 326,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_LOCAL_PICTURE",
+    "opcode": 143,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 327,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "final enum MultiShowEnum extends Enum<MultiShowEnum>",
+        "line": 163
+      },
+      {
+        "signature": "List a0(PixelBean r8)",
+        "line": 1301
+      }
+    ]
+  },
+  {
+    "name": "SppExtCarMode",
+    "opcode": 189,
+    "prefix": [
+      16
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 51,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void W1(boolean r8)",
+        "line": 1206
+      },
+      {
+        "signature": "void r()",
+        "line": 1908
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SET_KEY_PIC",
+    "opcode": 189,
+    "prefix": [
+      17
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 52,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SECOND_SET_KEY_FUNC",
+    "opcode": 189,
+    "prefix": [
+      18
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 53,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void K()",
+        "line": 710
+      },
+      {
+        "signature": "void k1()",
+        "line": 1629
+      },
+      {
+        "signature": "boolean r2(byte[] r8)",
+        "line": 1921
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SET_GIF_TYPE",
+    "opcode": 189,
+    "prefix": [
+      19
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 54,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void V()",
+        "line": 1161
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SET_USER_DEFINE_TIME",
+    "opcode": 189,
+    "prefix": [
+      20
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 55,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void Z1(int r8)",
+        "line": 1289
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_GET_USER_DEFINE_TIME",
+    "opcode": 189,
+    "prefix": [
+      21
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 56,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void v()",
+        "line": 2040
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_CLEAR_USER_DEFINE_INDEX",
+    "opcode": 189,
+    "prefix": [
+      22
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 57,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void g(int r8)",
+        "line": 1492
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_USE_USER_DEFINE_INDEX",
+    "opcode": 189,
+    "prefix": [
+      23
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 58,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void q1(int r8)",
+        "line": 1882
+      },
+      {
+        "signature": "void u()",
+        "line": 2003
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_GET_NEW_POWER_ON_CHANNEL",
+    "opcode": 189,
+    "prefix": [
+      24
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 59,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void U0()",
+        "line": 1147
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SET_SAVE_VOLUME_CFG",
+    "opcode": 189,
+    "prefix": [
+      25
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 60,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void d1()",
+        "line": 1404
+      },
+      {
+        "signature": "void o1(boolean r8)",
+        "line": 1821
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SET_AUTO_CONNECT_CFG",
+    "opcode": 189,
+    "prefix": [
+      26
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 61,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void U1(boolean r8)",
+        "line": 1151
+      },
+      {
+        "signature": "void q()",
+        "line": 1872
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SET_GIF_PLAY_TIME_CFG",
+    "opcode": 189,
+    "prefix": [
+      27
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 62,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void X1(int r8)",
+        "line": 1237
+      },
+      {
+        "signature": "void s()",
+        "line": 1948
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SET_MUSIC_NAME_CFG",
+    "opcode": 189,
+    "prefix": [
+      28
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 63,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void C2(byte r8, byte r9, byte r10, byte r11)",
+        "line": 400
+      },
+      {
+        "signature": "void N()",
+        "line": 838
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_RECORD_CTRL",
+    "opcode": 189,
+    "prefix": [
+      29
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 64,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void R0()",
+        "line": 1079
+      },
+      {
+        "signature": "void n3(byte r8)",
+        "line": 1803
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_KARAOKE_CTRL",
+    "opcode": 189,
+    "prefix": [
+      30
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 65,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void Q0()",
+        "line": 1025
+      },
+      {
+        "signature": "void m3(int[] r8)",
+        "line": 1724
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_TOUCH",
+    "opcode": 189,
+    "prefix": [
+      33
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 66,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SECOND_WIRELESS_MIC_CTRL",
+    "opcode": 189,
+    "prefix": [
+      32
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 67,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void P()",
+        "line": 966
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SET_SCREEN_DIR_CFG",
+    "opcode": 189,
+    "prefix": [
+      35
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 68,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void a3(int r8)",
+        "line": 1325
+      },
+      {
+        "signature": "void l0()",
+        "line": 1652
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SET_SCREEN_MIRROR_CFG",
+    "opcode": 189,
+    "prefix": [
+      36
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 69,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void b3(byte r8)",
+        "line": 1350
+      },
+      {
+        "signature": "void m0()",
+        "line": 1711
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_CLEAR_SYS_CFG",
+    "opcode": 189,
+    "prefix": [
+      37
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 70,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void X2()",
+        "line": 1241
+      },
+      {
+        "signature": "void i0()",
+        "line": 1556
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SET_LANGUAGE",
+    "opcode": 189,
+    "prefix": [
+      38
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 71,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void f2()",
+        "line": 1470
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SUPPORT_MORE_ANCS",
+    "opcode": 189,
+    "prefix": [
+      39
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 72,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void T0()",
+        "line": 1131
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_GET_DECODE_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      40
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 73,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SECOND_GET_NORMAL_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      41
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 74,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SECOND_GET_CLOCK_ID_INFO",
+    "opcode": 189,
+    "prefix": [
+      42
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 75,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SECOND_GET_DEVICE_INFO",
+    "opcode": 189,
+    "prefix": [
+      43
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 76,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void e2(long r8, int r9)",
+        "line": 1443
+      },
+      {
+        "signature": "void y()",
+        "line": 2132
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_DEVICE_FORMAT_FLAG",
+    "opcode": 189,
+    "prefix": [
+      44
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 77,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SECOND_GET_FONT_INFO",
+    "opcode": 189,
+    "prefix": [
+      45
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 78,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_GET_SYSTEM_TIME",
+    "opcode": 189,
+    "prefix": [
+      46
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 79,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SECOND_OPEN_SCREEN_CTRL",
+    "opcode": 189,
+    "prefix": [
+      47
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 80,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void c3(byte r8)",
+        "line": 1392
+      },
+      {
+        "signature": "void n0()",
+        "line": 1781
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_GET_ZSTD_DECODE_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      48
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 81,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SECOND_APP_SEND_GIF_START",
+    "opcode": 189,
+    "prefix": [
+      49
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 82,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void A3()",
+        "line": 333
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SEND_DEVICE_EQUALIZER_CTRL",
+    "opcode": 189,
+    "prefix": [
+      50
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 83,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void d2(K1.b r8)",
+        "line": 1408
+      },
+      {
+        "signature": "void x()",
+        "line": 2110
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_SEND_DEVICE_LIGHT_EFFECT_CTRL",
+    "opcode": 189,
+    "prefix": [
+      51
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 84,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "void g2(K1.a r9)",
+        "line": 1504
+      },
+      {
+        "signature": "void z()",
+        "line": 2180
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_APP_SET_VOL",
+    "opcode": 189,
+    "prefix": [
+      52
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 85,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] w3(int r8)",
+        "line": 2106
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_APP_GET_VOL",
+    "opcode": 189,
+    "prefix": [
+      53
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 86,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] c1()",
+        "line": 1382
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_APP_SET_MUSIC_PLAY_PAUSE",
+    "opcode": 189,
+    "prefix": [
+      54
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 87,
+    "support": "app-defined; device support unverified",
+    "builders": [
+      {
+        "signature": "byte[] Q1(boolean r8)",
+        "line": 1029
+      }
+    ]
+  },
+  {
+    "name": "SPP_SECOND_GET_EZIP_DECODE_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      55
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 88,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SECOND_GET_EZIP_ROTATE_DECODE_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      56
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 89,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  },
+  {
+    "name": "SPP_SECOND_GET_JPEG_PIXEL_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      58
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 90,
+    "support": "app-defined; device support unverified",
+    "builders": []
+  }
+]

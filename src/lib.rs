@@ -8,7 +8,7 @@ use std::time::Duration;
 use std::thread;
 
 use bluer::Address;
-use chrono::{NaiveDateTime, NaiveTime};
+use chrono::NaiveDateTime;
 use futures::StreamExt;
 #[cfg(feature = "video")]
 use image::{DynamicImage, Rgb, RgbImage};
@@ -27,6 +27,7 @@ use crate::divoom_file_format::frame_header::FrameHeader;
 pub mod divoom_file_format;
 pub mod protocol;
 mod transport;
+pub mod control;
 pub use transport::{Transport, with_transport};
 use transport::DeviceConnection;
 
@@ -242,8 +243,12 @@ impl ClassicConnection {
   }
 
   async fn send_and_receive(&mut self, packet: &Packet) -> Result<Response, Box<dyn Error>> {
+    self.exchange(packet, packet.command.value(), &[]).await
+  }
+
+  async fn exchange(&mut self, packet: &Packet, expected_command: u8, prefix: &[u8]) -> Result<Response, Box<dyn Error>> {
+    while self.response_rx.try_recv().is_ok() {}
     let serialized = packet.serialize()?;
-    let expected_command = packet.command.value();
     debug!("send_and_receive 0x{:02x}: {}", expected_command, hex::encode(&serialized));
     self.writer.write_all(&serialized).await?;
     tokio::time::sleep(INTER_PACKET_DELAY).await;
@@ -252,7 +257,7 @@ impl ClassicConnection {
       let response = tokio::time::timeout_at(deadline, self.response_rx.recv()).await
         .map_err(|_| format!("Timed out waiting for response to command 0x{:02x}", expected_command))?
         .ok_or("Response channel closed")?;
-      if response.original_command != expected_command {
+      if response.original_command != expected_command || !response.data.starts_with(prefix) {
         debug!("Skipping unsolicited response for command 0x{:02x}", response.original_command);
         continue;
       }
@@ -314,17 +319,7 @@ fn create_network_packets_from(animation: &[u8]) -> Result<Vec<Packet>, Box<dyn 
   Ok(packets)
 }
 
-pub async fn send_alarm(mac_address: Address) -> Result<(), Box<dyn Error>> {
-  let alarm = Alarm {
-    index: 0,
-    enable: false,
-    time: NaiveTime::from_hms_opt(13, 37, 0).ok_or("Invalid time")?,
-    repeat: 0,
-    mode: 0,
-    trigger_mode: 0,
-    fm: [0, 0],
-    volume: 100
-  };
+pub async fn send_alarm(mac_address: Address, alarm: &Alarm) -> Result<(), Box<dyn Error>> {
   let packet = Packet {
     command: Command::Alarm,
     payload: alarm.serialize()?

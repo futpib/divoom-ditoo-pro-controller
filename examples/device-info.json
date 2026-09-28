@@ -1,0 +1,5 @@
+[
+  {"command":"SPP_GET_FILE_VERSION2_LIST","payload_hex":"00","response":"SPP_GET_FILE_VERSION2_LIST"},
+  {"command":"SPP_GET_BOX_MODE","response":"SPP_GET_BOX_MODE"},
+  {"command":"SPP_GET_VOL","response":"SPP_GET_VOL"}
+]

@@ -1,0 +1,3 @@
+{"delivery":"command_reply","request":{"opcode":55,"payload_hex":"00","response":{"opcode":55,"prefix_hex":""},"rfcomm_frame_hex":"01040037003b0002"},"response":{"ack":true,"data_hex":"0157ab0400","firmware_versions":[306007],"opcode":55},"transport":"ble"}
+{"delivery":"command_reply","request":{"opcode":70,"payload_hex":"","response":{"opcode":70,"prefix_hex":""},"rfcomm_frame_hex":"01030046490002"},"response":{"ack":true,"brightness":0,"data_hex":"000000ff5000000001030000ff50000601000000286e","mode":0,"opcode":70},"transport":"ble"}
+{"delivery":"command_reply","request":{"opcode":9,"payload_hex":"","response":{"opcode":9,"prefix_hex":""},"rfcomm_frame_hex":"010300090c0002"},"response":{"ack":true,"data_hex":"03","opcode":9,"volume":3},"transport":"ble"}

@@ -1,5 +1,6 @@
 #[derive(Clone, Copy, Debug)]
 pub enum Command {
+  Raw(u8),
   Alarm,
   Animation,
   SetVolume,
@@ -19,6 +20,7 @@ pub enum Command {
 impl Command {
   pub fn value(&self) -> u8 {
     match *self {
+      Command::Raw(value) => value,
       Command::SetVolume => 0x08,
       Command::GetVolume => 0x09,
       Command::SetPlayStatus => 0x0a,

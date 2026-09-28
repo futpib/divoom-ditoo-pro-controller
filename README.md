@@ -126,8 +126,8 @@ divoom-ditoo-pro-controller keyboard-backlight next
 divoom-ditoo-pro-controller keyboard-backlight prev
 
 # Alarm
-divoom-ditoo-pro-controller alarm on
-divoom-ditoo-pro-controller alarm off
+divoom-ditoo-pro-controller alarm on --time 07:30 --repeat 62
+divoom-ditoo-pro-controller alarm off --time 07:30 --repeat 62
 ```
 
 ### Display modes
@@ -213,12 +213,36 @@ Library callers can select a transport with
 unscoped calls default to automatic fallback. The selection applies to
 the scoped future and is not inherited by separately spawned Tokio tasks.
 
+## Device protocol API
+
+The [protocol capability map](docs/protocol-capabilities.md) tracks device
+operations, their opcodes, implemented helpers, remaining gaps and actual
+hardware results. The command catalogue contains 196 Android symbols,
+including extended selectors; catalogue membership does not imply Ditoo support.
+
+```sh
+divoom-ditoo-pro-controller --transport ble device firmware
+divoom-ditoo-pro-controller --transport ble device status
+divoom-ditoo-pro-controller --transport ble device setting hour24
+divoom-ditoo-pro-controller protocol list --filter ALARM
+divoom-ditoo-pro-controller protocol send 0x37 --data 00 --query
+divoom-ditoo-pro-controller protocol run examples/device-info.json
+divoom-ditoo-pro-controller device --dry-run scoreboard 12 34
+divoom-ditoo-pro-controller alarm on --time 07:30 --repeat 62 --dry-run
+```
+
+Raw and symbolic commands support arbitrary binary payloads, explicit response
+opcodes/prefixes, JSON output, batch requests and bounded event collection.
+The library exposes `control::{Request, Session}` for programs. Alarm writes
+now honor the supplied fields; `--time` is required because a write replaces
+the full slot. Library callers pass `&Alarm` to `send_alarm`.
+
 ## Android feature comparison and firmware archive
 
 The [Android feature audit](docs/android-feature-gaps.md) compares the inspected
 Divoom 3.8.40 app with this CLI, including device-specific versus phone/cloud
-features, partially implemented commands, and the alarm command's ignored
-boolean. It includes a source inventory for follow-up implementation work.
+features and partially implemented commands at the historical `ff5196c` baseline.
+The alarm defect found there is fixed by the subsequent protocol work.
 
 The [firmware archive](firmware/README.md) contains the vendor image matching
 installed version 306007, also the latest returned by the checked test-channel

@@ -1,5 +1,9 @@
 # Android app feature gaps
 
+Historical baseline audit. For current device-facing coverage, see the
+[protocol capability map](protocol-capabilities.md). Subsequent changes add a
+generic command API and device helpers and fix the alarm defect described below.
+
 Audit date: 2026-09-28. Compared Divoom Android **3.8.40 (640)** with the
 Rust CLI at **ff5196c**, including the new BLE option and automatic fallback.
 APK SHA-256: `d7ae490205cf71cc37f74948bd1ca7f1b2a446070565294b3ae835c0a51fde81`.

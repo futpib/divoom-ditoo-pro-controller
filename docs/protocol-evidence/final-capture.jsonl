@@ -1,0 +1,4 @@
+{"delivery":"transport_ack","events":[],"request":{"opcode":55,"payload_hex":"00","response":null,"rfcomm_frame_hex":"01040037003b0002"},"response":null,"transport":"ble"}
+{"delivery":"transport_ack","events":[{"ack":true,"data_hex":"00","opcode":45}],"request":{"opcode":45,"payload_hex":"ff","response":null,"rfcomm_frame_hex":"0104002dff300102"},"response":null,"transport":"ble"}
+{"delivery":"transport_ack","events":[{"ack":true,"data_hex":"000000000000000300","opcode":180},{"ack":true,"data_hex":"4e6f62021c040000","opcode":247}],"request":{"opcode":180,"payload_hex":"","response":null,"rfcomm_frame_hex":"010300b4b70002"},"response":null,"transport":"ble"}
+{"delivery":"transport_ack","events":[{"ack":true,"brightness":0,"data_hex":"000000ff5000000001030000ff500006010000001804","mode":0,"opcode":70}],"request":{"opcode":70,"payload_hex":"","response":null,"rfcomm_frame_hex":"01030046490002"},"response":null,"transport":"ble"}

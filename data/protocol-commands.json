@@ -1,0 +1,1650 @@
+[
+  {
+    "name": "SPP_JSON",
+    "opcode": 1,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 172,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_COMMAND_CHECK",
+    "opcode": 4,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 173,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_CHANGE_MODE",
+    "opcode": 5,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 174,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_SD_MUSIC_LIST",
+    "opcode": 7,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 175,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SD_PLAY_MUSIC_ID",
+    "opcode": 17,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 176,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_LAST_NEXT",
+    "opcode": 18,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 177,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_SD_LIST_OVER",
+    "opcode": 20,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 178,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_SD_TF_STATUS",
+    "opcode": 21,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 179,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_APP_EQ_GIF",
+    "opcode": 27,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 180,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DEVICE_TO_APP_GIF",
+    "opcode": 30,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 181,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_SD_MUSIC_LIST_TOTAL_NUM",
+    "opcode": 125,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 182,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_SD_MUSIC_INFO",
+    "opcode": 180,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 183,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SD_MUSIC_POSITION",
+    "opcode": 184,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 184,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SD_MUSIC_PLAY_MODE",
+    "opcode": 185,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 185,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_VOL",
+    "opcode": 8,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 186,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_VOL",
+    "opcode": 9,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 187,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_PLAY_STATUS",
+    "opcode": 10,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 188,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_PLAY_STATUS",
+    "opcode": 11,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 189,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_STDB_MODE",
+    "opcode": 19,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 190,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_POWERON_VOICE_CTRL",
+    "opcode": 28,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 191,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_LIEGHT_SET_25DOTS_PIC",
+    "opcode": 29,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 192,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_LIEGHT_SET_25DOTS_ATTR",
+    "opcode": 30,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 193,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_GIF_SPEED_CMD",
+    "opcode": 22,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 194,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SYSTEM_TIME",
+    "opcode": 24,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 195,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DEVICE_UPDATE_GIF",
+    "opcode": 25,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 196,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_STOP_SEND_GIF",
+    "opcode": 26,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 197,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_TEMP_TYPE",
+    "opcode": 43,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 198,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_HPUR_TYPE",
+    "opcode": 45,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 199,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_LIGHT_CURRENT_LEVEL",
+    "opcode": 49,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 200,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_LIGHT_ADJUST_LEVEL",
+    "opcode": 50,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 201,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SAND_PAINT_CTRL",
+    "opcode": 52,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 202,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SCROLL",
+    "opcode": 53,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 203,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_MUL_PAD_CTRL",
+    "opcode": 58,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 204,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_BIG_PAD_CTRL",
+    "opcode": 59,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 205,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_ANCS_NOTICE_PIC",
+    "opcode": 60,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 206,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_MOVE_RESET_IFRAME",
+    "opcode": 62,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 207,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SLEEP_TIME",
+    "opcode": 64,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 208,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SLEEP_SCENE",
+    "opcode": 65,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 209,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_ALARM_TIME_SCENE",
+    "opcode": 66,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 210,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_ALARM_TIME_SCENE",
+    "opcode": 67,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 211,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_BOX_MODE",
+    "opcode": 69,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 212,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_BOX_MODE",
+    "opcode": 70,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 213,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_BOX_COLOR",
+    "opcode": 68,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 214,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_APP_NEED_GET_MUSIC_LIST",
+    "opcode": 71,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 215,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_MUL_BOX_COLOR",
+    "opcode": 73,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 216,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_ANDROID_ANCS",
+    "opcode": 80,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 217,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_ALARM_TIME_GIF",
+    "opcode": 81,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 218,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_BOOT_GIF",
+    "opcode": 82,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 219,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_DIALY_TIME_EXT2",
+    "opcode": 83,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 220,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_DIALY_TIME_EXT2",
+    "opcode": 84,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 221,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_DIALY_TIME_GIF",
+    "opcode": 85,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 222,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_TIME_MANAGE_INFO",
+    "opcode": 86,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 223,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_TIME_MANAGE_CTRL",
+    "opcode": 87,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 224,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_PAD_CTRL",
+    "opcode": 88,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 225,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_PAD_EXIT",
+    "opcode": 90,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 226,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_ENCODE_PIC",
+    "opcode": 91,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 227,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_ENCODE_PLAY",
+    "opcode": 92,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 228,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_NET_TEMP_INFO",
+    "opcode": 93,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 229,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_NET_TEMP_DISP_INFO",
+    "opcode": 94,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 230,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_CUR_NET_TEMP",
+    "opcode": 95,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 231,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_DEVICE_TEMP_INFO",
+    "opcode": 89,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 232,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_MIX_MUISE_MODE",
+    "opcode": 106,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 233,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_NEW_MIX_MUSIC_MODE",
+    "opcode": 188,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 234,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_FM_CURRENT_FREQ",
+    "opcode": 96,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 235,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_FM_CURRENT_FREQ",
+    "opcode": 97,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 236,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_FM_AUTOMATIC_SEARCH",
+    "opcode": 99,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 237,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_FM_COUNT_OR_FREQ",
+    "opcode": 100,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 238,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_FM_FAVOURITE",
+    "opcode": 103,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 239,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_FM_AUTOMATIC_SEARCH_STATUS",
+    "opcode": 104,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 240,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_MUL_ENCODE_GIF_PLAY",
+    "opcode": 107,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 241,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_MUL_PAD_ENTER",
+    "opcode": 111,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 242,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_ENCODE_MOVIE_PLAY",
+    "opcode": 108,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 243,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_MUL_ENCODE_MOVIE_PLAY",
+    "opcode": 109,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 244,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DRAWING_CTRL_MOVIE_PLAY",
+    "opcode": 110,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 245,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_FM_REGION",
+    "opcode": 105,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 246,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_FM_REGION",
+    "opcode": 112,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 247,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_TOOL_INFO",
+    "opcode": 113,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 248,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_TOOL_INFO",
+    "opcode": 114,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 249,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_NET_TEMP_DISP_INFO",
+    "opcode": 115,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 250,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SYSTEM_BRIGHT",
+    "opcode": 116,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 251,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_DEVICE_NAME",
+    "opcode": 117,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 252,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_MUL_DEVICE_CTRL",
+    "opcode": 119,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 253,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_LED_UPDATE_FONT_INFO",
+    "opcode": 124,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 254,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_DIVOOM_LEAVE_MSG_GIF",
+    "opcode": 126,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 255,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_ALARM_VOICE_CTRL",
+    "opcode": 130,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 256,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SONG_DIS_CTRL",
+    "opcode": 131,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 257,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_RESET_NOTIFICATIONS",
+    "opcode": 132,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 258,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_HOTCTRL",
+    "opcode": 133,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 259,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_LED_WORD_CMD",
+    "opcode": 134,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 260,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_GAME_SHARK",
+    "opcode": 136,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 261,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_FILE_VERSION",
+    "opcode": 151,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 262,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_APP_UPDATE_FILE_INFO",
+    "opcode": 152,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 263,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_FILE_VERSION2",
+    "opcode": 54,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 264,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_FILE_VERSION2_LIST",
+    "opcode": 55,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 265,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_APP_SEND_FILE_DATA",
+    "opcode": 153,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 266,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_PAUSE_SYS_UPDATE_DATA",
+    "opcode": 72,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 267,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_HOT_FILE_LIST",
+    "opcode": 155,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 268,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_HOT_UPDATE_FILE_INFO",
+    "opcode": 157,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 269,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_HOT_SEND_FILE_DATA",
+    "opcode": 158,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 270,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_HOT_PAUSE_FILE_SEND",
+    "opcode": 159,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 271,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SYS_DEVICE_UPDATE",
+    "opcode": 147,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 272,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SYS_UPDATE_DATA",
+    "opcode": 148,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 273,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SYS_CONTINUE_UPDATE_DATA",
+    "opcode": 149,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 274,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SYS_GET_UPDATE_ADDR",
+    "opcode": 150,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 275,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_GAME",
+    "opcode": 160,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 276,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_TALK",
+    "opcode": 161,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 277,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_SCENE",
+    "opcode": 162,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 278,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SCENE_LISTEN",
+    "opcode": 163,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 279,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SCENE_LISTEN_VOLUME",
+    "opcode": 164,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 280,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_ALARM_LISTEN",
+    "opcode": 165,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 281,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_ALARM_LISTEN_VOLUME",
+    "opcode": 166,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 282,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SOUND_CTRL",
+    "opcode": 167,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 283,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_SOUND_CTRL",
+    "opcode": 168,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 284,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_PLAY_STOP_VOICE",
+    "opcode": 169,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 285,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_PLAY_VOICE_STATUS",
+    "opcode": 170,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 286,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_AUTO_POWER_OFF",
+    "opcode": 171,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 287,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_AUTO_POWER_OFF",
+    "opcode": 172,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 288,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SLEEP_COLOR",
+    "opcode": 173,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 289,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SLEEP_LIGHT",
+    "opcode": 174,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 290,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_CONNECTED_FLAG",
+    "opcode": 175,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 291,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_CONNECTED_FLAG",
+    "opcode": 176,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 292,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_USER_GIF",
+    "opcode": 177,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 293,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_ENERGY_CTRL",
+    "opcode": 178,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 294,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_ENERGY_CTRL",
+    "opcode": 179,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 295,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_MODIFY_RHYTHM_ITEMS",
+    "opcode": 182,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 296,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_RHYTHM_GIF",
+    "opcode": 183,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 297,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DEL_LEAVE_MSG_GIF",
+    "opcode": 127,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 298,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_SLEEP_CTRL_MODE",
+    "opcode": 121,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 299,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "COMMAND_CHECK",
+    "opcode": 4,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 300,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "START_BOND_BLE_COMMAND",
+    "opcode": 240,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 301,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "EXIT_BOND_BLE_COMMAND",
+    "opcode": 241,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 302,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "WIFI_CONFIG_BLE_COMMAND",
+    "opcode": 242,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 303,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "WIFI_STATUS_BLE_COMMAND",
+    "opcode": 243,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 304,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_WIFI_SERVER_TYPE_COMMAND",
+    "opcode": 244,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 305,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SPP_POWER_ON_OFF_INFO",
+    "opcode": 31,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 306,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SPP_LIGHT_ARROW_SWITCH",
+    "opcode": 35,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 307,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SPP_SET_MIC_SWITCH",
+    "opcode": 32,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 308,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_GAME_CTRL_INFO",
+    "opcode": 23,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 309,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_GAME_CTRL_KEY_UP_INFO",
+    "opcode": 33,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 310,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SYSTEM_TRY_COLOR",
+    "opcode": 36,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 311,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_EYE_GUARD_INFO",
+    "opcode": 34,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 312,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_APP_NEW_PIC_INFO",
+    "opcode": 37,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 313,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SEND_APP_NEWEST_TIME",
+    "opcode": 38,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 314,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_APP_BR_PASSWORD",
+    "opcode": 39,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 315,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_LIEGHT_PHONE_GIF32_WORD_ATTR",
+    "opcode": 135,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 316,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_POWERON_VOICE_VOL",
+    "opcode": 187,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 317,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_POWER_CHANNEL",
+    "opcode": 138,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 318,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_REQUEST_NEW_FILE_INFO",
+    "opcode": 247,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 319,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_DIVOOM_EXTERN_CMD",
+    "opcode": 189,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 320,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SET_PERIPHERALS_DEVICE_CTRL",
+    "opcode": 137,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 321,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_APP_NEW_GIF_CMD2020",
+    "opcode": 139,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 322,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_APP_NEW_USER_DEFINE2020",
+    "opcode": 140,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 323,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_APP_BIG64_USER_DEFINE",
+    "opcode": 141,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 324,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_APP_GET_USER_DEFINE_INFO",
+    "opcode": 142,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 325,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SEND_SERVER_FILE_INFO",
+    "opcode": 190,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 326,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_LOCAL_PICTURE",
+    "opcode": 143,
+    "prefix": [],
+    "source": "SppProc$CMD_TYPE.java",
+    "source_line": 327,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SppExtCarMode",
+    "opcode": 189,
+    "prefix": [
+      16
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 51,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_KEY_PIC",
+    "opcode": 189,
+    "prefix": [
+      17
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 52,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_KEY_FUNC",
+    "opcode": 189,
+    "prefix": [
+      18
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 53,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_GIF_TYPE",
+    "opcode": 189,
+    "prefix": [
+      19
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 54,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_USER_DEFINE_TIME",
+    "opcode": 189,
+    "prefix": [
+      20
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 55,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_USER_DEFINE_TIME",
+    "opcode": 189,
+    "prefix": [
+      21
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 56,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_CLEAR_USER_DEFINE_INDEX",
+    "opcode": 189,
+    "prefix": [
+      22
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 57,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_USE_USER_DEFINE_INDEX",
+    "opcode": 189,
+    "prefix": [
+      23
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 58,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_NEW_POWER_ON_CHANNEL",
+    "opcode": 189,
+    "prefix": [
+      24
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 59,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_SAVE_VOLUME_CFG",
+    "opcode": 189,
+    "prefix": [
+      25
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 60,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_AUTO_CONNECT_CFG",
+    "opcode": 189,
+    "prefix": [
+      26
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 61,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_GIF_PLAY_TIME_CFG",
+    "opcode": 189,
+    "prefix": [
+      27
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 62,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_MUSIC_NAME_CFG",
+    "opcode": 189,
+    "prefix": [
+      28
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 63,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_RECORD_CTRL",
+    "opcode": 189,
+    "prefix": [
+      29
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 64,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_KARAOKE_CTRL",
+    "opcode": 189,
+    "prefix": [
+      30
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 65,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_TOUCH",
+    "opcode": 189,
+    "prefix": [
+      33
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 66,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_WIRELESS_MIC_CTRL",
+    "opcode": 189,
+    "prefix": [
+      32
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 67,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_SCREEN_DIR_CFG",
+    "opcode": 189,
+    "prefix": [
+      35
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 68,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_SCREEN_MIRROR_CFG",
+    "opcode": 189,
+    "prefix": [
+      36
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 69,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_CLEAR_SYS_CFG",
+    "opcode": 189,
+    "prefix": [
+      37
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 70,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SET_LANGUAGE",
+    "opcode": 189,
+    "prefix": [
+      38
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 71,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SUPPORT_MORE_ANCS",
+    "opcode": 189,
+    "prefix": [
+      39
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 72,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_DECODE_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      40
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 73,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_NORMAL_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      41
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 74,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_CLOCK_ID_INFO",
+    "opcode": 189,
+    "prefix": [
+      42
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 75,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_DEVICE_INFO",
+    "opcode": 189,
+    "prefix": [
+      43
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 76,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_DEVICE_FORMAT_FLAG",
+    "opcode": 189,
+    "prefix": [
+      44
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 77,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_FONT_INFO",
+    "opcode": 189,
+    "prefix": [
+      45
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 78,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_GET_SYSTEM_TIME",
+    "opcode": 189,
+    "prefix": [
+      46
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 79,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_OPEN_SCREEN_CTRL",
+    "opcode": 189,
+    "prefix": [
+      47
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 80,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_ZSTD_DECODE_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      48
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 81,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_APP_SEND_GIF_START",
+    "opcode": 189,
+    "prefix": [
+      49
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 82,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SEND_DEVICE_EQUALIZER_CTRL",
+    "opcode": 189,
+    "prefix": [
+      50
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 83,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_SEND_DEVICE_LIGHT_EFFECT_CTRL",
+    "opcode": 189,
+    "prefix": [
+      51
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 84,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_APP_SET_VOL",
+    "opcode": 189,
+    "prefix": [
+      52
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 85,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_APP_GET_VOL",
+    "opcode": 189,
+    "prefix": [
+      53
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 86,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_APP_SET_MUSIC_PLAY_PAUSE",
+    "opcode": 189,
+    "prefix": [
+      54
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 87,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_EZIP_DECODE_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      55
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 88,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_EZIP_ROTATE_DECODE_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      56
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 89,
+    "support": "app-defined; device support unverified"
+  },
+  {
+    "name": "SPP_SECOND_GET_JPEG_PIXEL_FILE_INFO",
+    "opcode": 189,
+    "prefix": [
+      58
+    ],
+    "source": "SppProc$EXT_CMD_TYPE.java",
+    "source_line": 90,
+    "support": "app-defined; device support unverified"
+  }
+]

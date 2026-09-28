@@ -1,0 +1,54 @@
+[
+  {
+    "args": [
+      "device",
+      "setting",
+      "hour24"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"delivery\":\"command_reply\",\"events\":[],\"request\":{\"opcode\":45,\"payload_hex\":\"ff\",\"response\":{\"opcode\":45,\"prefix_hex\":\"\"},\"rfcomm_frame_hex\":\"0104002dff300102\"},\"response\":{\"ack\":true,\"data_hex\":\"00\",\"opcode\":45},\"transport\":\"ble\"}\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "device",
+      "setting",
+      "hour24",
+      "1"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"delivery\":\"transport_ack\",\"events\":[],\"request\":{\"opcode\":45,\"payload_hex\":\"01\",\"response\":null,\"rfcomm_frame_hex\":\"0104002d01320002\"},\"response\":null,\"transport\":\"ble\"}\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "device",
+      "setting",
+      "hour24"
+    ],
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "Error: \"Timed out waiting for BLE acknowledgment/response\"\n"
+  },
+  {
+    "args": [
+      "device",
+      "setting",
+      "hour24",
+      "0"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"delivery\":\"transport_ack\",\"events\":[],\"request\":{\"opcode\":45,\"payload_hex\":\"00\",\"response\":null,\"rfcomm_frame_hex\":\"0104002d00310002\"},\"response\":null,\"transport\":\"ble\"}\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "device",
+      "setting",
+      "hour24"
+    ],
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "Error: \"Timed out waiting for BLE acknowledgment/response\"\n"
+  }
+]

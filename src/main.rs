@@ -1,3 +1,4 @@
+mod control_cli;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
@@ -12,7 +13,7 @@ use log::{debug, info};
 use divoom_ditoo_pro_controller::divoom_file_format::animation::Animation;
 use divoom_ditoo_pro_controller::divoom_file_format::frame::bits_per_pixel;
 use divoom_ditoo_pro_controller::{
-  find_paired_ditoo_pro_devices, scan_devices, list_paired_devices, send_alarm,
+  find_paired_ditoo_pro_devices, scan_devices, list_paired_devices,
   send_divoom_animation, send_get_clock_face, send_get_volume, send_image,
   send_keyboard_backlight, send_set_brightness,
   send_set_box_mode, send_set_clock_face, send_set_datetime, send_set_language,
@@ -44,6 +45,15 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+  /// Low-level protocol catalogue, commands, scripts and response monitoring
+  Protocol { #[command(subcommand)] action: control_cli::ProtocolCommand },
+
+  /// Device protocol controls and queries, independent of phone UI
+  Device {
+    #[arg(long, global=true)] dry_run: bool,
+    #[command(subcommand)] action: control_cli::DeviceCommand
+  },
+
   /// Scan for available bluetooth devices
   Scan,
 
@@ -167,10 +177,21 @@ enum Command {
     action: KeyboardBacklightAction
   },
 
-  /// Toggle the alarm
+  /// Write an alarm slot, including its enabled state and time
   Alarm {
     #[arg(required = true, number_of_values = 1, value_parser = clap::builder::BoolishValueParser::new())]
-    enable: bool
+    enable: bool,
+    /// Full alarm slot configuration is written; specify its time explicitly
+    #[arg(long)] time: String,
+    #[arg(long, default_value_t=0)] index: u8,
+    /// Repeat bit mask: bit 0 Sunday through bit 6 Saturday
+    #[arg(long, default_value_t=0, value_parser=clap::value_parser!(u8).range(0..=127))] repeat: u8,
+    #[arg(long, default_value_t=0)] mode: u8,
+    #[arg(long, default_value_t=0)] trigger: u8,
+    /// Radio frequency in tenths of MHz (875 = 87.5 MHz)
+    #[arg(long, default_value_t=0, value_parser=clap::value_parser!(u16).range(0..=25599))] frequency: u16,
+    #[arg(long, default_value_t=50, value_parser=clap::value_parser!(u8).range(0..=100))] volume: u8,
+    #[arg(long)] dry_run: bool
   },
 }
 
@@ -334,6 +355,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn run(args: Args) -> Result<(), Box<dyn Error>> {
   match args.command {
+    Command::Protocol { action } => control_cli::run(args.device, action).await?,
+    Command::Device { action, dry_run } => control_cli::run_requests(args.device, vec![action.request()?], dry_run).await?,
     Command::Scan => scan_devices().await?,
     Command::Devices => list_paired_devices().await?,
     Command::Convert { convert } => match convert {
@@ -524,15 +547,37 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
       info!("Keyboard backlight: {:?}", action);
       send_keyboard_backlight(mac, mode).await?
     }
-    Command::Alarm { enable } => {
-      let mac = resolve_device(args.device).await?;
-      match enable {
-        true => info!("Enabling alarm.."),
-        false => info!("Disabling alarm..")
-      }
-      send_alarm(mac).await?
+    Command::Alarm { enable, time, index, repeat, mode, trigger, frequency, volume, dry_run } => {
+      let alarm = divoom_ditoo_pro_controller::protocol::alarm::Alarm {
+        enable, index, repeat, mode, trigger_mode: trigger, fm: [(frequency % 100) as u8, (frequency / 100) as u8], volume,
+        time: chrono::NaiveTime::parse_from_str(&time, "%H:%M")?,
+      };
+      let request = divoom_ditoo_pro_controller::control::Request::bytes(0x43, &alarm.serialize()?, false);
+      control_cli::run_requests(args.device, vec![request], dry_run).await?;
     }
   }
 
   Ok(())
+}
+
+#[cfg(test)]
+mod cli_tests {
+  use super::*;
+  #[test]
+  fn alarm_requires_explicit_time_and_preserves_enabled_value() -> Result<(), Box<dyn Error>> {
+    assert!(Args::try_parse_from(["divoom", "alarm", "true"]).is_err());
+    for (text, expected) in [("true", true), ("false", false)] {
+      let args = Args::try_parse_from(["divoom", "alarm", text, "--time", "07:30", "--repeat", "62", "--dry-run"])?;
+      match args.command {
+        Command::Alarm { enable, time, repeat, dry_run, .. } => {
+          assert_eq!(enable, expected);
+          assert_eq!(time, "07:30");
+          assert_eq!(repeat, 62);
+          assert!(dry_run);
+        }
+        _ => return Err("Parsed a different command".into()),
+      }
+    }
+    Ok(())
+  }
 }

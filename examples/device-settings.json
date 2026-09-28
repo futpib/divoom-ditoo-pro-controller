@@ -1,0 +1,5 @@
+[
+  {"command":"SPP_SET_HPUR_TYPE","payload_hex":"ff","response":"SPP_SET_HPUR_TYPE"},
+  {"command":"SPP_SECOND_SET_SAVE_VOLUME_CFG","payload_hex":"ff","response":"SPP_SECOND_SET_SAVE_VOLUME_CFG"},
+  {"command":"SPP_SECOND_SET_AUTO_CONNECT_CFG","payload_hex":"ff","response":"SPP_SECOND_SET_AUTO_CONNECT_CFG"}
+]

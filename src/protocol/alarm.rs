@@ -45,3 +45,16 @@ impl Alarm {
     Ok(buffer)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  #[test]
+  fn weekday_alarm_payload_matches_app_layout() -> Result<(), Box<dyn Error>> {
+    let mut alarm = Alarm { index: 2, enable: true, time: NaiveTime::from_hms_opt(7,30,0).ok_or("Invalid test time")?, repeat: 62, mode: 3, trigger_mode: 1, fm: [0x34,0x12], volume: 40 };
+    assert_eq!(alarm.serialize()?, [2,1,7,30,62,3,1,0x34,0x12,40]);
+    alarm.enable=false;
+    assert_eq!(alarm.serialize()?, [2,0,7,30,62,3,1,0x34,0x12,40]);
+    Ok(())
+  }
+}

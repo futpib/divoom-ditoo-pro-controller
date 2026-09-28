@@ -66,17 +66,45 @@ impl DeviceConnection {
   pub async fn fire_and_forget(&mut self, packet: &Packet) -> Result<(), Box<dyn Error>> {
     match self {
       Self::Classic(c) => c.fire_and_forget(packet).await,
-      Self::Ble(c) => c.send(packet, false).await.map(|_| ()),
+      Self::Ble(c) => c.send(packet, None).await.map(|_| ()),
     }
   }
 
   pub async fn send_and_receive(&mut self, packet: &Packet) -> Result<Response, Box<dyn Error>> {
+    self.exchange(packet, packet.command.value(), &[]).await
+  }
+
+  pub async fn exchange(
+    &mut self,
+    packet: &Packet,
+    expected: u8,
+    prefix: &[u8],
+  ) -> Result<Response, Box<dyn Error>> {
     match self {
-      Self::Classic(c) => c.send_and_receive(packet).await,
+      Self::Classic(c) => c.exchange(packet, expected, prefix).await,
       Self::Ble(c) => c
-        .send(packet, true)
+        .send(packet, Some((expected, prefix)))
         .await?
         .ok_or_else(|| "Missing command response".into()),
+    }
+  }
+
+  pub fn transport_name(&self) -> &'static str {
+    match self {
+      Self::Classic(_) => "rfcomm",
+      Self::Ble(_) => "ble",
+    }
+  }
+
+  pub async fn receive(&mut self, timeout: Duration) -> Result<Option<Response>, Box<dyn Error>> {
+    let rx = match self {
+      Self::Classic(c) => &mut c.response_rx,
+      Self::Ble(c) => &mut c.responses,
+    };
+    match tokio::time::timeout(timeout, rx.recv()).await {
+      Ok(Some(reply)) => Ok(Some(reply)),
+      Ok(None) => Err("Device response channel closed".into()),
+      Err(_) => Ok(None),
     }
   }
 
@@ -289,7 +317,7 @@ impl BleConnection {
   async fn send(
     &mut self,
     packet: &Packet,
-    needs_response: bool,
+    expected: Option<(u8, &[u8])>,
   ) -> Result<Option<Response>, Box<dyn Error>> {
     while self.responses.try_recv().is_ok() {}
     let sequence = self.sequence;
@@ -314,13 +342,15 @@ impl BleConnection {
           return Err("BLE transport rejected command".into());
         }
         acknowledged = true;
-      } else if reply.original_command == packet.command.value() {
+      } else if expected.is_some_and(|(code, prefix)| {
+        reply.original_command == code && reply.data.starts_with(prefix)
+      }) {
         if !reply.ack {
           return Err("Device rejected command".into());
         }
         command_response = Some(reply);
       }
-      if acknowledged && (!needs_response || command_response.is_some()) {
+      if acknowledged && (expected.is_none() || command_response.is_some()) {
         return Ok(command_response);
       }
     }

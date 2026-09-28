@@ -1,0 +1,48 @@
+[
+  {
+    "command": "0x37",
+    "payload_hex": "00",
+    "delay_ms": 250,
+    "listen_ms": 1000
+  },
+  {
+    "command": "0x2d",
+    "payload_hex": "ff",
+    "delay_ms": 250,
+    "response": "0x2d"
+  },
+  {
+    "command": "0x2d",
+    "payload_hex": "01",
+    "delay_ms": 250
+  },
+  {
+    "command": "0x2d",
+    "payload_hex": "ff",
+    "delay_ms": 250,
+    "response": "0x2d"
+  },
+  {
+    "command": "0x2d",
+    "payload_hex": "00",
+    "delay_ms": 250
+  },
+  {
+    "command": "0x2d",
+    "payload_hex": "ff",
+    "delay_ms": 250,
+    "response": "0x2d"
+  },
+  {
+    "command": "0xb4",
+    "payload_hex": "",
+    "delay_ms": 250,
+    "response": "0xb4"
+  },
+  {
+    "command": "0x46",
+    "payload_hex": "",
+    "delay_ms": 250,
+    "response": "0x46"
+  }
+]
