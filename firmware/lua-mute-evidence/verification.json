@@ -1,0 +1,90 @@
+{
+  "firmware": 306018,
+  "sha256": "9bc2b1966c32ce184b25d1aaacf18fa80283fb894ffb244a80d58346704d8c6d",
+  "date": "2026-09-28",
+  "rebuild_identical": true,
+  "usb_flash": {
+    "application_reenumerated": true,
+    "ble_version_check_requested": false,
+    "blocks_verified": 479,
+    "erase_transfer_verify_seconds": 11.063156884,
+    "event": "usb_complete",
+    "total_usb_seconds": 16.979634973,
+    "usb_port": "1-6",
+    "version": 306018
+  },
+  "host_checks": {
+    "rust_tests_no_default_features": 41,
+    "clippy": "lib and bins, no default features, warnings denied: passed",
+    "native": "ASan/UBSan: mute dispatch, release capacity, app cancellation, peer guards, both TV app bindings and hostile-script recovery passed"
+  },
+  "device_checks": {
+    "passed": 43,
+    "stock_version_afterwards": true,
+    "scope": "43 cases including infinite loops, memory exhaustion, full-size uploads, lifecycle and independent recovery queries"
+  },
+  "laptop_test": {
+    "operations": [
+      "pause",
+      "mute",
+      "mute",
+      "play"
+    ],
+    "accepted_mute_packets": [
+      "0x43 press",
+      "0xc3 release",
+      "0x43 press",
+      "0xc3 release"
+    ],
+    "input_device": "DitooPro-Audio (AVRCP)",
+    "input_events": [
+      {
+        "code": 113,
+        "value": 1
+      },
+      {
+        "code": 113,
+        "value": 0
+      },
+      {
+        "code": 113,
+        "value": 1
+      },
+      {
+        "code": 113,
+        "value": 0
+      }
+    ],
+    "capture": "EVIOCGRAB on the specific Ditoo input node; desktop shortcuts suppressed",
+    "player_callbacks": [
+      "Pause",
+      "Play"
+    ],
+    "ble_connected": true,
+    "media_state": 2,
+    "audio_state": 0,
+    "default_sink_unchanged": "volume 1.25, muted"
+  },
+  "cleanup": {
+    "test_player_unregistered": true,
+    "input_grab_released": true,
+    "pairable": false,
+    "discoverable": false,
+    "tv_connection": "peer=0C:CD:B4:D0:0C:26 media=2 audio=0 BLE=true",
+    "lua_state": "active"
+  },
+  "limitations": [
+    "Owner accepted pairing but reports no response to any TV control, including mute; AVRCP path works on laptop only",
+    "No keyboard HID profile or Space-key binding",
+    "Mute toggles the remote state; there is no remote mute-state query",
+    "Queue success is not remote acknowledgement"
+  ],
+  "recovered_transport_failures": [
+    "Initial USB bootloader entry timed out before writes; port reset and explicit bootloader recovery completed readback",
+    "Initial runtime test connection returned ATT 0x0e before any test requests; reconnect passed all 43 cases",
+    "Laptops stale classic bond required pairing again",
+    "BLE service-discovery timeout after laptop classic disconnect; explicit LE disconnect and reconnect restored TV setup"
+  ],
+  "raw_logs": "Ignored firmware/runs and target/bluetooth-investigation; only this compact summary is committed",
+  "tv_owner_test": "Play/pause and mute do not work on the TV"
+}

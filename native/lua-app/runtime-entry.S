@@ -76,6 +76,8 @@ led_stock:
 
 .section .native_hook,"ax"
     jal native_service
+.section .bt_command_hook,"ax"
+    jal runtime_bt_peek
 .section .indicator_hook,"ax"
     j indicator_filter
 .section .noise_hook,"ax"

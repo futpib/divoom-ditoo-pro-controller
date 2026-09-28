@@ -1,6 +1,7 @@
 # Lua Bluetooth media connections
 
 Firmware 306017 exposes the stock classic Bluetooth AVRCP connection API to Lua.
+306018 adds a mute toggle through the Bluetooth task queue.
 The computer still uses the existing BLE control service. This does not add HID,
 Bluetooth scanning, arbitrary sockets, custom GATT services or a general pairing
 agent. The native stack handles link security and stores bonds when pairing
@@ -12,6 +13,7 @@ succeeds; a remote device may require confirmation.
 | 2 | `bluetooth.connect_media('XX:XX:XX:XX:XX:XX')` | Queue a native outgoing AVRCP connection to a public classic Bluetooth address. Returns a ticket. |
 | 3 | `bluetooth.disconnect_media()` | Queue AVRCP disconnection. Does not disconnect BLE or explicitly disconnect the audio profile. |
 | 4 | `bluetooth.media('play'|'pause')` | Queue an AVRCP command, requiring a connected media profile. Returns a ticket. |
+| 5 | `bluetooth.mute()` | 306018: queue AVRCP MUTE (`0x43`) press and release. A mute/unmute toggle, with no remote mute-state query or separate idempotent unmute command. |
 
 Poll `device.result(ticket)` for native dispatch completion. Success means the
 stock command queue accepted the request, **not** that pairing completed or the
@@ -37,14 +39,17 @@ Use the TV's actual Bluetooth address and open its accessory pairing screen.
 The app selects Bluetooth input and submits one outgoing connection attempt. It
 reports a timeout after 20 seconds without claiming the native attempt was
 cancelled. There is no automatic retry loop. Startup sends no play command.
-The first physical key press selects the button; subsequent down events on that
-button alternate pause and play, starting with pause. Hold/release/repeat events
-do not toggle. This is local state: `audio.status().playing` does not reflect TV
-playback on an AVRCP-only connection. Other TV controls can put the sequence out
+The example requires 306018. The first physical key press binds play/pause;
+the first different key binds mute/unmute. Binding sends nothing. Subsequent
+presses alternate pause/play on the first key, and send MUTE on the second.
+Hold/release/repeat events and other keys do nothing. Mute does not change the
+play/pause sequence. The M icon confirms submission, not the TV mute state.
+This is local state: `audio.status().playing` does not reflect TV playback on an
+AVRCP-only connection. Other TV controls can put the sequence out
 of sync; `lua send play` or `lua send pause` sets it explicitly.
-`lua send toggle` exercises the same path; `bind` chooses another button and
-`disconnect` requests AVRCP disconnection. Reloading the app requires selecting
-the target and binding the button again; an existing native connection is reused.
+`lua send toggle` and `lua send mute` exercise those paths; `bind` resets both
+bindings and `disconnect` requests AVRCP disconnection. Reloading the app requires selecting
+the target and binding both buttons again; an existing native connection is reused.
 
 The outgoing connection produced a pairing prompt on the test Google TV, even
 though the Ditoo did not appear in its accessory search list. After accepting it,
@@ -59,7 +64,8 @@ a special path that tries to select that audio device. This is a likely cause of
 the AVRCP-only TV failure; the TV's own implementation/logs were not inspected.
 See [Android's device handler](https://android.googlesource.com/platform/packages/modules/Bluetooth/+/refs/heads/main/system/profile/avrcp/device.cc).
 HID consumer-control reports use the keyboard/input path, but this firmware does
-not yet implement a HID profile.
+not yet implement a HID profile. A literal Space key requires a keyboard HID
+profile and cannot be sent over this AVRCP API; the example has two bindings.
 
 ## Computer BLE selection
 
@@ -103,6 +109,26 @@ press/release (`0x44`/`0xc4`). BlueZ accepted all four packets and invoked the t
 player's `Pause` and `Play` methods. BLE control continued on a separate ACL
 handle, with A2DP state 0. This verifies the Ditoo's command path, not TV behavior.
 
+Firmware 306018 was also tested with `lua send pause`, two `lua send mute`
+commands one second apart, then `lua send play`. The laptop accepted both MUTE
+press/release pairs (`0x43`/`0xc3`); its `DitooPro-Audio (AVRCP)` input device
+emitted `EV_KEY KEY_MUTE` (113), values 1 then 0, twice. Pause/Play still reached
+the silent player. BLE remained connected and A2DP stayed disconnected.
+
+For the input test, the Ditoo's specific Linux input device was exclusively
+grabbed with `EVIOCGRAB`, preventing desktop mute shortcuts while capturing
+`input_event` records. To reproduce with `evtest`, select the Ditoo AVRCP node
+from `/proc/bus/input/devices` and start `sudo evtest --grab /dev/input/eventN`
+**before** sending mute. Close the monitor afterward to release the grab.
+The laptop's volume and mute setting were unchanged. BlueZ's
+[input mapping](https://github.com/bluez/bluez/blob/5.87/profiles/audio/avctp.c)
+explains why mute arrives as an input event rather than a player method.
+[306018 verification](../firmware/lua-mute-evidence/verification.json) records
+this test, the USB readback and the 43 passing on-device runtime checks.
+The TV was reselected afterward. The owner accepted pairing but reports that
+none of these controls work on the TV, including mute. Keep this as a verified
+AVRCP transport API, not a working remote for this TV.
+
 ## Bounds and native bindings
 
 Requests copy values into the existing single native job slot. The stock main
@@ -111,7 +137,12 @@ worker. Connection attempts require 16 KiB of native heap, are separated by ten
 seconds, and are limited to 32 per boot. Invalid, zero and broadcast addresses
 are rejected. A connected/connecting media peer with a different address is not
 replaced. Requests still waiting in the job slot are cancelled on app release;
-already-submitted native requests, connections and saved bonds persist.
+already-submitted native play/pause requests, connections and saved bonds persist.
+Mute also checks the app generation and original peer when the Bluetooth task
+consumes its copied payload, dropping requests after app release or peer change.
+It reserves room for both press and release in the native panel-key queue; a
+saturated queue drops the whole toggle. Ticket success only means the first
+queue accepted it, not that the panel queue or remote accepted it.
 
 The stock 306007 command wrappers are pinned in the builder:
 
@@ -128,6 +159,8 @@ This was checked against the connected computer's independently known address.
 | 5 | AVRCP / A2DP state getters | `0x7c954` / `0x7bac0` |
 | 6 | Native manager | `gp + 0x5104`; shared peer at `+0xe0` |
 | 7 | BLE connected flag | `gp - 30420`, maintained by stock connection callbacks |
+| 8 | Command peek hook / original | `0x138c76` / `0x138bf6`; private command `0x80`, stock default path pops it |
+| 9 | `AVRCP_SetPanelKey` | `0x11c52e`; Bluetooth-task-only call, instance at context `+0x9c`, ring indices `+0x2ba`/`+0x2bb` |
 
 The related [SDK AVRCP header](https://github.com/leadercxn/bp1048_sdk_v0.1.12/blob/8105bd864b04995d81c9f9ae77cb158259f39015/MVsB1_Base_SDK/middleware/bluetooth/inc/bt_avrcp_api.h)
 helps name these functions; bindings are checked against the actual Ditoo

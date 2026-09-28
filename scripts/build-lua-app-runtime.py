@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the pinned NDS32 Lua runtime and its installable 306017 firmware."""
+"""Build the pinned NDS32 Lua runtime and its installable 306018 firmware."""
 import binascii
 import hashlib
 import importlib.util
@@ -88,7 +88,7 @@ def build():
         assert not any(line.split()[-1] == symbol for line in symbols.splitlines()), symbol
 
     sections = {}
-    for section in ['hook','init_hook','screen_hook','key_hook','led_hook','native_hook','indicator_hook','noise_hook','wake_select_hook','text','data']:
+    for section in ['hook','init_hook','screen_hook','key_hook','led_hook','native_hook','indicator_hook','noise_hook','wake_select_hook','bt_command_hook','text','data']:
         path = out/(section+'.bin')
         run('nds32le-elf-objcopy','-O','binary','-j','.'+section,str(out/'runtime.elf'),str(path))
         sections[section] = path.read_bytes()
@@ -97,6 +97,9 @@ def build():
     code = bytearray(stock[base.CODE:-4])
     # Match the native queue wrappers used by the bounded Bluetooth API.
     for offset, expected in [
+        (0x138c7a,'f0034e0204bb8e015cf0004a4ef204b4'),
+        (0x1395ee,'49fffb27fcc6'),
+        (0x11c52e,'c076fc20007002bb66508080001002ba'),
         (0x1139b0,'fc01f081f1018446fa02490128ddfc81'),
         (0x1139c0,'fc0084208041fa03490128d6fc80'),
         (0x1139ce,'3c0de560000000a6c008fc0084208041fa04490128cafc80dd9e'),
@@ -110,6 +113,7 @@ def build():
                (0x2d490, bytes.fromhex('49fff590'), sections['key_hook']),
                (0x7580c, bytes.fromhex('3bfffcbc'), sections['led_hook']),
                (0x47838, bytes.fromhex('49001752'), sections['native_hook']),
+               (0x138c76, bytes.fromhex('49ffffc0'), sections['bt_command_hook']),
                (0x2d6e8, bytes.fromhex('3a6f98bc'), sections['indicator_hook']),
                (0x72192, bytes.fromhex('49ff14eb'), sections['noise_hook']),
                # Native one-shot cleanup must retain all nine 16-byte schedules.
@@ -118,7 +122,7 @@ def build():
                # Remember the selected earliest slot, not the last eligible slot.
                (0x47eba, bytes.fromhex('3e177b1c'), bytes.fromhex('92009200')),
                (0x47eea, bytes.fromhex('3c0fdbd1'), sections['wake_select_hook']),
-               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab61')),
+               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab62')),
                (0x4b550, bytes.fromhex('c816'), bytes.fromhex('d516'))]
     for offset, before, after in patches:
         assert code[offset:offset+len(before)] == before
@@ -140,13 +144,13 @@ def build():
     struct.pack_into('<I', image,0x607,length+4)
     image.extend(code)
     image.extend(struct.pack('<I',binascii.crc_hqx(image,0)))
-    report = {'version':306017,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
+    report = {'version':306018,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
               'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':40960,'arena_page_unit':1024,'arena_page_slots':40,
               'task_stack_words':4096,'globals_reserved':8192,'source_limit':8192,
               'instruction_limit':100000,'callback_ms_limit':50,'boot_crc16':0x5f08,
               'status':'offline-built; hardware-unverified'}
-    (ROOT/'firmware/306017-lua.MVA').write_bytes(image)
-    (ROOT/'firmware/306017-lua.json').write_text(json.dumps(report,indent=2)+'\n')
+    (ROOT/'firmware/306018-lua.MVA').write_bytes(image)
+    (ROOT/'firmware/306018-lua.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 
 if __name__ == '__main__': build()

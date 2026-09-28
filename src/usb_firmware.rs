@@ -556,6 +556,7 @@ mod tests {
       ("306015-lua.MVA", 1_959_420, 479),
       ("306016-lua.MVA", 1_959_420, 479),
       ("306017-lua.MVA", 1_959_420, 479),
+      ("306018-lua.MVA", 1_959_420, 479),
     ] {
       let image = Image::load(
         &Path::new(env!("CARGO_MANIFEST_DIR"))

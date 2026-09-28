@@ -50,9 +50,22 @@ unsigned stock_sd_present(void) { return 0; }
 
 void *stock_sd_queue(void) { return NULL; }
 
-void *volatile stock_bt_context=(void *)1;
-volatile unsigned char stock_bt_manager[0x1c4],stock_ble_connected=1;
 static unsigned bt_media_state,bt_audio_state,bt_connects,bt_commands,bt_queue_ok=1,bt_last_action;
+static unsigned char bt_context[256],bt_channel[0x1038],bt_payload[10];
+void *volatile stock_bt_context=bt_context;
+static struct bt_command bt_queued;
+static unsigned bt_panel_calls,bt_panel_ok=1,bt_pressed[2];
+void stock_bt_peek(struct bt_command *p) { *p=bt_queued; }
+unsigned stock_bt_enqueue(unsigned op,const void *p,unsigned n) {
+    assert(op==BT_MUTE_COMMAND && n==sizeof bt_payload);
+    if (!bt_queue_ok) return 0;
+    memcpy(bt_payload,p,n);bt_queued=(struct bt_command){op,n,0,bt_payload};return 1;
+}
+unsigned stock_avrcp_panel(void *p,unsigned key,unsigned pressed) {
+    assert(p==bt_channel && key==0x43 && pressed<=1);
+    bt_pressed[bt_panel_calls++%2]=pressed;return bt_panel_ok ? 2 : 12;
+}
+volatile unsigned char stock_bt_manager[0x1c4],stock_ble_connected=1;
 static unsigned char bt_address[6];
 unsigned stock_avrcp_state(void) { return bt_media_state; }
 unsigned stock_a2dp_state(void) { return bt_audio_state; }

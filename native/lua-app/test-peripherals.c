@@ -7,13 +7,52 @@ static void request_test(const char *source) {
     app.cancel=1;service();runtime_native_service();
     assert(!allocations);
 }
+static void test_bt_mute(void) {
+    struct bt_command peek;
+    unsigned char *channel=bt_channel;
+    memcpy(bt_context+0x9c,&channel,sizeof channel);bt_context[0xa6]=1;
+    bt_media_state=2;
+    load("return {init=function() assert(bluetooth.mute()) end}",1);
+    runtime_native_service();
+    assert(bt_queued.op==BT_MUTE_COMMAND && bt_queued.length==10);
+    assert(bt_panel_calls==0); /* Only the Bluetooth task can send the key. */
+    runtime_bt_peek(&peek);
+    assert(peek.op==BT_MUTE_COMMAND && bt_panel_calls==2 && bt_pressed[0]==1 && bt_pressed[1]==0);
+    /* Stock commands and malformed/private requests pass to stock cleanup. */
+    bt_queued.op=0x14;runtime_bt_peek(&peek);assert(peek.op==0x14 && bt_panel_calls==2);
+    bt_queued.op=BT_MUTE_COMMAND;bt_queued.length=9;runtime_bt_peek(&peek);
+    bt_queued.length=10;bt_queued.data=NULL;runtime_bt_peek(&peek);bt_queued.data=bt_payload;
+    bt_media_state=0;runtime_bt_peek(&peek);bt_media_state=2;
+    stock_bt_context=NULL;runtime_bt_peek(&peek);stock_bt_context=bt_context;
+    bt_context[0xa6]=0;runtime_bt_peek(&peek);bt_context[0xa6]=1;
+    stock_bt_manager[0xe0]^=1;runtime_bt_peek(&peek);stock_bt_manager[0xe0]^=1;
+    channel=NULL;memcpy(bt_context+0x9c,&channel,sizeof channel);runtime_bt_peek(&peek);
+    channel=bt_channel;memcpy(bt_context+0x9c,&channel,sizeof channel);
+    assert(bt_panel_calls==2);
+    /* Saturated/corrupt rings must not produce a press without its release. */
+    for (unsigned i=12;i<16;++i) { bt_channel[0x2bb]=i;runtime_bt_peek(&peek); }
+    bt_channel[0x2bb]=0;bt_channel[0x2ba]=15;runtime_bt_peek(&peek);bt_channel[0x2ba]=0;
+    assert(bt_panel_calls==2);
+    bt_channel[0x2bb]=11;runtime_bt_peek(&peek);assert(bt_panel_calls==4);bt_channel[0x2bb]=0;
+    bt_panel_ok=0;runtime_bt_peek(&peek);assert(bt_panel_calls==5);bt_panel_ok=1;
+    app.cancel=1;service();runtime_native_service();runtime_bt_peek(&peek);
+    assert(bt_panel_calls==5 && !allocations);
+    bt_queue_ok=0;
+    request_test("local t;return {init=function() t=assert(bluetooth.mute()) end,"
+        "update=function() local ok,e=device.result(t);assert(ok==false and e=='Bluetooth queue full');print('ok') end}");
+    bt_queue_ok=1;bt_media_state=0;
+    request_test("local t;return {init=function() t=assert(bluetooth.mute()) end,"
+        "update=function() local ok,e=device.result(t);assert(ok==false and e=='media peer not connected');print('ok') end}");
+    puts("Mute queue copies payload, runs on Bluetooth task, reserves release space and rejects stale/disconnected peers");
+}
 static void test_tv_remote(void) {
     char source[8193];
     FILE *file=fopen("examples/lua/tv-remote.lua","rb");assert(file);
     size_t n=fread(source,1,sizeof(source)-1,file);assert(!ferror(file));fclose(file);source[n]=0;
     bt_media_state=2;bt_audio_state=0;
     memcpy((void *)(stock_bt_manager+0xe0),"\x26\x0c\xd0\xb4\xcd\x0c",6);
-    load(source,1);assert(app.state==ACTIVE);
+    load(source,1);
+    if (app.state!=ACTIVE) { fprintf(stderr,"TV app failed: %s (peak %u)\n",app.result,app.peak);abort(); }
     tick();tick();
     memcpy(app.message,"connect 0C:CD:B4:D0:0C:26",25);app.message_size=25;
     for (unsigned i=0;i<12;++i) { tick();runtime_native_service(); }
@@ -34,9 +73,25 @@ static void test_tv_remote(void) {
     assert(bt_commands==commands+2);
     runtime_adc_result(4U<<16 | 2);tick();runtime_adc_result(5U<<16 | 2);tick();
     assert(bt_commands==commands+2);
+    unsigned mute_calls=bt_panel_calls;
+    runtime_adc_result(1U<<16 | 3);tick();runtime_adc_result(2U<<16 | 3);tick();
+    assert(strstr(app.result,"mute toggle key 3") && bt_panel_calls==mute_calls);
+    for (unsigned i=0;i<2;++i) {
+        clock_ms+=600;runtime_adc_result(1U<<16 | 3);tick();runtime_adc_result(2U<<16 | 3);
+        for (unsigned j=0;j<8;++j) { tick();runtime_native_service(); }
+        struct bt_command peek;runtime_bt_peek(&peek);
+        assert(app.state==ACTIVE && bt_panel_calls==mute_calls+2*(i+1));
+    }
+    runtime_adc_result(4U<<16 | 3);tick();runtime_adc_result(5U<<16 | 3);tick();
+    runtime_adc_result(1U<<16 | 4);tick();runtime_adc_result(2U<<16 | 4);tick();
+    assert(bt_panel_calls==mute_calls+4 && bt_commands==commands+2);
+    /* Muting must not change the next play/pause action. */
+    clock_ms+=600;runtime_adc_result(1U<<16 | 2);tick();runtime_adc_result(2U<<16 | 2);
+    for (unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
+    assert(bt_commands==commands+3 && bt_last_action==2);
     app.cancel=1;service();runtime_native_service();assert(!allocations);
     bt_media_state=0;
-    puts("TV remote binds a key, alternates pause/play without local audio state, ignores repeats and draws visible icons");
+    puts("TV remote binds two keys, keeps play/pause independent of mute toggle and ignores unrelated/repeat events");
 }
 static void test_peripherals(void) {
     check("local b=power.battery(); return b.level..':'..tostring(b.charging)",DONE,"6:true");
@@ -137,7 +192,8 @@ static void test_peripherals(void) {
     stock_bt_context=NULL;
     request_test("local t;return {init=function() t=assert(bluetooth.connect_media('0C:CD:B4:D0:0C:26')) end,"
         "update=function() local ok,e=device.result(t);assert(ok==false and e=='Bluetooth unavailable');print('ok') end}");
-    stock_bt_context=(void *)1;
+    stock_bt_context=bt_context;
+    test_bt_mute();
     test_tv_remote();
     puts("Bluetooth address validation, connection rate limits, cancellation, peer isolation and queue errors passed");
     puts("Native job cancellation, config readback, wear limits, alarm priority, indicator and microphone cleanup passed");

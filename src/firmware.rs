@@ -37,6 +37,9 @@ const DEVICE_SIZE: usize = 2026511;
 const BLUETOOTH_VERSION: u32 = 306017;
 const BLUETOOTH_SHA256: &str = "00fd46616ad27bc3db0c30bf8c19668f884dc22bb052b04f378180dfb27a4bce";
 const BLUETOOTH_SIZE: usize = 2026511;
+const MUTE_VERSION: u32 = 306018;
+const MUTE_SHA256: &str = "9bc2b1966c32ce184b25d1aaacf18fa80283fb894ffb244a80d58346704d8c6d";
+const MUTE_SIZE: usize = 2026511;
 const CHUNK_SIZE: usize = 256;
 const EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -74,7 +77,8 @@ impl Image {
       STORAGE_SHA256 => STORAGE_VERSION,
       DEVICE_SHA256 => DEVICE_VERSION,
       BLUETOOTH_SHA256 => BLUETOOTH_VERSION,
-      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013/306014/306015/306016/306017 are supported".into()),
+      MUTE_SHA256 => MUTE_VERSION,
+      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013/306014/306015/306016/306017/306018 are supported".into()),
     };
     let expected_size = match version {
       LUA_VERSION => LUA_SIZE,
@@ -83,6 +87,7 @@ impl Image {
       STORAGE_VERSION => STORAGE_SIZE,
       DEVICE_VERSION => DEVICE_SIZE,
       BLUETOOTH_VERSION => BLUETOOTH_SIZE,
+      MUTE_VERSION => MUTE_SIZE,
       LUA_PROBE_VERSION => LUA_PROBE_SIZE,
       _ => IMAGE_SIZE,
     };
@@ -244,9 +249,10 @@ fn validate_target(
         | STORAGE_VERSION
         | DEVICE_VERSION
         | BLUETOOTH_VERSION
+        | MUTE_VERSION
     ) && version == VERSION)
   {
-    return Err("--restore-stock requires a supported probe device (306008 through 306017) and pinned stock 306007".into());
+    return Err("--restore-stock requires a supported probe device (306008 through 306018) and pinned stock 306007".into());
   }
   if installed / 1000 != version / 1000 {
     return Err(format!("Hardware mismatch: device {installed}, image {version}").into());
@@ -504,7 +510,8 @@ mod tests {
     assert!(validate_target(306015, VERSION, false, true).is_ok());
     assert!(validate_target(306016, VERSION, false, true).is_ok());
     assert!(validate_target(306017, VERSION, false, true).is_ok());
-    assert!(validate_target(306018, VERSION, false, true).is_err());
+    assert!(validate_target(306018, VERSION, false, true).is_ok());
+    assert!(validate_target(306019, VERSION, false, true).is_err());
     assert!(validate_target(306007, VERSION, false, true).is_err());
     assert!(validate_target(306008, PROBE_VERSION, false, true).is_err());
     assert!(validate_target(306006, VERSION, false, false).is_ok());
@@ -560,4 +567,16 @@ mod tests {
     assert!(validate_target(BLUETOOTH_VERSION, VERSION, false, true).is_ok());
     Ok(())
   }
+  #[test]
+  fn mute_runtime_image_is_pinned() -> Result<(), Box<dyn Error>> {
+    let image = Image::load(Path::new(concat!(
+      env!("CARGO_MANIFEST_DIR"),
+      "/firmware/306018-lua.MVA"
+    )))?;
+    assert_eq!(image.version, crate::lua::MUTE_VERSION);
+    assert_eq!(image.bytes.len(), MUTE_SIZE);
+    assert!(validate_target(MUTE_VERSION, VERSION, false, true).is_ok());
+    Ok(())
+  }
+
 }

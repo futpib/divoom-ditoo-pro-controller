@@ -35,13 +35,18 @@ extern volatile unsigned char stock_bt_manager[], stock_ble_connected;
 extern unsigned stock_avrcp_state(void), stock_a2dp_state(void);
 extern unsigned stock_avrcp_connect(const unsigned char *);
 extern unsigned stock_avrcp_disconnect(void), stock_avrcp_play(void), stock_avrcp_pause(void);
+struct bt_command { unsigned op; uint16_t length, reserved; unsigned char *data; };
+extern void stock_bt_peek(struct bt_command *);
+extern unsigned stock_bt_enqueue(unsigned, const void *, unsigned);
+extern unsigned stock_avrcp_panel(void *, unsigned, unsigned);
+enum { BT_MUTE_COMMAND = 0x80 };
 
 enum { JOB_EMPTY, JOB_QUEUED, JOB_RUNNING, JOB_DONE };
 enum { ALARM_GET=1, ALARM_SET, WAKE_GET, WAKE_SET, ALARM_CANCEL,
        ALARM_SNOOZE, AUDIO_PLAY, AUDIO_DIRECTION, AUDIO_TRACK, AUDIO_SEEK,
        AUDIO_REPEAT, AUDIO_PREVIEW, AUDIO_STOP, NOISE_ENABLE,
        MEMO_START, MEMO_STOP, MEMO_PLAY, MEMO_DELETE, AUDIO_SOURCE,
-       BT_CONNECT, BT_DISCONNECT, BT_MEDIA };
+       BT_CONNECT, BT_DISCONNECT, BT_MEDIA, BT_MUTE };
 static struct {
     volatile unsigned state, epoch, cleanup;
     unsigned ticket, sequence, job_epoch, op, slot, mask, value;
@@ -54,6 +59,26 @@ static struct {
     volatile unsigned recorded_bytes;
     unsigned bt_attempts, bt_last_attempt;
 } peripheral;
+
+/* Called only on the stock Bluetooth task. Unknown commands still pass through
+ * its normal dispatcher/pop path; no Lua pointer enters this queue. */
+void runtime_bt_peek(struct bt_command *command) {
+    stock_bt_peek(command);
+    if (command->op != BT_MUTE_COMMAND || command->length != 10 || !command->data) return;
+    unsigned epoch;
+    memcpy(&epoch,command->data,4);
+    unsigned char *context=stock_bt_context, *channel;
+    if (epoch != peripheral.epoch || !context || !context[0xa6] || stock_avrcp_state()!=2) return;
+    for (unsigned i=0;i<6;++i)
+        if (command->data[4+i] != stock_bt_manager[0xe0+i]) return;
+    memcpy(&channel,context+0x9c,sizeof channel);
+    if (!channel) return;
+    unsigned read=channel[0x2ba],write=channel[0x2bb];
+    /* Reserve a previous-key release plus this press/release, on the same task.
+     * Never enqueue a press if its release could overflow the 14-entry ring. */
+    if (read>=15 || write>=15 || (write+15-read)%15>11) return;
+    if (stock_avrcp_panel(channel,0x43,1)==2) stock_avrcp_panel(channel,0x43,0);
+}
 
 static unsigned native_priority(void) {
     unsigned s = stock_alarm_state;
@@ -181,6 +206,15 @@ static const char *perform_job(void) {
         if (!stock_bt_context || stock_avrcp_state()!=2) return "media peer not connected";
         if (!(n ? stock_avrcp_play() : stock_avrcp_pause())) return "Bluetooth queue full";
         break;
+    case BT_MUTE: {
+        if (!stock_bt_context || stock_avrcp_state()!=2) return "media peer not connected";
+        unsigned char data[10];
+        unsigned epoch=peripheral.epoch;
+        memcpy(data,&epoch,4);
+        for (unsigned i=0;i<6;++i) data[4+i]=stock_bt_manager[0xe0+i];
+        if (!stock_bt_enqueue(BT_MUTE_COMMAND,data,sizeof data)) return "Bluetooth queue full";
+        break;
+    }
     case AUDIO_SOURCE:
         if (peripheral.recording) return "recording is active";
         if (n == 3 && !stock_sd_present()) return "no SD card";
@@ -444,6 +478,7 @@ static int bt_connect(lua_State *L) {
     return submit(L,BT_CONNECT,0,0,address,0);
 }
 static int bt_disconnect(lua_State *L) { return submit(L,BT_DISCONNECT,0,0,NULL,0); }
+static int bt_mute(lua_State *L) { return submit(L,BT_MUTE,0,0,NULL,0); }
 static int bt_media(lua_State *L) {
     const char *actions[]={"pause","play",NULL};
     return submit(L,BT_MEDIA,0,luaL_checkoption(L,1,NULL,actions),NULL,0);
@@ -469,7 +504,7 @@ static int bt_status(lua_State *L) {
 }
 static void peripherals_modules(lua_State *L) {
     static const luaL_Reg bluetooth[] = {{"status",bt_status},{"connect_media",bt_connect},
-        {"disconnect_media",bt_disconnect},{"media",bt_media},{NULL,NULL}};
+        {"disconnect_media",bt_disconnect},{"media",bt_media},{"mute",bt_mute},{NULL,NULL}};
     luaL_newlib(L,bluetooth); lua_setglobal(L,"bluetooth");
     static const luaL_Reg power[] = {{"battery",battery},{"indicator",indicator},
         {"get_schedule",get_wake},{"set_schedule",set_wake},{NULL,NULL}};

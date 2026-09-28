@@ -64,6 +64,9 @@ stock_avrcp_connect = 0x1139b0;
 stock_avrcp_disconnect = 0x1139c0;
 stock_avrcp_play = 0x1139ce;
 stock_avrcp_pause = 0x1139e8;
+stock_bt_peek = 0x138bf6;
+stock_bt_enqueue = 0x138b74;
+stock_avrcp_panel = 0x11c52e;
 _SDA_BASE_ = 0x2000d2f8;
 SECTIONS {
     .hook 0x3ab9c : { KEEP(*(.hook)) }
@@ -72,6 +75,7 @@ SECTIONS {
     .key_hook 0x2d490 : { KEEP(*(.key_hook)) }
     .led_hook 0x7580c : { KEEP(*(.led_hook)) }
     .native_hook 0x47838 : { KEEP(*(.native_hook)) }
+    .bt_command_hook 0x138c76 : { KEEP(*(.bt_command_hook)) }
     .indicator_hook 0x2d6e8 : { KEEP(*(.indicator_hook)) }
     .noise_hook 0x72192 : { KEEP(*(.noise_hook)) }
     .wake_select_hook 0x47eea : { KEEP(*(.wake_select_hook)) }
@@ -100,6 +104,7 @@ ASSERT(SIZEOF(.key_hook) == 4, "key hook size")
 ASSERT(SIZEOF(.led_hook) == 4, "LED hook size")
 
 ASSERT(SIZEOF(.native_hook) == 4, "native hook size")
+ASSERT(SIZEOF(.bt_command_hook) == 4, "Bluetooth command hook size")
 ASSERT(SIZEOF(.indicator_hook) == 4, "indicator hook size")
 ASSERT(SIZEOF(.noise_hook) == 4, "noise hook size")
 

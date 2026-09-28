@@ -17,6 +17,7 @@ pub const IO_VERSION: u32 = 306014;
 pub const STORAGE_VERSION: u32 = 306015;
 pub const DEVICE_VERSION: u32 = 306016;
 pub const BLUETOOTH_VERSION: u32 = 306017;
+pub const MUTE_VERSION: u32 = 306018;
 pub const APP_SOURCE_LIMIT: usize = 8192;
 
 #[derive(Debug, Serialize)]
@@ -199,10 +200,16 @@ async fn execute(
   let installed = u32::from_le_bytes(version.data[1..5].try_into()?);
   if !matches!(
     installed,
-    VERSION | APP_VERSION | IO_VERSION | STORAGE_VERSION | DEVICE_VERSION | BLUETOOTH_VERSION
+    VERSION
+      | APP_VERSION
+      | IO_VERSION
+      | STORAGE_VERSION
+      | DEVICE_VERSION
+      | BLUETOOTH_VERSION
+      | MUTE_VERSION
   ) {
     return Err(
-      format!("Lua requires firmware {VERSION}, {APP_VERSION}, {IO_VERSION}, {STORAGE_VERSION}, {DEVICE_VERSION} or {BLUETOOTH_VERSION}; no program sent")
+      format!("Lua requires firmware {VERSION}, {APP_VERSION}, {IO_VERSION}, {STORAGE_VERSION}, {DEVICE_VERSION}, {BLUETOOTH_VERSION} or {MUTE_VERSION}; no program sent")
         .into(),
     );
   }
