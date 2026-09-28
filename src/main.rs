@@ -307,6 +307,25 @@ enum ConvertCommand {
 
 #[derive(Subcommand, Debug)]
 enum LuaCommand {
+  /// Watch runtime status on one connection (JSONL; Ctrl-C disconnects)
+  Watch {
+    #[arg(long, default_value_t=500, value_parser=clap::value_parser!(u64).range(20..=60000))]
+    interval_ms: u64,
+    #[arg(long, default_value_t=30, value_parser=clap::value_parser!(u64).range(1..=86400))]
+    seconds: u64,
+    /// Include unchanged observations and changing frame/instruction counters
+    #[arg(long)] all: bool,
+  },
+  /// Run a JSON array of Lua actions on one connection
+  Sequence {
+    file: PathBuf,
+    #[arg(long, default_value_t=120, value_parser=clap::value_parser!(u64).range(1..=3600))]
+    timeout: u64,
+    /// Validate all steps and source files without opening a device
+    #[arg(long)] dry_run: bool,
+  },
+  /// Decode saved raw replies or hex payloads offline; '-' reads stdin
+  Decode { file: PathBuf },
   /// Start or replace a resident app; the device continues after disconnect
   Start { file: PathBuf },
   /// Stop the app and release its controls
@@ -422,6 +441,32 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
   match args.command {
     Command::Lua { action } => {
       use divoom_ditoo_pro_controller::lua::{self, Action};
+      use divoom_ditoo_pro_controller::lua_tools;
+      use std::time::Duration;
+      // Offline inspection and validation must not resolve a Bluetooth device.
+      let action = match action {
+        LuaCommand::Decode { file } => {
+          if file.as_os_str() == "-" {
+            lua_tools::decode_lines(std::io::stdin().lock(), std::io::stdout().lock())?;
+          } else {
+            lua_tools::decode_lines(BufReader::new(File::open(file)?), std::io::stdout().lock())?;
+          }
+          return Ok(());
+        }
+        LuaCommand::Sequence { file, timeout, dry_run } => {
+          let sequence = lua_tools::Sequence::load(&file)?;
+          if dry_run { println!("{}", serde_json::to_string_pretty(&sequence.describe())?); }
+          else {
+            lua_tools::sequence(resolve_device(args.device).await?, &sequence, Duration::from_secs(timeout)).await?;
+          }
+          return Ok(());
+        }
+        LuaCommand::Watch { interval_ms, seconds, all } => {
+          lua_tools::watch(resolve_device(args.device).await?, Duration::from_millis(interval_ms), Duration::from_secs(seconds), all).await?;
+          return Ok(());
+        }
+        action => action,
+      };
       let address = resolve_device(args.device).await?;
       let status = match action {
         LuaCommand::Run { file } => lua::control(address, Action::Run(&std::fs::read(file)?)).await?,
@@ -433,6 +478,7 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
         LuaCommand::Resume => lua::control(address, Action::Resume).await?,
         LuaCommand::Send { message } => lua::control(address, Action::Send(message.as_bytes())).await?,
         LuaCommand::Receive => lua::control(address, Action::Receive).await?,
+        LuaCommand::Decode { .. } | LuaCommand::Sequence { .. } | LuaCommand::Watch { .. } => unreachable!(),
       };
       println!("{}", serde_json::to_string(&status)?);
       if status.state == "error" { return Err(format!("Lua: {}", status.result).into()); }

@@ -36,7 +36,7 @@ pub struct Status {
   pub generation: u32,
 }
 
-fn decode(reply: Response) -> Result<Status, Box<dyn Error>> {
+pub fn decode(reply: Response) -> Result<Status, Box<dyn Error>> {
   let d = reply.data;
   if !reply.ack
     || reply.original_command != 0x37
@@ -184,7 +184,7 @@ async fn wait_for_worker(
   Ok(status)
 }
 
-async fn execute(
+pub(crate) async fn execute(
   conn: &mut DeviceConnection,
   action: Action<'_>,
 ) -> Result<Status, Box<dyn Error>> {

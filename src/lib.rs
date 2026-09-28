@@ -32,6 +32,7 @@ pub mod firmware;
 pub mod usb_firmware;
 pub mod firmware_decode;
 pub mod lua;
+pub mod lua_tools;
 pub use transport::{Transport, selected_transport, with_transport, with_usb_port};
 mod usb_control;
 use transport::DeviceConnection;

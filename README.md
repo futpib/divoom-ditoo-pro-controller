@@ -311,6 +311,11 @@ The Bluetooth 306007 → modified 306008 → stock 306007 round trip is verified
 completion events and live version reads. See [Bluetooth protocol and
 evidence](docs/firmware-update.md).
 
+## Development tools
+
+For firmware inspection, persistent Lua watch/sequence sessions, offline reply
+decoding, and registration checks, see [development tools](docs/development-tools.md).
+
 ## Android feature comparison and firmware archive
 
 The [Android feature audit](docs/android-feature-gaps.md) compares the inspected

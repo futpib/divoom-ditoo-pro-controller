@@ -1,0 +1,5 @@
+[
+  {"op":"status"},
+  {"op":"sleep","ms":200},
+  {"op":"status"}
+]
