@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read the 128 KiB stock filesystem metadata through the 306015 diagnostic."""
+"""Read the 128 KiB stock filesystem metadata through the 306015/306016 diagnostic."""
 import argparse
 from collections import Counter
 import hashlib
@@ -32,8 +32,10 @@ def batch(name, requests, timeout):
         assert row['response']['ack'], 'Negative acknowledgement'
     return [bytes.fromhex(row['response']['data_hex']) for row in rows]
 
-version=b'\x01'+(306015).to_bytes(4,'little')
-assert batch('preflight',[query(b'\0')],45)==[version], 'Firmware 306015 required; no diagnostic sent'
+version, = batch('preflight',[query(b'\0')],45)
+assert len(version)==5 and version[0]==1, 'Invalid firmware version; no diagnostic sent'
+installed=int.from_bytes(version[1:],'little')
+assert installed in (306015,306016), 'Firmware 306015 or 306016 required; no diagnostic sent'
 units=list(range(8 if a.probe_only else 1024))
 requests=[query(b'\x7fDLUA\x0a'+struct.pack('<HB',unit,1)) for unit in units]
 requests.append(query(b'\0'))
@@ -51,7 +53,7 @@ for unit,data in zip(units,rows):
 assert all(s==snapshots[0] for s in snapshots), 'Filesystem metadata changed during backup'
 context=snapshots[0]
 summary={
-    'firmware':306015,'read_only':True,'physical_start':0x900000,
+    'firmware':installed,'read_only':True,'physical_start':0x900000,
     'bytes':len(contents),'sha256':hashlib.sha256(contents).hexdigest(),
     'context_hex':context.hex(),
     'driver_statuses':sorted(set(int.from_bytes(d[8:12],'little') for d in rows)),

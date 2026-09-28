@@ -52,10 +52,16 @@ void stock_reply(unsigned c,unsigned o,const void *p,unsigned n) {
     (void)c;assert(o == 0x37); assert(n <= sizeof reply); memcpy(reply,p,n);reply_size=n;
 }
 
+#include "test-peripherals-stubs.c"
+
 static void load(const char *source, unsigned resident) {
+    runtime_native_service(); clock_ms += 100;
     assert(!app.L && !allocations);
     memset(&app,0,sizeof app);
     app.source_size = strlen(source); assert(app.source_size <= SOURCE_LIMIT);
+    int failure = fail_alloc; fail_alloc = 0;
+    app.source = stock_alloc(app.source_size); assert(app.source);
+    fail_alloc = failure;
     memcpy(app.source,source,app.source_size); app.resident = resident; app.state = RUNNING;
     launch();
     assert(app.peak <= MEMORY_LIMIT);
@@ -65,9 +71,11 @@ static void check(const char *source, unsigned state, const char *value) {
     if (app.state != state || (value && strcmp(app.result,value))) {
         fprintf(stderr,"source: %s\nstate %u result %s\n",source,app.state,app.result); abort();
     }
-    assert(!app.owner && !app.L && !app.arena && !allocations);
+    assert(!app.owner && !app.L && !app.arena[0] && !app.arena[1] && !app.arena[2] && !allocations);
 }
 static void tick(void) { clock_ms += FRAME_MS; service(); }
+
+#include "test-peripherals.c"
 
 int main(void) {
     check("return 6*7",DONE,"42");
@@ -94,6 +102,7 @@ int main(void) {
         "while true do pcall(string.rep,'a',2147483647) end",
         "local function f() return 1+f() end; return f()",
         "while true do brightness(0) end",
+        "local t=setmetatable({}, {__gc=function() while true do end end});t=nil;microphone.record()",
         "local function f() return coroutine.wrap(f)() end; return f()",
         NULL
     };
@@ -103,7 +112,7 @@ int main(void) {
     }
     check("return function (",ERROR,NULL);
     check("\x1bLua",ERROR,NULL);
-    fail_alloc=1; check("return 1",ERROR,"Lua arena allocation failed"); fail_alloc=0;
+    fail_alloc=1; check("return 1",ERROR,"Lua allocation failed"); fail_alloc=0;
     load("local n=0; return {init=function() display.clear(0); timer.every(40,function() n=n+1 end) end,"
          "update=function(dt) display.pixel(n%16,0,0xff00); display.present(); print(n) end,"
          "key=function(k,e) print(k..':'..e) end, message=function(s) comms.send(s) end}",1);
@@ -158,12 +167,20 @@ int main(void) {
     memset(&app,0,sizeof app);
     unsigned char request[524]={0x37,0x7f,'D','L','U','A',3,9,0,1};
     runtime_command(0,request,12);assert(reply[6]==0 && app.state==UPLOADING);
+    assert(app.source && allocations==1);
+    char *pending_source=app.source;
+    fail_alloc=1;runtime_command(0,request,12);fail_alloc=0;
+    assert(reply[6]==3 && app.source==pending_source && allocations==1);
+    runtime_command(0,request,12);assert(reply[6]==0 && allocations==1);
+    request[6]=2;runtime_command(0,request,9);
+    assert(app.state==IDLE && !app.source && !allocations);
+    request[6]=3;runtime_command(0,request,12);assert(reply[6]==0 && allocations==1);
     request[6]=5;runtime_command(0,request,9);assert(reply[6]==2);
     request[6]=4;request[7]=1;runtime_command(0,request,12);assert(reply[6]==1);
     request[7]=0;memcpy(request+9,"return {}",9);
     runtime_command(0,request,20);assert(reply[6]==0 && app.received==9);
     request[6]=5;runtime_command(0,request,9);assert(reply[6]==0 && app.state==RUNNING);
-    launch();assert(app.state==ACTIVE);app.cancel=1;service();assert(!allocations);
+    launch();assert(app.state==ACTIVE && !app.source);app.cancel=1;service();assert(!allocations);
     for (unsigned n=0;n<sizeof request;++n) {
         request[6]=4;runtime_command(0,request,n);
     }
@@ -177,5 +194,6 @@ int main(void) {
     request[7]=0;request[8]=0;request[9]=0;
     runtime_command(0,request,12);assert(reply[5]==0 && reply_size==48 && page_reads==1);
     fs_context[2]=0;runtime_command(0,request,12);assert(reply[5]==4 && page_reads==1);
+    test_peripherals();
     puts("Resident lifecycle, upload, keys, arena reclamation, and adversarial guard checks passed");
 }

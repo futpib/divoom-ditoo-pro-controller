@@ -1,0 +1,18 @@
+{
+  "version": 306016,
+  "sha256": "a955d25fa90434d12981b92972b7c5780368c875b6ed905b16edd20eb715a099",
+  "bytes": 2026511,
+  "checksum": 174662880,
+  "lua": "5.4.9",
+  "number_bits": 32,
+  "memory_limit": 40960,
+  "arena_page_unit": 1024,
+  "arena_page_slots": 40,
+  "task_stack_words": 4096,
+  "globals_reserved": 8192,
+  "source_limit": 8192,
+  "instruction_limit": 100000,
+  "callback_ms_limit": 50,
+  "boot_crc16": 24328,
+  "status": "offline-built; hardware-unverified"
+}

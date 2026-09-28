@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the pinned NDS32 Lua runtime and its installable 306015 firmware."""
+"""Build the pinned NDS32 Lua runtime and its installable 306016 firmware."""
 import binascii
 import hashlib
 import importlib.util
@@ -88,7 +88,7 @@ def build():
         assert not any(line.split()[-1] == symbol for line in symbols.splitlines()), symbol
 
     sections = {}
-    for section in ['hook','init_hook','screen_hook','key_hook','led_hook','text','data']:
+    for section in ['hook','init_hook','screen_hook','key_hook','led_hook','native_hook','indicator_hook','noise_hook','wake_select_hook','text','data']:
         path = out/(section+'.bin')
         run('nds32le-elf-objcopy','-O','binary','-j','.'+section,str(out/'runtime.elf'),str(path))
         sections[section] = path.read_bytes()
@@ -97,11 +97,20 @@ def build():
     code = bytearray(stock[base.CODE:-4])
     patches = [(0x3ab9c, bytes.fromhex('a639c805'), sections['hook']),
                (0x2ec58, bytes.fromhex('4902b436'), sections['init_hook']),
-               (0x854d0, bytes.fromhex('4602004c'), bytes.fromhex('46020048')),
+               (0x854d0, bytes.fromhex('4602004c'), bytes.fromhex('4602004a')),
                (0x75dcc, bytes.fromhex('3a6f98bc'), sections['screen_hook']),
                (0x2d490, bytes.fromhex('49fff590'), sections['key_hook']),
                (0x7580c, bytes.fromhex('3bfffcbc'), sections['led_hook']),
-               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab5f')),
+               (0x47838, bytes.fromhex('49001752'), sections['native_hook']),
+               (0x2d6e8, bytes.fromhex('3a6f98bc'), sections['indicator_hook']),
+               (0x72192, bytes.fromhex('49ff14eb'), sections['noise_hook']),
+               # Native one-shot cleanup must retain all nine 16-byte schedules.
+               (0x47fdc, bytes.fromhex('44300048'), bytes.fromhex('44300090')),
+               (0x4818e, bytes.fromhex('44300048'), bytes.fromhex('44300090')),
+               # Remember the selected earliest slot, not the last eligible slot.
+               (0x47eba, bytes.fromhex('3e177b1c'), bytes.fromhex('92009200')),
+               (0x47eea, bytes.fromhex('3c0fdbd1'), sections['wake_select_hook']),
+               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab60')),
                (0x4b550, bytes.fromhex('c816'), bytes.fromhex('d516'))]
     for offset, before, after in patches:
         assert code[offset:offset+len(before)] == before
@@ -123,13 +132,13 @@ def build():
     struct.pack_into('<I', image,0x607,length+4)
     image.extend(code)
     image.extend(struct.pack('<I',binascii.crc_hqx(image,0)))
-    report = {'version':306015,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
-              'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':40960,
-              'task_stack_words':4096,'globals_reserved':16384,'source_limit':8192,
+    report = {'version':306016,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
+              'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':40960,'arena_page_unit':1024,'arena_page_slots':40,
+              'task_stack_words':4096,'globals_reserved':8192,'source_limit':8192,
               'instruction_limit':100000,'callback_ms_limit':50,'boot_crc16':0x5f08,
               'status':'offline-built; hardware-unverified'}
-    (ROOT/'firmware/306015-lua.MVA').write_bytes(image)
-    (ROOT/'firmware/306015-lua.json').write_text(json.dumps(report,indent=2)+'\n')
+    (ROOT/'firmware/306016-lua.MVA').write_bytes(image)
+    (ROOT/'firmware/306016-lua.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 
 if __name__ == '__main__': build()

@@ -21,6 +21,8 @@
 #define MESSAGE_LIMIT 128
 #define LED_COUNT 12
 #define STOCK_HEAP_RESERVE 24576
+#define ARENA_PAGES 40
+#define ARENA_PAGE_SIZE 1024
 
 extern void *stock_alloc(unsigned);
 extern void stock_free(void *);
@@ -56,13 +58,14 @@ static struct {
     char message[MESSAGE_LIMIT];
     char outbox[MESSAGE_LIMIT];
     unsigned outbox_size;
-    void *task, *arena_base;
-    unsigned char *arena;
+    void *task, *arena_base[ARENA_PAGES];
+    unsigned char *arena[ARENA_PAGES];
+    unsigned capacity[ARENA_PAGES], reserved;
     lua_State *L;
     int app_ref;
     unsigned resident, source_size, received, used, peak, steps, started, guarded;
-    unsigned last_tick, frames, callbacks, dirty, native_calls, generation;
-    char source[SOURCE_LIMIT];
+    unsigned last_tick, frames, callbacks, dirty, native_calls, generation, native_alarm;
+    char *source;
     char result[RESULT_LIMIT];
     unsigned char frame[768];
     unsigned char leds[LED_COUNT * 3], led_buffers[2][LED_COUNT * 3];
@@ -100,50 +103,71 @@ void runtime_poll(void) {
         abort_script("callback time budget exceeded");
 }
 
-/* The quota includes headers, alignment and realloc's temporary old allocation.
- * Coalescing is bounded by the number of blocks in the fixed-size arena. */
-static void *allocate(void *ud, void *ptr, size_t old, size_t size) {
-    (void)ud;
-    runtime_poll();
-    if (!size) {
-        if (ptr) {
-            struct block *b = (struct block *)ptr - 1;
-            b->free = 1; app.used -= b->size;
+/* Nonmoving pages grow in KiB units, under one 40 KiB quota including headers.
+ * Empty pages return immediately to native audio. Scans have a fixed bound. */
+static void arena_free(void *ptr) {
+    struct block *b = (struct block *)ptr - 1;
+    b->free = 1; app.used -= b->size;
+    for (unsigned i=0;i<ARENA_PAGES;++i) {
+        uintptr_t address = (uintptr_t)ptr, base = (uintptr_t)app.arena[i];
+        if (!base || address<base || address>=base+app.capacity[i]) continue;
+        unsigned offset = 0;
+        while (offset<app.capacity[i]) {
+            struct block *p = (struct block *)(app.arena[i]+offset);
+            if (!p->free) return;
+            offset += p->size;
         }
-        return NULL;
+        stock_free(app.arena_base[i]); app.reserved -= app.capacity[i];
+        app.arena_base[i] = NULL; app.arena[i] = NULL; app.capacity[i] = 0;
+        return;
     }
-    if (size > MEMORY_LIMIT - sizeof(struct block)) return NULL;
-    unsigned needed = (size + 7) & ~7U;
-    needed += sizeof(struct block);
-    if (ptr && needed <= ((struct block *)ptr - 1)->size) return ptr;
-    for (unsigned offset = 0; offset < MEMORY_LIMIT;) {
-        struct block *b = (struct block *)(app.arena + offset);
-        if (b->free) {
-            while (offset + b->size < MEMORY_LIMIT) {
-                struct block *next = (struct block *)(app.arena + offset + b->size);
-                if (!next->free) break;
-                b->size += next->size;
-            }
-            if (b->size >= needed) {
-                if (b->size >= needed + sizeof(struct block) + 8) {
-                    struct block *next = (struct block *)((unsigned char *)b + needed);
-                    next->size = b->size - needed; next->free = 1; b->size = needed;
-                }
-                b->free = 0; app.used += b->size;
-                if (app.used > app.peak) app.peak = app.used;
-                void *p = b + 1;
-                if (ptr) {
-                    memcpy(p, ptr, old < size ? old : size);
-                    struct block *previous = (struct block *)ptr - 1;
-                    previous->free = 1; app.used -= previous->size;
-                }
-                return p;
-            }
-        }
-        offset += b->size;
-    }
-    return NULL;
 }
+static void *allocate(void *ud, void *ptr, size_t old, size_t size) {
+    (void)ud; runtime_poll();
+    if (!size) { if (ptr) arena_free(ptr); return NULL; }
+    if (size > MEMORY_LIMIT-sizeof(struct block)) return NULL;
+    unsigned needed = ((size+7)&~7U)+sizeof(struct block);
+    if (ptr && needed<=((struct block *)ptr-1)->size) return ptr;
+    struct block *chosen = NULL; unsigned empty = ARENA_PAGES;
+    for (unsigned i=0;i<ARENA_PAGES && !chosen;++i) {
+        if (!app.arena[i]) { empty=i; continue; }
+        for (unsigned offset=0;offset<app.capacity[i];) {
+            struct block *b=(struct block *)(app.arena[i]+offset);
+            if (b->free) {
+                while (offset+b->size<app.capacity[i]) {
+                    struct block *next=(struct block *)((unsigned char *)b+b->size);
+                    if (!next->free) break;
+                    b->size+=next->size;
+                }
+                if (b->size>=needed) { chosen=b; break; }
+            }
+            offset+=b->size;
+        }
+    }
+    if (!chosen && empty<ARENA_PAGES) {
+        unsigned capacity=(needed+ARENA_PAGE_SIZE-1)&~(ARENA_PAGE_SIZE-1);
+        if (capacity>MEMORY_LIMIT-app.reserved || stock_free_heap()<capacity+8+8192) return NULL;
+        void *base=stock_alloc(capacity+8);
+        if (!base) return NULL;
+        app.arena_base[empty]=base;
+        app.arena[empty]=(void *)(((uintptr_t)base+7)&~(uintptr_t)7);
+        app.capacity[empty]=capacity;app.reserved+=capacity;
+        chosen=(struct block *)app.arena[empty];*chosen=(struct block){capacity,1};
+    }
+    if (!chosen) return NULL;
+    if (chosen->size>=needed+sizeof(struct block)+8) {
+        struct block *next=(struct block *)((unsigned char *)chosen+needed);
+        *next=(struct block){chosen->size-needed,1};chosen->size=needed;
+    }
+    chosen->free=0;app.used+=chosen->size;
+    if (app.used>app.peak) app.peak=app.used;
+    void *p=chosen+1;
+    if (ptr) { memcpy(p,ptr,old<size ? old : size);arena_free(ptr); }
+    return p;
+}
+
+static void peripherals_release(void);
+static unsigned native_priority(void);
 
 static void led_refresh(void) {
     unsigned char *context = runtime_led_context();
@@ -155,8 +179,12 @@ static void discard(unsigned state) {
     app.guarded = app.owner = app.dirty = 0;
     app.led_owner = app.led_dirty = 0; led_refresh();
     app.L = NULL; app.used = 0; app.held = 0;
-    if (app.arena_base) stock_free(app.arena_base);
-    app.arena_base = NULL; app.arena = NULL;
+    stock_free(app.source); app.source = NULL;
+    peripherals_release();
+    for (unsigned i=0;i<ARENA_PAGES;++i) {
+        stock_free(app.arena_base[i]); app.arena_base[i] = NULL; app.arena[i] = NULL; app.capacity[i] = 0;
+    }
+    app.reserved = 0;
     app.key_read = app.key_write; app.message_size = 0;
     memset(app.timers, 0, sizeof app.timers);
     __asm__ volatile ("" ::: "memory");
@@ -165,6 +193,7 @@ static void discard(unsigned state) {
 
 /* These hooks only copy bounded records. Power keys always remain native. */
 unsigned runtime_key(const unsigned char *raw) {
+    if (native_priority()) return 0;
     if (!raw || raw[1] != 0 || raw[0] >= KEY_COUNT) return 0;
     unsigned key = raw[0], event = raw[2], mask = 1U << key;
     if (app.suppressed & mask) {
@@ -197,13 +226,13 @@ unsigned runtime_adc_result(unsigned packed) {
 }
 
 unsigned runtime_screen_allowed(const void *frame) {
-    return !app.owner || frame == app.frame;
+    return native_priority() ? frame != app.frame : (!app.owner || frame == app.frame);
 }
 
 /* The stock LED task performs I/O. Lua only publishes a complete packed buffer
  * and requests its normal refresh, so no script enters the LED driver. */
 unsigned runtime_led_override(void) {
-    if (!app.led_owner || app.state != ACTIVE) return 0;
+    if (native_priority() || !app.led_owner || app.state != ACTIVE) return 0;
     stock_led_write(app.led_buffers[app.led_active], LED_COUNT * 3);
     return 1;
 }
@@ -379,10 +408,10 @@ static int led_claim(lua_State *L) {
     return 0;
 }
 static int stats(lua_State *L) {
-    const char *names[] = {"free_heap","lua_used","lua_peak","frames","callbacks","dropped_keys"};
-    unsigned values[] = {stock_free_heap(),app.used,app.peak,app.frames,app.callbacks,app.dropped};
-    lua_createtable(L,0,6);
-    for (unsigned i=0;i<6;++i) { lua_pushinteger(L,values[i]); lua_setfield(L,-2,names[i]); }
+    const char *names[] = {"free_heap","lua_used","lua_peak","frames","callbacks","dropped_keys","lua_reserved"};
+    unsigned values[] = {stock_free_heap(),app.used,app.peak,app.frames,app.callbacks,app.dropped,app.reserved};
+    lua_createtable(L,0,7);
+    for (unsigned i=0;i<7;++i) { lua_pushinteger(L,values[i]); lua_setfield(L,-2,names[i]); }
     return 1;
 }
 
@@ -427,6 +456,8 @@ static void module(lua_State *L, const char *name, const luaL_Reg *functions) {
     lua_newtable(L); luaL_setfuncs(L,functions,0); lua_setglobal(L,name);
 }
 static void remove_field(lua_State *L, const char *key) { lua_pushnil(L); lua_setfield(L,-2,key); }
+#include "peripherals.c"
+
 static int setup(lua_State *L) {
     luaL_requiref(L,"_G",luaopen_base,1);
     /* No filesystem, dynamically loaded code, or mutable interpreter hooks. */
@@ -454,6 +485,7 @@ static int setup(lua_State *L) {
     module(L,"display",drawing); module(L,"time",timing); module(L,"timer",timers);
     module(L,"keys",keyboard); module(L,"device",device); module(L,"app",control); module(L,"comms",comms);
     module(L,"lights",lights);
+    peripherals_modules(L);
     lua_getglobal(L,"lights"); lua_pushinteger(L,LED_COUNT); lua_setfield(L,-2,"count"); lua_pop(L,1);
     lua_pushcfunction(L,brightness); lua_setglobal(L,"brightness");
     lua_pushcfunction(L,volume); lua_setglobal(L,"volume");
@@ -491,17 +523,16 @@ static void launch(void) {
     if (stock_free_heap() < MEMORY_LIMIT + 8 + STOCK_HEAP_RESERVE) {
         result("insufficient stock heap headroom"); discard(ERROR); return;
     }
-    app.arena_base = stock_alloc(MEMORY_LIMIT + 8);
-    if (!app.arena_base) { result("Lua arena allocation failed"); discard(ERROR); return; }
-    app.arena = (void *)(((uintptr_t)app.arena_base+7) & ~(uintptr_t)7);
-    *(struct block *)app.arena = (struct block){MEMORY_LIMIT,1};
     if (setjmp(app.escape)) { discard(ERROR); return; }
     begin_budget();
     app.L = lua_newstate(allocate,NULL);
     if (!app.L) abort_script("Lua allocation failed");
     lua_atpanic(app.L,panic);
     lua_pushcfunction(app.L,setup); check_call(app.L,0,0);
-    if (luaL_loadbufferx(app.L,app.source,app.source_size,"app","t")) abort_script(lua_tostring(app.L,-1));
+    int loaded = luaL_loadbufferx(app.L,app.source,app.source_size,"app","t");
+    /* The compiled function owns its strings; source bytes are no longer read. */
+    stock_free(app.source); app.source = NULL;
+    if (loaded) abort_script(lua_tostring(app.L,-1));
     check_call(app.L,0,1);
     if (!app.resident) { scalar(app.L); present_outputs(); discard(DONE); return; }
     if (!lua_istable(app.L,-1)) abort_script("app must return a callback table");
@@ -512,7 +543,11 @@ static void launch(void) {
 }
 
 static void service(void) {
-    unsigned now = stock_ticks();
+    unsigned now = stock_ticks(), priority = native_priority();
+    if (priority != app.native_alarm) {
+        app.native_alarm = priority; app.held = 0; app.key_read = app.key_write;
+        led_refresh();
+    }
     for (unsigned k = 0; k < KEY_COUNT; ++k)
         if ((app.held & (1U << k)) && (unsigned)(now-app.held_since[k]) >= 5000) app.cancel = 1;
     if (app.cancel) { result("stopped"); discard(DONE); return; }
@@ -520,6 +555,7 @@ static void service(void) {
         unsigned action = app.action; app.action = 0;
         app.state = action == 1 ? PAUSED : ACTIVE;
         app.owner = action == 1 ? 0 : 1; app.last_tick = now;
+        if (action == 1) peripherals_release();
         if (app.led_owner) led_refresh();
         app.key_read = app.key_write;
     }
@@ -582,6 +618,9 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
                 if (!app.task) app.task = stock_task(runtime_worker_entry,"lua_app",NULL,4096,1,0);
                 if (!app.task) error = 3;
                 else {
+                    char *source = stock_alloc(n);
+                    if (!source) { error = 3; goto reply; }
+                    stock_free(app.source); app.source = source;
                     app.cancel = app.action = 0; app.result[0] = 0;
                     app.source_size = n; app.received = op == 1 ? n : 0;
                     app.resident = op == 3 ? data[9] != 0 : 0;
@@ -593,7 +632,9 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         }
     } else if (op == 2) {
         app.cancel = 1;
-        if (app.state == UPLOADING) app.state = IDLE;
+        if (app.state == UPLOADING) {
+            stock_free(app.source); app.source = NULL; app.state = IDLE;
+        }
     } else if (op == 4) {
         if (app.state != UPLOADING) error = 2;
         else if (length < 12) error = 1;
@@ -614,6 +655,7 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         else if (!n || n > MESSAGE_LIMIT) error = 1;
         else { memcpy(app.message,data+7,n); __asm__ volatile ("" ::: "memory"); app.message_size = n; }
     } else if (op != 0 && op != 9) error = 4;
+reply:;
     unsigned char reply[RESULT_LIMIT+40] = {'D','L','U','A',2};
     reply[5] = app.state; reply[6] = error;
     unsigned n = op == 9 ? app.outbox_size : strlen(app.result);

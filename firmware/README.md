@@ -67,7 +67,14 @@ commit `9a9d89c` for the earlier 306013 image. Its device evidence is in
 `lua-io-evidence/verification.json`.
 
 `306015-lua.MVA` retains the resident runtime and adds a bounded, read-only
-filesystem metadata diagnostic for persistence research. The current
-`scripts/build-lua-app-runtime.py` builds this image. It exposes no Lua file API
+filesystem metadata diagnostic for persistence research. Build this image from
+source at commit `842115b`. It exposes no Lua file API
 and performs no filesystem writes. See [storage research](../docs/lua-storage.md)
 and `lua-storage-evidence/verification.json` for protocol and verification.
+
+`306016-lua.MVA` adds native battery/charging status, indicator control, alarms,
+power schedules, player controls, voice memos and microphone noise readings.
+It fixes native wake-table persistence/selection and returns unused Lua memory
+to the native audio heap. The current `scripts/build-lua-app-runtime.py` builds
+this image. See the [peripheral API](../docs/lua-peripherals.md) and
+`lua-peripherals-evidence/verification.json`. Raw transport logs remain ignored.

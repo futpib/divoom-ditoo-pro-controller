@@ -73,3 +73,42 @@ led_stock:
     lmw.bim $r6, [$sp], $r6, 2
     smw.adm $sp, [$sp], $sp, 2
     j stock_led_original
+
+.section .native_hook,"ax"
+    jal native_service
+.section .indicator_hook,"ax"
+    j indicator_filter
+.section .noise_hook,"ax"
+    jal runtime_noise_sample
+
+.section .text.native_service,"ax"
+native_service:
+    smw.adm $r6, [$sp], $r6, 2
+    jal stock_native_pump
+    jal runtime_native_service
+    lmw.bim $r6, [$sp], $r6, 2
+    ret
+
+.section .text.indicator_filter,"ax"
+indicator_filter:
+    smw.adm $r6, [$sp], $r6, 2
+    jal runtime_indicator_filter
+    j stock_indicator_resume
+
+.section .text.stock_indicator_write,"ax"
+.global stock_indicator_write
+stock_indicator_write:
+    smw.adm $r6, [$sp], $r6, 2
+    j stock_indicator_resume
+
+.section .wake_select_hook,"ax"
+    jal wake_selected
+.section .text.wake_selected,"ax"
+wake_selected:
+    /* r0 is the new earliest time; r6/r7 are the entry and its slot. */
+    .byte 0x3c, 0x0f, 0xdb, 0xd1
+    lbi $r1, [$r6 + 5]
+    movi $r0, -1
+    cmovz $r0, $r7, $r1
+    .byte 0x3e, 0x07, 0x7b, 0x1c
+    ret

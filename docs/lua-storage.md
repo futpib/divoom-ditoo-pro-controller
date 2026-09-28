@@ -8,13 +8,13 @@ Lua scripts have no access to this diagnostic or to raw flash addresses.
 ```sh
 python3 scripts/build-lua-app-runtime.py
 cargo build --locked --release
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306015-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306016-lua.MVA
 python3 scripts/backup-lua-storage.py B1:21:81:DD:B8:9B \
   --output firmware/runs/lua-storage-backup
 ```
 
 Use a new output directory. The script first queries ordinary firmware version
-and requires exactly 306015 before sending any extension command. It reads 1,024
+and requires 306015 or 306016 before sending any extension command. It reads 1,024
 128-byte chunks, checks every response and driver status, requires identical
 filesystem context snapshots throughout, and checks firmware version again.
 `--probe-only` reads the first 1 KiB. Backups, requests and raw logs stay ignored

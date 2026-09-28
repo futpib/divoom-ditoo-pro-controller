@@ -57,7 +57,7 @@ The device reboot naturally interrupts its USB audio connection.
 ### What is written and how completion is checked
 
 Only SHA-256-pinned images accepted by `firmware::Image` can be flashed: stock
-306007, gate probe 306008, native-memory probe 306009 and Lua runtimes 306012–306015. The USB
+306007, gate probe 306008, native-memory probe 306009 and Lua runtimes 306012–306016. The USB
 updater extracts the MVA code payload and writes **only the application at
 `0x10000`**. The installed bootloader, its header, and the user-data partition
 starting at `0x1f0000` are preserved. This is not a byte-for-byte replacement of
@@ -105,6 +105,13 @@ was demonstrated after an interrupted transfer, not after every possible form
 of application corruption. A generic bootloader is never selected implicitly. Starting in the bootloader
 requires `--reflash`: a matching old header alone cannot establish that a
 previously interrupted application image is intact.
+
+During a 306016 reflash, upgrade entry left Linux showing `8888:171e` with
+failing control requests. A targeted `sudo usbreset BBB/DDD` using the Ditoo's
+bus/device numbers from `lsusb` made it enumerate as `0000:2244`; restarting
+the command with `--reflash` then verified all 479 blocks. `usbreset` itself
+reported "No such device" during this successful identity change, so check
+the new enumeration. No erase command had been sent before that entry failure.
 
 ## Performance and verification
 

@@ -1,0 +1,256 @@
+{
+  "firmware": 306016,
+  "sha256": "a955d25fa90434d12981b92972b7c5780368c875b6ed905b16edd20eb715a099",
+  "bytes": 2026511,
+  "date": "2026-09-28",
+  "hardware": "Ditoo Pro, USB port 1-6",
+  "image_history": {
+    "regression_image_sha256": "b7fa71e9e7d54d586964a86129b9462e30b512d70fdc134ff0404b8b9529d7aa",
+    "final_delta": "Final image additionally reports failure if the native priority arbiter declines a sound preview; it does not claim preview ownership in that case. Runtime allocator, alarm/wake hooks and other bindings are unchanged."
+  },
+  "usb_flash": {
+    "application_reenumerated": true,
+    "ble_version_check_requested": true,
+    "blocks_verified": 479,
+    "erase_transfer_verify_seconds": 11.328452037,
+    "event": "usb_complete",
+    "total_usb_seconds": 17.1557679,
+    "usb_port": "1-6",
+    "version": 306016
+  },
+  "usb_entry_recovery": "Entry initially stalled at 8888:171e before any erase. A targeted usbreset re-enumerated the device as 0000:2244; the complete application transfer then succeeded.",
+  "host_checks": {
+    "rust_tests": 50,
+    "native": "Exact patched Lua/runtime ASan and UBSan passed, including source-buffer replacement/allocation failure/cancellation, native job cancellation, settings readback/wear limits, rejected preview ownership, alarm priority and microphone cleanup.",
+    "clippy": "Production lib/bin with no default features passed with warnings denied.",
+    "preexisting_check_failures": [
+      "All-target Clippy rejects three existing unwrap calls in src/protocol/packet.rs tests.",
+      "cargo fmt --check reports existing repository formatting drift."
+    ]
+  },
+  "isolated_rebuild": {
+    "identical": true,
+    "sha256": "a955d25fa90434d12981b92972b7c5780368c875b6ed905b16edd20eb715a099"
+  },
+  "runtime_checks": {
+    "tested_sha256": "b7fa71e9e7d54d586964a86129b9462e30b512d70fdc134ff0404b8b9529d7aa",
+    "passed": 43,
+    "failed": 0,
+    "names": [
+      "integer",
+      "float",
+      "libraries",
+      "loop",
+      "pcall",
+      "coroutine",
+      "nested-coroutine",
+      "finalizer",
+      "close",
+      "tostring",
+      "sort",
+      "gsub",
+      "pattern",
+      "oom",
+      "caught-oom",
+      "recursion",
+      "native-call-limit",
+      "syntax",
+      "binary",
+      "capabilities",
+      "stock-heap-headroom",
+      "led-frame",
+      "one-shot-present",
+      "resident-start",
+      "incoming-message",
+      "outgoing-message",
+      "outgoing-acknowledged",
+      "paused",
+      "resumed",
+      "stopped",
+      "update-loop",
+      "update-loop-recovery",
+      "timer-loop",
+      "timer-loop-recovery",
+      "message-loop",
+      "message-loop-recovery",
+      "full-8192-byte-upload",
+      "led-resident",
+      "led-paused",
+      "led-resumed",
+      "led-error-reclaimed",
+      "led-error-recovery",
+      "final-stop"
+    ],
+    "stock_version_afterwards": true,
+    "script": "scripts/check-lua-app-device.py"
+  },
+  "settings": {
+    "tested_sha256": "b7fa71e9e7d54d586964a86129b9462e30b512d70fdc134ff0404b8b9529d7aa",
+    "script": "scripts/check-lua-peripherals.py --settings-test",
+    "results": {
+      "baseline": {
+        "alarm-0": "false,13,37,0,0,0,100",
+        "alarm-1": "false,0,0,0,2,1,50",
+        "alarm-2": "false,0,0,0,2,1,50",
+        "alarm-3": "false,0,0,0,2,1,50",
+        "alarm-4": "false,0,0,0,2,1,50",
+        "alarm-5": "false,0,0,0,2,1,50",
+        "alarm-6": "false,0,0,0,2,1,50",
+        "alarm-7": "false,0,0,0,2,1,50",
+        "alarm-8": "false,0,0,0,2,1,50",
+        "alarm-9": "false,0,0,0,2,1,50",
+        "wake-0": "false,off,0,0,0,0",
+        "wake-1": "false,off,0,0,0,0",
+        "wake-2": "false,off,0,0,0,0",
+        "wake-3": "false,off,0,0,0,0",
+        "wake-4": "false,off,0,0,0,0",
+        "wake-5": "false,off,0,0,0,0",
+        "wake-6": "false,off,0,0,0,0",
+        "wake-7": "false,off,0,0,0,0",
+        "wake-8": "false,off,0,0,0,0",
+        "battery": "7,7,true,false,true",
+        "audio": "false,3,0,0,false"
+      },
+      "settings": {
+        "alarm-save": "false,11,23,62,2,1,15",
+        "alarm-read": "false,11,23,62,2,1,15",
+        "wake-save": "false,on,7,21,127,1193046",
+        "wake-read": "false,on,7,21,127,1193046"
+      },
+      "restored": {
+        "alarm-restored": "false,0,0,0,2,1,50",
+        "alarm-restored-read": "false,0,0,0,2,1,50",
+        "wake-restored": "false,off,0,0,0,0"
+      }
+    }
+  },
+  "native_schedules": {
+    "tested_sha256": "b7fa71e9e7d54d586964a86129b9462e30b512d70fdc134ff0404b8b9529d7aa",
+    "script": "scripts/check-lua-peripheral-schedules.py --exercise-schedules",
+    "results": {
+      "baseline": {
+        "alarm-9": "false,0,0,0,2,1,50",
+        "wake-7": "false,off,0,0,0,0",
+        "wake-8": "false,off,0,0,0,0"
+      },
+      "alarm": {
+        "alarm": "ring-snooze-cancel-restore passed"
+      },
+      "armed": {
+        "wake": "armed:49"
+      },
+      "usb_absent_while_off": true,
+      "off_status": {
+        "timed_out": true
+      },
+      "usb_present_after_wake": true,
+      "on_status": {
+        "exit_code": 0,
+        "stdout": "{\"state\":\"idle\",\"peak_memory_bytes\":0,\"instructions\":0,\"result\":\"\",\"abi\":2,\"memory_bytes\":0,\"frames\":0,\"callbacks\":0,\"dropped_keys\":0,\"held_keys\":0,\"generation\":0}\n",
+        "stderr": ""
+      },
+      "restored": {
+        "alarm-9": "false,0,0,0,2,1,50",
+        "wake-7": "false,off,0,0,0,0",
+        "wake-8": "false,off,0,0,0,0"
+      }
+    }
+  },
+  "audio": {
+    "tested_sha256": "a955d25fa90434d12981b92972b7c5780368c875b6ed905b16edd20eb715a099",
+    "script": "scripts/check-lua-peripheral-audio.py --record-memo",
+    "status_fields": [
+      "recording",
+      "sound_playing",
+      "recorded_bytes",
+      "free_heap"
+    ],
+    "results": {
+      "memo": {
+        "loaded": "65928",
+        "record-start": "true:nil",
+        "recording": "true:false:26112:19504",
+        "record-stop": "true:nil",
+        "play-start": "true:nil",
+        "playing": "false:true:35328:65400",
+        "play-finished": "false:false:35328:62692",
+        "deleted": "true:nil"
+      },
+      "record_loop": {
+        "reloaded": "62716",
+        "record-start": "true:nil",
+        "recording": "true:false:14848:16316",
+        "recovery": "66792"
+      },
+      "noise_loop": {
+        "cleanup": "62612",
+        "deleted-after-error": "true:nil",
+        "noise-start": "true:nil",
+        "noise-level": "39",
+        "recovery": "66792"
+      }
+    },
+    "record_loop_error": {
+      "state": "error",
+      "lua_memory_bytes": 0,
+      "result": "instruction budget exceeded"
+    },
+    "noise_loop_error": {
+      "state": "error",
+      "lua_memory_bytes": 0,
+      "result": "instruction budget exceeded"
+    }
+  },
+  "source_controls": {
+    "tested_sha256": "a955d25fa90434d12981b92972b7c5780368c875b6ed905b16edd20eb715a099",
+    "fixture": "firmware/lua-peripherals-evidence/audio-controls.lua",
+    "results": {
+      "audio-controls": "sources-stop passed; preview: native-priority refusal"
+    }
+  },
+  "storage_probe": {
+    "tested_sha256": "a955d25fa90434d12981b92972b7c5780368c875b6ed905b16edd20eb715a099",
+    "script": "scripts/backup-lua-storage.py --probe-only",
+    "results": {
+      "firmware": 306016,
+      "read_only": true,
+      "physical_start": 9437184,
+      "bytes": 1024,
+      "sha256": "5e7c5422eb1169ffc04ab0ad4c643a1500eb9e3f0f3b7a32f0753a0644ff21de",
+      "context_hex": "7600000000920000009000002e000000009100002d00010016006b00e0060000",
+      "driver_statuses": [
+        0
+      ],
+      "used_blocks": 118,
+      "block_count": 1760,
+      "index_start_page": 45,
+      "index_pages": 1
+    }
+  },
+  "restored_audio": {
+    "audio-restored": "0:3"
+  },
+  "clock_restored": {
+    "state": "active",
+    "peak_memory_bytes": 31072,
+    "instructions": 10,
+    "result": "",
+    "abi": 2,
+    "memory_bytes": 26368,
+    "frames": 9,
+    "callbacks": 188,
+    "dropped_keys": 0,
+    "held_keys": 0,
+    "generation": 8
+  },
+  "limits": [
+    "SD card absent; actual SD playback, seeking and repeat not exercised.",
+    "Native audio state and recorder bytes were observed; audible output was not independently confirmed.",
+    "Battery indicator override and release passed host hook tests and earlier live API exercise; physical LED appearance was not confirmed.",
+    "Battery level is coarse 0..7. This unit reported USB power, full level 7 and charging false; charger-transition calibration was not tested.",
+    "Sound preview was refused by the native priority arbiter in the exercised mode, and the final image reported the refusal correctly.",
+    "Scheduled wake boots stock firmware; Lua autostart remains unimplemented.",
+    "Lua limits and recovery do not constitute memory isolation or a guarantee against defects in vendor native code."
+  ],
+  "raw_logs": "Ignored firmware/runs/lua-peripherals. No raw JSONL logs, microphone audio or storage bytes committed."
+}

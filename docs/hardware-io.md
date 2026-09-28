@@ -9,12 +9,14 @@ is linked from Divoom's [manual library](https://divoom.com/pages/product-manual
 | 1 | Six keyboard keys, lever, audio-source button, power button, reset pinhole | Listed in the manual. Physical Lua key events work; the complete physical-to-ID mapping remains unfinished. The power-button scan is left native. Reset is a hardware control, not a Lua event. |
 | 2 | 16×16 RGB screen | Custom Lua drawing and resident clock physically confirmed. |
 | 3 | Keyboard RGB lighting | 12 independently controlled RGB positions physically confirmed with a chase and key-triggered color changes. |
-| 4 | Speaker output | Manual specifies 15 W. Lua currently exposes volume; custom sample/tone playback is not bound. |
-| 5 | Microphone input | Manual documents on-device voice-memo recording and noise detection. Native capture, levels and USB microphone operation have not been verified on the attached unit. |
+| 4 | Speaker output | Manual specifies 15 W. 306016 exposes volume, native source/playback controls, alarm previews and memo playback. No arbitrary PCM/synthesis API. |
+| 5 | Microphone input | Manual documents on-device voice-memo recording and noise detection. 306016 binds native noise readings and bounded voice-memo capture. USB microphone operation remains unverified. |
 | 6 | Bluetooth | Audio and control connections documented; BLE control, firmware transfer and resident Lua upload/messages tested. |
 | 7 | USB-C | Charging, observed audio/HID interfaces and tested application flashing. See [USB details](usb.md); USB Lua upload is not implemented. |
 | 8 | TF/microSD slot | Manual documents offline music playback. Lua filesystem access is not implemented. |
-| 9 | Battery/charging status and indicator | Manual documents battery indication and charge-completion behavior. Lua does not yet expose these status inputs or indicator output. |
+| 9 | Battery/charging status and indicator | Manual documents battery indication and charge-completion behavior. 306016 exposes the native 0–7 level, power/charging/full status and an override for the five indicator LEDs. |
+
+See the [native peripheral API](lua-peripherals.md) for exact limits and completion semantics.
 
 The internal RTC and flash are also relevant resources for apps. RTC calendar
 reads work from Lua; internal filesystem metadata has a verified read-only
