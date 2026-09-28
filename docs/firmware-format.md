@@ -123,3 +123,6 @@ Source corroboration comes from the MVsilicon SDK mirror at commit
 
 The SDK is related source evidence; Divoom's own binary and matching CRCs establish
 the exact offsets above. No SDK binaries need to be executed to use the decoder.
+
+For shell/interpreter findings and a one-time runtime design, see
+[custom program support](firmware-runtime.md).

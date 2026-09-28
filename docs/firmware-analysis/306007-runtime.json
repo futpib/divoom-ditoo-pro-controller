@@ -1,0 +1,45 @@
+{
+  "image_sha256": "fc16341c005b11d0ac476917dc2fd98c9bc7481b92a183e64bfe209801566544",
+  "method": "Exact byte-string search; absence is not proof of absence of all interpreters or consoles",
+  "marker_offsets": {
+    "mv shell cmd list": [],
+    "displaytaskinfo": [],
+    "displayruntimestats": [],
+    "DisplayMemInf": [],
+    "mv_shell_task": [],
+    "SHELL": [],
+    "help": [],
+    "Lua": [],
+    "lua": [],
+    "MicroPython": [],
+    "Python": [],
+    "Duktape": [],
+    "JerryScript": [],
+    "javascript": [],
+    ".elf": [],
+    ".lua": [],
+    ".py": [],
+    ".wasm": []
+  },
+  "microtask": {
+    "entry": 479596,
+    "callback_call": 479708,
+    "register": 480084,
+    "callback_store": 480184,
+    "slots": 10,
+    "registration_wrapper": 314132,
+    "observed_callback_targets": [
+      314048,
+      331220,
+      347992,
+      349140,
+      351456,
+      353420,
+      422964,
+      426972,
+      428104,
+      464676,
+      467292
+    ]
+  }
+}
