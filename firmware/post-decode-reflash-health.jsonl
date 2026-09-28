@@ -1,0 +1,2 @@
+{"delivery":"command_reply","events":[],"request":{"delay_ms":0,"listen_ms":0,"opcode":55,"payload_hex":"00","response":{"opcode":55,"prefix_hex":""},"rfcomm_frame_hex":"01040037003b0002"},"response":{"ack":true,"data_hex":"0157ab0400","firmware_versions":[306007],"opcode":55},"transport":"ble"}
+{"delivery":"transport_ack","events":[],"request":{"delay_ms":0,"listen_ms":1500,"opcode":70,"payload_hex":"","response":null,"rfcomm_frame_hex":"01030046490002"},"response":null,"transport":"ble"}

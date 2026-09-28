@@ -91,8 +91,9 @@ All three independent CRC checks pass on the archived file.
   `0xff` against a saved device value. This image has `0xff` there; the flag's
   complete meaning and underlying ROM enforcement remain unresolved.
 - The bootloader has a no-upgrade-needed return path, but its return value must
-  not be equated with the Bluetooth `0x98` status byte. The cause of the observed
-  Bluetooth refusal `00 02` is not established by this decode.
+  not be equated with the Bluetooth `0x98` status byte. A subsequent [application-handler trace](firmware-update.md#device-side-rejection-decoded)
+  independently establishes that our equal-version announcement produces the
+  Bluetooth refusal `00 02`.
 
 The inspected package and bootloader paths show CRC and compatibility checks,
 not public-key signature verification. This does **not** prove that every

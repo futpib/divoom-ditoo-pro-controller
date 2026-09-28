@@ -25,7 +25,7 @@ The current-version attempt on firmware 306007 reached the metadata handshake.
 The device responded with firmware file type 0 and ready status **2**. The
 updater stopped without transmitting a 99 firmware-data packet. No reflash was
 completed. The APK labels nonzero ready values as not ready but does not decode
-status 2. Same-version rejection is a possibility, not an established meaning.
+status 2. The subsequent binary analysis below establishes an explicit same-version rejection.
 
 Logs are in `firmware/reflash-306007*`. The repeated attempt with enhanced
 logging captured the same response: opcode 98, payload `00 02`. No update-success
@@ -36,6 +36,14 @@ The streaming, retransmission, completion and post-reboot paths are implemented
 but await a device-accepted update for E2E validation. Local tests cover the
 image metadata/checksum/padding, target-version guards and response decoding. RFCOMM connected during this session but timed out on a version
 query. The live update announcement used BLE.
+
+The retry after offline decoding used the unchanged vendor file and again received
+opcode `0x98`, payload `00 02`, before any data chunks were sent. See
+`firmware/reflash-306007-after-decode.{jsonl,log}`. Subsequent reads in
+`firmware/post-decode-reflash-health.{jsonl,log}` show a successful version
+read of 306007. Two mode/brightness queries timed out; a later listen-only status
+request received a transport acknowledgment without a status event. Consequently
+this attempt confirms version-query responsiveness, not a complete settings check.
 
 ## Protocol and source evidence
 
@@ -75,6 +83,45 @@ The current BLE transport uses paced 20-byte writes, so this 1,877,379-byte imag
 would take over an hour at nominal pacing. The implementation does not increase
 transfer speed by assuming a larger writable packet size.
 
-The internal MVA structure has not been reverse-engineered. Integrity validation
-here means exact equality to the vendor image plus the app's transfer checksum,
-not a parser for arbitrary MVA firmware or signature verification.
+The [offline decoder](firmware-format.md) now extracts the MVA container and
+verifies its package and internal CRCs. The updater still requires exact equality
+to the pinned vendor image and uses the app's transfer checksum; decoding does
+not enable arbitrary-image flashing or establish signature enforcement.
+
+## Device-side rejection decoded
+
+Tracing the unmodified image establishes why announcing version 306007 fails.
+The metadata dispatcher at code address `0x3abb4` parses version, length and byte
+sum. Its internal event reaches `divoom_update_device_init` at `0x4b4a4`.
+The version getter at `0x47924` returns the constant `0x4ab57` (306007).
+
+Equivalent logic for the initial gates is:
+
+```c
+reply = {0, 2};
+if (announced_version / 1000 != current_version() / 1000)
+    return send_98(reply), NULL;
+if (announced_version <= current_version())
+    return send_98(reply), NULL;
+context = allocate(300);
+if (context == NULL)
+    return send_98(reply), NULL;
+```
+
+The equal/older-version branch is `0x4b548` through `0x4b578`: it proceeds only
+when current version is less than announced version, otherwise sends the two
+bytes initialized at `0x4b4b2` through `0x4b4b8`. The family comparison precedes
+it at `0x4b4bc` through `0x4b50c`; its multiply/shift sequence implements division
+by 1000. Allocation follows at `0x4b57c`, so our equal-version attempt never
+reaches memory allocation, image reception, CRC checking or signature inspection.
+
+Status 2 is therefore not universally synonymous with same-version rejection:
+family mismatch and allocation failure share it. But our known announcement and
+the hardcoded current version determine the failing gate. A later capacity check
+uses status 1. No image-content hash or digital signature can explain this
+particular pre-transfer refusal.
+
+See [the retained disassembly](firmware-analysis/306007-update-gates.nds32.S).
+No advertised version was falsified and no gate was bypassed during the retry.
+Changing only the advertised version might pass the first gates, but does not
+prove that downstream bootloader checks permit reinstalling the same code.
