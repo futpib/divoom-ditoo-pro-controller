@@ -1,6 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include "bluetooth-hid.c"
+void runtime_bt_trace(unsigned k,unsigned e,const void *p,unsigned n) {
+    (void)k;(void)e;assert(p && n<=12);
+}
 static unsigned clock_ms,disconnects,sends,rc=2,connect_rc;
 static unsigned char context[256],remote[256],sent[12],core[0x3200];
 volatile unsigned char stock_bt_manager[0x1c4];

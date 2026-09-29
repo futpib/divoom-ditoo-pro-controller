@@ -26,6 +26,7 @@ use crate::divoom_file_format::frame_header::FrameHeader;
 
 pub mod divoom_file_format;
 pub mod protocol;
+pub mod bluetooth_trace;
 mod transport;
 pub mod control;
 pub mod firmware;

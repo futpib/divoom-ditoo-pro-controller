@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "bluetooth-hid.h"
+#include "bluetooth-trace.h"
 extern void *volatile stock_bt_context;
 extern unsigned char *volatile stock_bt_core;
 extern volatile unsigned char stock_bt_manager[];
@@ -96,7 +97,10 @@ static struct {
     struct { struct packet packet; unsigned char bytes[12]; unsigned busy,started; } tx[2];
 } hid;
 
-static void error(unsigned code) { hid.status.error=code; ++hid.status.errors; }
+static void error(unsigned code) {
+    hid.status.error=code; ++hid.status.errors;
+    runtime_bt_trace(5,0,&code,sizeof code);
+}
 static unsigned elapsed(unsigned t,unsigned delay) { return (unsigned)(stock_ticks()-t)>=delay; }
 static void access_restore(void) {
     if (!hid.access_owned) return;
@@ -139,6 +143,7 @@ static void connect_channel(unsigned i) {
 }
 static void link_event(void *manager,unsigned event,unsigned status) {
     (void)manager;
+    runtime_bt_trace(4,event,&status,sizeof status);
     if (event==1 && !status) connect_channel(0);
     else if (event==1 && status) { error(0x300+status); disconnect(); }
 }
@@ -177,6 +182,11 @@ static void l2_event(unsigned cid,struct l2_event *p) {
     const struct psm *psm=p->psm;
     unsigned i=psm->id==0x13;
     if (psm->id!=0x11 && psm->id!=0x13) return;
+    if (p->event!=5 && p->event!=6) {
+        unsigned char data[12]={psm->id,p->status,p->status>>8,cid,cid>>8};
+        if(p->remote) memcpy(data+5,p->remote+0x54,6);
+        runtime_bt_trace(3,p->event,data,11);
+    }
     if (p->event==1) {
         ++hid.status.incoming;
         unsigned any=0;for(unsigned j=0;j<6;++j) any|=hid.status.peer[j];

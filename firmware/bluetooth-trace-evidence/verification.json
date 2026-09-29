@@ -1,0 +1,72 @@
+{
+  "firmware": 306024,
+  "sha256": "0638634ddeedc0ad36b2ecb274cef83ebcffbe0dc8dd1ff17a80da74b1dc6965",
+  "flash": {
+    "transport": "usb",
+    "blocks_verified": 480,
+    "version_read_back": 306024
+  },
+  "trace": {
+    "static_bytes": 772,
+    "capacity": 32,
+    "heap_allocation": false,
+    "flash_writes": false,
+    "observed_hci_pairing_success": true,
+    "observed_encryption": true,
+    "hid_psms_opened": [
+      17,
+      19
+    ],
+    "laptop_btmon_agrees_on_pairing_success": true,
+    "captured_keys_absent_from_device_trace": 7,
+    "tv_observation": {
+      "acl_connection": "success",
+      "authentication_status": 5,
+      "disconnect_reason": 5,
+      "hid_opened": false,
+      "conclusion": "Authentication failure before HID; stale or mismatched bonds possible, not proven"
+    },
+    "lua_observation": {
+      "same_generation": true,
+      "callbacks_advanced": 128
+    },
+    "overflow_notices_observed": true
+  },
+  "validation": {
+    "rust_tests_passed": 62,
+    "production_clippy": "passed",
+    "native_asan_ubsan": "passed",
+    "laptop_hid_lifecycle_checks_passed": [
+      "targeted-forget",
+      "fresh-outgoing-pair",
+      "bonded-incoming-connect",
+      "reuse-existing-link",
+      "bonded-outgoing-connect",
+      "pair-window-expiry",
+      "pair-window-lua-crash"
+    ],
+    "hardware_guards_passed": 42,
+    "hardware_guards_total": 43,
+    "hardware_guard_failures": [
+      {
+        "name": "full-8192-byte-upload",
+        "state": 3,
+        "result": "insufficient stock heap headroom"
+      }
+    ],
+    "maximum_upload_note": "An 8192-byte script was refused by the unchanged stock-heap reserve after Bluetooth testing; repeated once with same result. The 7828-byte TV bundle loaded. The safety reserve was not relaxed.",
+    "incoming_test_note": "Laptop-initiated pair opened encrypted HID but BlueZ also connected BLE, failing test isolation. A fresh Ditoo-initiated run passed all seven lifecycle checks without BLE or audio."
+  },
+  "cleanup": {
+    "saved_settings_unchanged": true,
+    "tv_app_active": true,
+    "saved_app_not_replaced": true,
+    "temporary_laptop_bond_removed_both_sides": true,
+    "other_bonds_preserved": 7,
+    "laptop_pairable": false,
+    "laptop_discoverable": false,
+    "preexisting_discovery_preserved": true,
+    "btmon_and_pairing_agent_stopped": true
+  },
+  "tv_controls_verified": false
+}

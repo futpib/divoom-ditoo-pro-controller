@@ -94,6 +94,8 @@ stock_sec_register = 0x12854c;
 stock_bt_access = 0x128032;
 stock_bt_find_device = 0x1276c8;
 stock_l2_security = 0x1233c8;
+stock_bt_stack_resume = 0x7ec24;
+stock_bt_hci_resume = 0x121c72;
 _SDA_BASE_ = 0x2000d2f8;
 SECTIONS {
     .hook 0x3ab9c : { KEEP(*(.hook)) }
@@ -107,6 +109,8 @@ SECTIONS {
     .usb_response_hook 0x38f00 : { KEEP(*(.usb_response_hook)) }
     .usb_connected_hook 0x387b2 : { KEEP(*(.usb_connected_hook)) }
     .bt_command_hook 0x138c76 : { KEEP(*(.bt_command_hook)) }
+    .bt_stack_hook 0x7ec20 : { KEEP(*(.bt_stack_hook)) }
+    .bt_hci_hook 0x121c6c : { KEEP(*(.bt_hci_hook)) }
     .indicator_hook 0x2d6e8 : { KEEP(*(.indicator_hook)) }
     .noise_hook 0x72192 : { KEEP(*(.noise_hook)) }
     .wake_select_hook 0x47eea : { KEEP(*(.wake_select_hook)) }
@@ -140,6 +144,8 @@ ASSERT(SIZEOF(.usb_send_hook) == 4, "USB send hook size")
 ASSERT(SIZEOF(.usb_response_hook) == 4, "USB response hook size")
 ASSERT(SIZEOF(.usb_connected_hook) == 4, "USB notification hook size")
 ASSERT(SIZEOF(.bt_command_hook) == 4, "Bluetooth command hook size")
+ASSERT(SIZEOF(.bt_stack_hook) == 4, "Bluetooth stack hook size")
+ASSERT(SIZEOF(.bt_hci_hook) == 6, "Bluetooth HCI hook size")
 ASSERT(SIZEOF(.indicator_hook) == 4, "indicator hook size")
 ASSERT(SIZEOF(.noise_hook) == 4, "noise hook size")
 

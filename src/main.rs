@@ -49,6 +49,8 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+  /// Inspect Bluetooth events recorded by the device (requires firmware 306024)
+  Bluetooth { #[command(subcommand)] action: BluetoothCommand },
   /// Run uploaded Lua programs on the device (requires Lua runtime firmware)
   Lua { #[command(subcommand)] action: LuaCommand },
 
@@ -227,6 +229,18 @@ enum Command {
     #[arg(long, default_value_t=0, value_parser=clap::value_parser!(u16).range(0..=25599))] frequency: u16,
     #[arg(long, default_value_t=50, value_parser=clap::value_parser!(u8).range(0..=100))] volume: u8,
     #[arg(long)] dry_run: bool
+  },
+}
+
+#[derive(Subcommand, Debug)]
+enum BluetoothCommand {
+  /// Read a bounded event history without stopping the Lua app; output JSONL
+  Trace {
+    /// Watch duration; zero reads the retained history once
+    #[arg(long, default_value_t=30, value_parser=clap::value_parser!(u64).range(0..=86400))]
+    seconds: u64,
+    #[arg(long, default_value_t=200, value_parser=clap::value_parser!(u64).range(50..=5000))]
+    interval_ms: u64,
   },
 }
 
@@ -445,6 +459,11 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
     return Err("--usb-port requires --transport usb".into());
   }
   match args.command {
+    Command::Bluetooth { action: BluetoothCommand::Trace { seconds, interval_ms } } => {
+      divoom_ditoo_pro_controller::bluetooth_trace::watch(
+        resolve_device(args.device).await?, std::time::Duration::from_secs(seconds),
+        std::time::Duration::from_millis(interval_ms)).await?;
+    },
     Command::Lua { action } => {
       use divoom_ditoo_pro_controller::lua::{self, Action};
       use divoom_ditoo_pro_controller::lua_tools;

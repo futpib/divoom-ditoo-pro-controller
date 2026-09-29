@@ -78,6 +78,32 @@ led_stock:
     jal native_service
 .section .bt_command_hook,"ax"
     jal runtime_bt_peek
+.section .bt_stack_hook,"ax"
+    j bt_stack_trace
+.section .bt_hci_hook,"ax"
+    j bt_hci_trace
+    nop16
+.section .text.bt_stack_trace,"ax"
+bt_stack_trace:
+    smw.adm $r6, [$sp], $r7, 2
+    move $r6, $r0
+    move $r7, $r1
+    jal runtime_bt_trace_stack
+    move $r0, $r6
+    move $r1, $r7
+    lmw.bim $r6, [$sp], $r7, 2
+    .byte 0x8e,0x01,0xe6,0x10
+    j stock_bt_stack_resume
+.section .text.bt_hci_trace,"ax"
+bt_hci_trace:
+    smw.adm $r6, [$sp], $r6, 2
+    move $r6, $r0
+    jal runtime_bt_trace_hci
+    move $r0, $r6
+    lmw.bim $r6, [$sp], $r6, 2
+    /* Reproduce the exact push25 and gp-relative fp setup at HciProcessEvent. */
+    .byte 0xfc,0x63,0x3f,0xcf,0x75,0xe4
+    j stock_bt_hci_resume
 .section .indicator_hook,"ax"
     j indicator_filter
 .section .noise_hook,"ax"

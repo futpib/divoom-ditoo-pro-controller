@@ -4,6 +4,12 @@ Run these commands from the repository root. Inspection, decoding, sequence
 validation, and manifest checks are offline. Generated captures belong in
 ignored `firmware/runs/`; the tools themselves live in tracked source files.
 
+## Observe Bluetooth
+
+Firmware 306024 adds `--transport usb bluetooth trace --seconds 120`. It records
+controller, stack and HID events without replacing the running Lua app. See
+[Bluetooth diagnostics](bluetooth-trace.md) for limits and capture instructions.
+
 ## Inspect firmware
 
 `scripts/fw-inspect.py` replaces the scratch `target/lua-app/inspect.py`.

@@ -32,3 +32,8 @@ hid_output = output.with_name('test-bluetooth-hid')
 subprocess.run(['cc','-m32','-O1','-g','-Wall','-Wextra','-Werror','-fsanitize=address,undefined',
     str(ROOT/'native/lua-app/test-bluetooth-hid.c'),'-o',str(hid_output)],check=True)
 subprocess.run([str(hid_output)],check=True,timeout=30,cwd=ROOT)
+
+trace_output = output.with_name('test-bluetooth-trace')
+subprocess.run(['cc','-m32','-O1','-g','-Wall','-Wextra','-Werror','-fsanitize=address,undefined',
+    str(ROOT/'native/lua-app/test-bluetooth-trace.c'),'-o',str(trace_output)],check=True)
+subprocess.run([str(trace_output)],check=True,timeout=30,cwd=ROOT)

@@ -23,6 +23,7 @@ pub const KEYBOARD_VERSION: u32 = 306020;
 pub const KEYBOARD_PAIRING_VERSION: u32 = 306021;
 pub const STANDALONE_VERSION: u32 = 306022;
 pub const MEMORY_VERSION: u32 = 306023;
+pub const BLUETOOTH_TRACE_VERSION: u32 = 306024;
 pub const APP_SOURCE_LIMIT: usize = 8192;
 
 #[derive(Debug, Serialize)]
@@ -214,10 +215,10 @@ pub(crate) async fn execute(
       | STORAGE_VERSION
       | DEVICE_VERSION
       | BLUETOOTH_VERSION
-      | MUTE_VERSION | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION | MEMORY_VERSION
+      | MUTE_VERSION | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION | MEMORY_VERSION | BLUETOOTH_TRACE_VERSION
   ) {
     return Err(
-      format!("Lua requires firmware {VERSION}, {APP_VERSION}, {IO_VERSION}, {STORAGE_VERSION}, {DEVICE_VERSION}, {BLUETOOTH_VERSION}, {MUTE_VERSION}, {USB_VERSION}, {KEYBOARD_VERSION}, {KEYBOARD_PAIRING_VERSION}, {STANDALONE_VERSION} or {MEMORY_VERSION}; no program sent")
+      format!("Lua requires firmware {VERSION}, {APP_VERSION}, {IO_VERSION}, {STORAGE_VERSION}, {DEVICE_VERSION}, {BLUETOOTH_VERSION}, {MUTE_VERSION}, {USB_VERSION}, {KEYBOARD_VERSION}, {KEYBOARD_PAIRING_VERSION}, {STANDALONE_VERSION} or {MEMORY_VERSION}, {BLUETOOTH_TRACE_VERSION}; no program sent")
         .into(),
     );
   }
@@ -236,7 +237,7 @@ pub(crate) async fn execute(
     };
   }
   if matches!(action, Action::Install(_) | Action::Uninstall) && installed < STANDALONE_VERSION {
-    return Err(format!("Saved apps require firmware {STANDALONE_VERSION}; no program sent").into());
+    return Err(format!("Saved apps require firmware {STANDALONE_VERSION} or later; no program sent").into());
   }
   match action {
     Action::Run(source) | Action::Start(source) | Action::Install(source) => {

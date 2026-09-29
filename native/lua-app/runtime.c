@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "bluetooth-trace.h"
 
 #define SOURCE_LIMIT 8192
 #define SOURCE_CHUNK 512
@@ -740,6 +741,7 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         stock_set_version(data+2); return;
     }
     unsigned op = data[6], error = 0;
+    if (op == 13) { runtime_bt_trace_read(context,data,length); return; }
     if (op == 10 || op == 12) { runtime_storage_diagnostic(context,data,length); return; }
     unsigned busy = app.state == RUNNING || app.state == ACTIVE || app.state == PAUSED || app.state==SAVING;
     if (op == 1 || op == 3) {

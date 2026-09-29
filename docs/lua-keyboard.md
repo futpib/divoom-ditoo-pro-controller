@@ -1,5 +1,7 @@
 # Standalone TV keyboard remote
 
+For pairing failures, firmware 306024 adds [device-side Bluetooth tracing](bluetooth-trace.md) over USB without stopping this app.
+
 Firmware **306022** runs the remote directly on the Ditoo. After one installation,
 setup, pairing, reconnection and ordinary use need only the Ditoo and TV.
 Bluetooth HID sends standard Play/Pause, Mute and Space reports. AVRCP and the

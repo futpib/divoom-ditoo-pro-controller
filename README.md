@@ -306,7 +306,7 @@ performance and recovery](docs/usb.md).
 and prints metadata for the selected transport without connecting. Bluetooth
 flashing retains the Android protocol and version checks: stock rejects an
 equal-version announcement, even with `--reflash`. `--restore-stock` allows
-supported experimental versions 306008–306023 to return to pinned stock 306007.
+supported experimental versions 306008–306024 to return to pinned stock 306007.
 The Bluetooth 306007 → modified 306008 → stock 306007 round trip is verified by
 completion events and live version reads. See [Bluetooth protocol and
 evidence](docs/firmware-update.md).
@@ -330,7 +330,8 @@ documentation for subsequent flashing experiments.
 
 ### On-device Lua
 
-Firmware 306023 [reduces Lua memory overhead](docs/lua-memory.md) and runs
+Firmware 306024 adds [Bluetooth event diagnostics](docs/bluetooth-trace.md) over
+USB, independently of the Lua app. Firmware 306023 [reduces Lua memory overhead](docs/lua-memory.md) and runs
 resident Lua apps with drawing, physical keys, keyboard
 RGB lighting, timers and messages. It adds [battery/charging status and indicator
 control, native alarms and power schedules, playback, voice memos and microphone
