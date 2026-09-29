@@ -5,7 +5,7 @@ For pairing failures, firmware 306024 adds [device-side Bluetooth tracing](bluet
 Firmware **306025** runs the remote directly on the Ditoo with its speaker
 profiles disabled. After one installation,
 setup, pairing, reconnection and ordinary use need only the Ditoo and TV.
-Bluetooth HID sends standard Play/Pause, Mute and Space reports. AVRCP and the
+Bluetooth HID sends Play/Pause, Mute, Volume Up/Down, Space and Left/Right reports. AVRCP and the
 older `tv-remote.lua` remain available separately.
 
 ```sh
@@ -17,9 +17,13 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
 ## On the Ditoo and TV
 
 1. Power on the Ditoo. It starts the saved remote automatically.
-2. Follow the four screen prompts: **PLAY**, **MUTE**, **SPC**, **MENU**.
-   Press a different keyboard key for each role. These setup presses are silent;
-   choose whichever layout feels natural. The assignments are saved.
+2. Follow the eight screen prompts: **PLAY**, **MUTE**, **SPC**, **MENU**,
+   **VOL+**, **VOL−**, **LEFT**, **RGHT**. Press a different key for each role.
+   For the [stock control conventions](stock-ux.md), use the lever for Play,
+   lighting key for Mute, source button for Space, M for Menu, and the printed
+   +/− and arrow keys for the remaining four roles. Setup presses are silent.
+   The existing four-button configuration is preserved on upgrade: only the
+   four new keys need binding. Progress and completed bindings are saved.
 3. On the TV, forget the old **DitooPro-Audio** accessory if it exists, then open
    **Pair accessory**. This removes the cached audio-only profile and stale bond.
 4. On the Ditoo, press your Play key and confirm pairing with Play again.
@@ -27,10 +31,12 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
    Choose **DitooPro-Audio** on the TV and accept the request. No MAC address is
    needed. A blue bar shows the two-minute pairing window.
 5. **TV / READY** with a green dot means the keyboard connection is established.
-   Play, Mute and Space now send their corresponding keys. A sent report does
-   not prove that every TV app handles it. SmartTube Play/Pause was confirmed
-   by the owner on the test TV with firmware 306024; Mute and Space still need
-   TV-specific verification.
+   The controls now send their corresponding keys. Left/Right are ordinary
+   keyboard arrows (HID usages 80/79), so the TV app decides whether they seek
+   or navigate. Volume uses Consumer Volume Increment/Decrement (233/234),
+   not the Ditoo speaker volume. A sent report does not prove that every TV app
+   handles it. SmartTube Play/Pause is owner-confirmed; see the verification
+   notes below for coverage of the other buttons.
 
 The top line shows the current step; the lower line scrolls its instructions.
 The remote remembers both the key assignments and the connected TV. Later boots
@@ -44,16 +50,30 @@ Pair deliberately resets the selected bond after confirmation.
 
 ## Menu and recovery
 
-Press **Menu** to open the menu. Menu (or Space) advances, Play selects, and
-Mute goes back. Items are:
+Press **M** to open or close the menu. **←/→** browse in either direction with
+wraparound, and the **lever** selects. Mute also backs out. These are the roles
+learned during setup; custom bindings retain the same behavior. Volume and
+Space do nothing in menus, and menu/confirmation presses never send TV reports.
+Pairing reset requires a separate lever confirmation; M or Mute cancels it.
+Items are:
 
 | # | Screen | Action |
 | --- | --- | --- |
 | 1 | LINK | Connect to the saved TV, or start pairing if none is saved. |
 | 2 | PAIR | Confirm, then open a pairing window for the first incoming keyboard host. Forget the old accessory on the TV first. |
-| 3 | KEYS | Choose the four button assignments again. |
+| 3 | KEYS | Choose the eight button assignments again. |
 | 4 | OFF | Disconnect the keyboard and stop listening; the Ditoo stays powered on. |
 | 5 | BACK | Return to the remote. |
+
+Outside menus, the lever toggles playback, +/− adjusts TV volume, and ←/→ seeks
+or navigates in the TV app. Mute and Space remain direct shortcuts. Each short
+press sends one automatically released report; long-down/repeat/release events
+do not repeat actions. The five-second recovery hold is unchanged.
+Brief action symbols (`>II`, `X`, `_`, `+`, `-`, `<`, `>`) identify the requested
+action, with a scrolling label and **SENT**.
+They indicate a submitted key, not a measured TV playback/volume state.
+The ready screen reminds you that M opens the menu; setup, pairing, saving and
+connection states show their own instructions and progress bars.
 
 The app selects keyboard-only mode automatically, including when reusing an
 existing connection. This closes native audio connections and prevents new ones.
@@ -67,14 +87,18 @@ starts the saved remote again. `lua uninstall` removes autostart; `lua start`
 is only temporary and does not replace the saved app. See [storage and boot
 recovery](lua-storage.md).
 
-The developer messages `toggle`/`play_pause`, `mute`, `space`, `bind`, `menu`,
+The developer messages `toggle`/`play_pause`, `mute`, `space`, `volume_up`,
+`volume_down`, `left`, `right`, `bind`, `menu`,
 `pair`, `connect`, `listen`, `disconnect`, `status`, and
 `target XX:XX:XX:XX:XX:XX` remain available.
 `status` reports HID state and peer; `target` saves a peer without connecting.
 `connect` initiates a connection to the saved TV; `listen` waits for that TV to
 connect. These reuse its bond. Control commands also work with
 `--transport ble --device DEVICE_MAC`; the TV remains the classic HID peer.
-Ordinary use does not require these messages.
+`menu` opens/closes the local menu. Ordinary use does not require these messages.
+Settings use `TV3|peer|play,mute,space,menu,volume_up,volume_down,left,right`.
+Both TV2 and TV3 are accepted on load; duplicates, out-of-range IDs and malformed
+lists restart binding without discarding a valid saved TV address.
 
 There is one resident Lua app. Replacing it preserves the Bluetooth profile
 and connection; native code releases any outstanding key independently of Lua.
@@ -273,6 +297,14 @@ after installation and reconnection.
 The TV did not automatically reconnect within 30 seconds of the forced
 disconnect; listening allows incoming connections but does not initiate them.
 
+The [expanded controls evidence](../firmware/tv-controls-evidence/verification.json)
+records native sanitizer checks of all seven report usages, silent eight-key
+setup, local menu navigation and confirmation, TV2 migration, TV3 reload, and
+the reconnect/OFF regressions. The 7,901-byte app was saved over BLE on 306025
+and resumed setup at VOL+, preserving the original four roles. Physical binding
+of the four added keys and their effects in SmartTube still need owner
+confirmation; the updated Linux input harness was not run against the laptop.
+
 The profile follows the [Bluetooth HID 1.1.1 specification](https://www.bluetooth.com/specifications/specs/hid-1-1-1/).
 The related [vendor SDK](https://github.com/leadercxn/bp1048_sdk_v0.1.12/tree/8105bd864b04995d81c9f9ae77cb158259f39015/MVsB1_Base_SDK/middleware/bluetooth)
 contains HID setup code omitted from the Ditoo link. This implementation supplies
@@ -280,11 +312,15 @@ that profile in C, using function and structure layouts checked against the
 pinned stock binary; it does not link SDK binary objects.
 
 The standalone test additionally drives the actual app's key callbacks through
-a temporary message wrapper, learns four buttons, uses the on-screen menu to
+a temporary message wrapper, learns eight buttons, uses the on-screen menu to
 pair a fresh Linux host, checks real input press/release events, and disconnects
 and reconnects. This replaces shared app settings and forgets only the laptop
 bond. It requires an active scoped pairing agent and permission to grab the
 Ditoo event node. Physical ADC routing is tested by the native sanitizer suite.
+The current harness includes Volume Up/Down and Left/Right as well as the
+original Play/Pause, Mute and Space; older committed Linux evidence covers the
+original three actions. The TV can be tested directly using BLE control without
+pairing the laptop as an input host.
 
 ```sh
 sudo python3 scripts/check-standalone-remote.py --device DEVICE_MAC

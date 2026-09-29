@@ -1,0 +1,78 @@
+{
+  "firmware": 306025,
+  "firmware_changed": false,
+  "control_transport": "ble",
+  "source": {
+    "path": "examples/lua/tv-keyboard.lua",
+    "bytes": 7901,
+    "sha256": "d96660627b86f8aa8842d5c50719adf3f053826f6ac001f9278e54d580173537"
+  },
+  "reports": {
+    "play_pause": {
+      "kind": "consumer",
+      "usage": 205
+    },
+    "mute": {
+      "kind": "consumer",
+      "usage": 226
+    },
+    "space": {
+      "kind": "keyboard",
+      "usage": 44
+    },
+    "volume_up": {
+      "kind": "consumer",
+      "usage": 233
+    },
+    "volume_down": {
+      "kind": "consumer",
+      "usage": 234
+    },
+    "left": {
+      "kind": "keyboard",
+      "usage": 80
+    },
+    "right": {
+      "kind": "keyboard",
+      "usage": 79
+    }
+  },
+  "host_validation": {
+    "native_32bit_asan_ubsan": true,
+    "eight_silent_bindings": true,
+    "all_seven_report_dispatches": true,
+    "release_and_repeat_events_do_not_send": true,
+    "menu_and_confirmation_do_not_send": true,
+    "menu_toggle_bidirectional_wrap_lever_select_and_cancel": true,
+    "tv2_migration_preserves_four_bindings_and_peer": true,
+    "tv3_saved_settings_reload": true,
+    "reconnect_and_explicit_off_regressions": true,
+    "lua_format_and_lint": true,
+    "bundle_headroom_test": true,
+    "linux_e2e_harness_syntax_checked": true,
+    "linux_e2e_wrapper_bytes": 8189,
+    "linux_input_e2e_run_for_new_actions": false,
+    "sustained_memory_bytes": 46488
+  },
+  "installation": {
+    "startup_app_saved_with_readback": true,
+    "generation": 8,
+    "runtime_state": "active",
+    "screen": "VOL+: PRESS KEY FOR VOL+",
+    "peak_memory_bytes_on_install": 41976,
+    "dropped_keys": 0,
+    "existing_pairing_retained": true,
+    "four_new_bindings": "awaiting physical setup",
+    "power_cycle_tested": false
+  },
+  "tv_validation": {
+    "volume_up_down": "pending owner confirmation",
+    "left_right_seek": "pending owner confirmation",
+    "physical_menu_navigation": "pending owner confirmation"
+  },
+  "notes": [
+    "TV2 settings upgrade to TV3 without clearing the saved TV or old bindings.",
+    "Left/Right are ordinary arrows; seeking depends on TV app focus and key handling.",
+    "No laptop classic Bluetooth pairing or firmware flash was used."
+  ]
+}

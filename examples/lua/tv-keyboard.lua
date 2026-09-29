@@ -2,27 +2,34 @@ local ui = require('../../lua/ui')
 local view = ui.screen()
 local screen, age = view.set, ui.elapsed
 -- Firmware 306025. Install once with `lua install`; setup then uses only keys.
-local target, keys, pending = nil, {}, nil
-local b, job, flow, stage, stage_at = {}, nil, nil, 0, 0
-local dirty, save_at, retries, retry_at, saving = false, 0, 0, 0, nil
-local menu, confirm, notice, notice_at = nil, false, nil, 0
-local key_at, errors, linked = 0, 0, false
+local keys = {}
+local target, pending
+local b = {}
+local job, flow
+local stage, stage_at = 0, 0
+local save_at, retries, retry_at = 0, 0, 0
+local dirty, saving
+local shown = 0
+local menu, confirm, notice
+local key_at, errors, linked = 0, 0
 local online = true
-local choices = { 'CONNECT', 'PAIR', 'KEYS', 'OFF', 'BACK' }
-local labels = { 'PLAY', 'MUTE', 'SPACE', 'MENU' }
-local function now()
-  return time.millis()
-end
+local choices = { 'LINK', 'PAIR', 'KEYS', 'OFF', 'BACK' }
+local labels = { 'PLAY', 'MUTE', 'SPC', 'MENU', 'VOL+', 'VOL-', 'LEFT', 'RGHT' }
+local actions =
+  { 'play_pause', 'mute', 'space', false, 'volume_up', 'volume_down', 'left', 'right' }
+local icons = { '>II', 'X', '_', 'M', '+', '-', '<', '>' }
+local taps = { space = 44, left = 80, right = 79 }
+local now = time.millis
 local function changed()
   dirty = true
   save_at = now()
 end
-local function settings()
-  return 'TV2|' .. (target or '-') .. '|' .. table.concat(keys, ',')
+local function config()
+  return 'TV3|' .. (target or '-') .. '|' .. table.concat(keys, ',')
 end
-local function inform(s)
+local function hint(s)
   notice = s
-  notice_at = now()
+  shown = now()
 end
 local function queue(name, fn, ...)
   local t, err = fn(...)
@@ -31,13 +38,13 @@ local function queue(name, fn, ...)
     return true
   end
   if err ~= 'busy' then
-    inform('WAIT THEN RETRY')
+    hint('WAIT THEN RETRY')
   end
   return false
 end
 local function begin(kind)
   if job then
-    inform('PLEASE WAIT')
+    hint('PLEASE WAIT')
     return
   end
   menu = nil
@@ -49,28 +56,21 @@ local function begin(kind)
   stage = 1
   retries = 0
 end
-local function press(action)
+local function press(role)
   keyboard.status(b)
   if not b.connected then
-    inform('OFFLINE TAP MENU')
+    hint('OFFLINE TAP MENU')
     return
   end
-  if age(key_at) < 300 then
-    return
-  end
-  if job or b.busy then
-    pending = action
+  if job or b.busy or age(key_at) < 200 then
+    pending = role
     return
   end
   key_at = now()
-  if action == 'space' then
-    queue('key', keyboard.tap, 44)
-  else
-    queue('key', keyboard.media, action)
+  local action = actions[role]
+  if queue('key', taps[action] and keyboard.tap or keyboard.media, taps[action] or action) then
+    hint(role)
   end
-  inform(
-    action == 'space' and 'SPACE SENT' or action == 'mute' and 'MUTE SENT' or 'PLAY PAUSE SENT'
-  )
 end
 local function select()
   local s = choices[menu]
@@ -87,17 +87,6 @@ local function select()
     begin(s == 'OFF' and 'off' or 'connect')
   end
 end
-local function paint()
-  local value, total
-  if b.pairing then
-    value, total = b.pair_remaining_ms, 120000
-  elseif #keys < 4 then
-    value, total = #keys + 1, 5
-  elseif menu then
-    value, total = menu, 5
-  end
-  view.draw(b.connected, value, total)
-end
 local function connect()
   if not b.keyboard_only and not job and (b.enabled or not flow or stage > 1) then
     queue('mode', keyboard.mode, 'keyboard')
@@ -110,22 +99,17 @@ local function connect()
       else
         queue('step', audio.source, 'bluetooth')
       end
-    elseif stage == 2 then
-      if b.state == 0 then
-        stage = 3
-      elseif flow == 'connect' and b.state == 4 and b.peer == target then
-        stage = 3
-      else
-        queue('step', keyboard.disconnect)
-      end
-    elseif stage == 3 then
-      if b.state == 0 or (flow == 'connect' and b.state == 4) then
+    elseif stage < 4 then
+      if b.state == 0 or (flow == 'connect' and b.state == 4 and b.peer == target) then
         if flow == 'off' then
           flow = nil
-          inform('OFFLINE TAP MENU')
+          hint('OFFLINE TAP MENU')
         else
           stage = 4
+          stage_at = now()
         end
+      elseif stage == 2 then
+        queue('step', keyboard.disconnect)
       end
     elseif stage == 4 and age(stage_at) > 2000 then
       if flow == 'pair' and target then
@@ -180,7 +164,7 @@ return {
     lights.present()
     local s = storage.get()
     if s then
-      local peer, list = s:match('^TV2|([^|]+)|(.*)$')
+      local peer, list = s:match('^TV[23]|([^|]+)|(.*)$')
       if peer then
         if peer ~= '-' and peer:match('^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$') then
           target = peer
@@ -194,7 +178,7 @@ return {
           used[k] = true
           keys[#keys + 1] = k
         end
-        if not valid or #keys > 4 or table.concat(keys, ',') ~= list then
+        if not valid or #keys > #labels or table.concat(keys, ',') ~= list then
           keys = {}
         end
       end
@@ -212,10 +196,10 @@ return {
     if event ~= 1 then
       return
     end
-    if #keys < 4 then
+    if #keys < #labels then
       for _, v in ipairs(keys) do
         if v == k then
-          inform('PICK A DIFFERENT KEY')
+          hint('PICK A DIFFERENT KEY')
           return
         end
       end
@@ -231,53 +215,58 @@ return {
       end
     end
     if not role then
-      inform('USE YOUR MENU KEY')
+      hint('USE YOUR MENU KEY')
       return
     end
     if confirm then
       if role == 1 then
         begin('pair')
-      elseif role == 2 or role == 4 then
+      elseif role == 4 or role == 2 then
         confirm = false
       end
+    elseif role == 4 then
+      menu = not menu and 1 or nil
+      notice = nil
     elseif menu then
-      if role == 4 or role == 3 then
-        menu = menu % #choices + 1
+      if role == 7 or role == 8 then
+        menu = (menu - 1 + (role == 7 and -1 or 1)) % #choices + 1
       elseif role == 1 then
         select()
       elseif role == 2 then
         menu = nil
       end
-    elseif role == 4 then
-      menu = 1
-      notice = nil
     elseif not target and not b.connected then
       confirm = true
     else
-      press(role == 1 and 'play_pause' or role == 2 and 'mute' or 'space')
+      press(role)
     end
   end,
   message = function(s)
-    if s == 'toggle' or s == 'play_pause' then
-      press('play_pause')
-    elseif s == 'mute' or s == 'space' then
-      press(s)
-    elseif s == 'bind' then
+    if s == 'toggle' then
+      s = 'play_pause'
+    end
+    if s == 'bind' then
       keys = {}
       changed()
-    elseif s == 'menu' then
-      menu = 1
     elseif s == 'pair' or s == 'connect' or s == 'listen' then
       begin(s)
     elseif s == 'disconnect' then
       begin('off')
     elseif s == 'status' then
       app.log(b.state .. ' ' .. (b.peer or '-'))
+    elseif s == 'menu' then
+      menu = not menu and 1 or nil
     else
       local peer = s:match('^target (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x)$')
       if peer then
         target = peer:upper()
         changed()
+      else
+        for i, name in ipairs(actions) do
+          if s == name then
+            press(i)
+          end
+        end
       end
     end
   end,
@@ -290,9 +279,9 @@ return {
         job = nil
         if not ok then
           flow = nil
-          inform(kind == 'save' and 'SAVE FAILED RETRY' or 'DISCONNECT OTHER AUDIO')
+          hint(kind == 'save' and 'SAVE FAILED RETRY' or 'DISCONNECT OTHER AUDIO')
         elseif kind == 'save' then
-          dirty = settings() ~= saving
+          dirty = config() ~= saving
         elseif kind == 'step' then
           stage = stage + 1
           stage_at = now()
@@ -309,44 +298,37 @@ return {
       retry_at = now()
     end
     linked = b.connected
-    if pending and not job and not b.busy then
+    if pending and not job and not b.busy and age(key_at) >= 200 then
       local a = pending
       pending = nil
       press(a)
     end
     connect()
     if dirty and not flow and not job and age(save_at) > 1200 then
-      saving = settings()
+      saving = config()
       queue('save', storage.set, saving)
     end
     if b.errors ~= errors then
       errors = b.errors
-      inform('LINK FAILED TAP MENU')
+      hint('LINK FAILED TAP MENU')
     end
-    if notice and age(notice_at) > 3500 then
+    if notice and age(shown) > 3500 then
       notice = nil
     end
     if confirm then
-      screen('PAIR', 'RESET PAIRING PLAY YES MUTE NO', 0xffa030)
+      screen('PAIR', 'RESET PAIRING LEVER YES M BACK', 0xffa030)
     elseif menu then
-      local t = choices[menu]
-      screen(
-        t == 'CONNECT' and 'LINK' or t == 'BACK' and 'BACK' or t,
-        'MENU NEXT PLAY OK MUTE BACK'
-      )
+      screen(choices[menu], 'ARROWS BROWSE LEVER OK M BACK')
     elseif notice then
-      screen('INFO', notice)
-    elseif #keys < 4 then
-      screen(
-        labels[#keys + 1] == 'SPACE' and 'SPC' or labels[#keys + 1],
-        'PRESS KEY FOR ' .. labels[#keys + 1]
-      )
+      screen(icons[notice] or 'INFO', labels[notice] and labels[notice] .. ' SENT' or notice)
+    elseif #keys < #labels then
+      screen(labels[#keys + 1], 'PRESS KEY FOR ' .. labels[#keys + 1])
     elseif flow then
       screen('WAIT', 'SETTING UP')
     elseif dirty then
       screen('SAVE', 'KEEP POWER ON')
     elseif b.connected then
-      screen('TV', 'READY', 0x20ff40)
+      screen('TV', 'READY  M MENU', 0x20ff40)
     elseif b.pairing then
       screen(
         'PAIR',
@@ -360,6 +342,14 @@ return {
     else
       screen('WAIT', 'CONNECT ON TV OR TAP MENU')
     end
-    paint()
+    local value, total
+    if b.pairing then
+      value, total = b.pair_remaining_ms, 120000
+    elseif #keys < #labels then
+      value, total = #keys + 1, #labels + 1
+    elseif menu then
+      value, total = menu, 5
+    end
+    view.draw(b.connected, value, total)
   end,
 }
