@@ -293,9 +293,36 @@ static void test_tv_keyboard(void) {
     fake_hid_status.state=4;bt_queued.op=0;
     for(unsigned i=0;i<1000;++i) { tick();runtime_native_service(); }
     assert(!bt_queued.op); /* Listening is passive, without outgoing attempts. */
+    /* An offline action starts a bonded connection and sends once it opens. */
+    clock_ms+=10001;
+    runtime_adc_result(1U<<16 | 4);tick();runtime_adc_result(2U<<16 | 4);
+    for(unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
+    memcpy(reconnect,bt_payload,sizeof reconnect);
+    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_CONNECT);
+    assert(!memcmp(bt_payload+16,fake_hid_status.peer,6));
+    fake_hid_status.state=1;bt_queued.op=0;
+    for(unsigned i=0;i<50;++i) { tick();runtime_native_service(); }
+    assert(!bt_queued.op);
+    fake_hid_status.state=2;
+    for(unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
+    memcpy(reconnect,bt_payload,sizeof reconnect);
+    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_CONSUMER && reconnect[3]==0xcd);
+    bt_queued.op=0;
+    for(unsigned i=0;i<100;++i) { tick();runtime_native_service(); }
+    assert(!bt_queued.op); /* The deferred action is not repeated. */
+    /* A late connection must not replay an old action. */
+    fake_hid_status.state=0;
+    for(unsigned i=0;i<80;++i) { tick();runtime_native_service(); }
+    fake_hid_status.state=4;bt_queued.op=0;clock_ms+=10001;
+    runtime_adc_result(1U<<16 | 7);tick();runtime_adc_result(2U<<16 | 7);
+    for(unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
+    memcpy(reconnect,bt_payload,sizeof reconnect);
+    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_CONNECT);
+    fake_hid_status.state=1;bt_queued.op=0;
+    for(unsigned i=0;i<150;++i) { tick();runtime_native_service(); }
     fake_hid_status.state=2;
     for(unsigned i=0;i<80;++i) { tick();runtime_native_service(); }
-    assert(app.state==ACTIVE && strstr(app.result,"TV: READY"));
+    assert(app.state==ACTIVE && strstr(app.result,"TV: READY") && !bt_queued.op);
     /* Explicit OFF must not be undone by automatic recovery. */
     memcpy(app.message,"disconnect",10);app.message_size=10;bt_queued.op=0;
     for(unsigned i=0;i<30;++i) { tick();runtime_native_service(); }
@@ -304,6 +331,9 @@ static void test_tv_keyboard(void) {
     fake_hid_status.state=0;bt_queued.op=0;
     for(unsigned i=0;i<1000;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
     assert(!bt_queued.op);
+    runtime_adc_result(1U<<16 | 4);tick();runtime_adc_result(2U<<16 | 4);
+    for(unsigned i=0;i<80;++i) { tick();runtime_native_service(); }
+    assert(!bt_queued.op); /* Ordinary keys respect explicit OFF. */
     /* A developer/listen request re-enables the remote without clearing bonds. */
     memcpy(app.message,"listen",6);app.message_size=6;
     for(unsigned i=0;i<160;++i) { tick();runtime_native_service(); }
@@ -340,7 +370,7 @@ static void test_tv_keyboard(void) {
     puts("TV2/TV3 migrate only the peer, TV4 reloads, and fresh startup has no binding prompts");
     stock_config_context=NULL;saved.settings_size=0;track_heap=0;free_heap=100000;
     puts("TV keyboard uses stock ADC IDs, sends seven reports, and keeps M/arrows/lever navigation local");
-    puts("TV keyboard resumes listening after link loss, stays offline after OFF and can listen again");
+    puts("TV keyboard resumes listening, reconnects on input with bounded deferred action, and respects OFF");
 }
 
 static void test_keyboard_lifecycle(void) {

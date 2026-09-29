@@ -3,7 +3,7 @@ local view = ui.screen()
 local screen, age = view.set, ui.elapsed
 -- Stock ADC IDs: lever, source, sun, M, +, -, left, right.
 local keys = { [4] = 1, [10] = 2, [7] = 3, [0] = 4, [1] = 5, [9] = 6, [2] = 7, [3] = 8 }
-local target, pending
+local target, pending, pending_at
 local b = {}
 local job, flow
 local stage, stage_at = 0, 0
@@ -59,11 +59,24 @@ end
 local function press(role)
   keyboard.status(b)
   if not b.connected then
-    hint('OFFLINE')
+    if online and target then
+      if not flow and not job and (b.state == 0 or b.state == 4) then
+        if queue('done', keyboard.connect, target) then
+          retry_at, retries = now(), 1
+          pending, pending_at = role, now()
+          hint('CONNECTING')
+        end
+      elseif b.state == 1 or flow == 'connect' or flow == 'listen' then
+        pending, pending_at = role, now()
+        hint('CONNECTING')
+      end
+    else
+      hint('OFFLINE')
+    end
     return
   end
   if job or b.busy or age(key_at) < 200 then
-    pending = role
+    pending, pending_at = role, now()
     return
   end
   key_at = now()
@@ -265,7 +278,10 @@ return {
       retry_at = now()
     end
     linked = b.connected
-    if pending and not job and not b.busy and age(key_at) >= 200 then
+    if pending and age(pending_at) > 5000 then
+      pending = nil
+    end
+    if pending and b.connected and not job and not b.busy and age(key_at) >= 200 then
       local a = pending
       pending = nil
       press(a)

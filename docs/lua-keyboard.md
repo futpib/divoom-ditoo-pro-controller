@@ -50,7 +50,12 @@ three times, then listen for it. If necessary use LINK in the menu or the
 TV's Connect action. After a connected TV disconnects, the remote automatically
 resumes listening for that saved TV. This also works when the Ditoo initiated
 the previous connection. Listening does not consume outgoing connection
-attempts. OFF stays offline until LINK or PAIR is selected. Reconnection reuses
+attempts. A remote-action key pressed while disconnected also initiates a
+connection to the saved TV. The latest action is retained for at most five
+seconds and sent once if the connection opens in time; stale actions expire.
+This reuses the bond and obeys the native connection-attempt limits. Opening
+the local menu cancels a pending action. OFF stays offline until LINK or PAIR
+is selected; ordinary keys do not override it. Reconnection reuses
 the saved bond; PAIR deliberately resets the selected bond after confirmation.
 
 ## Menu and recovery
@@ -106,6 +111,27 @@ and connection; native code releases any outstanding key independently of Lua.
 Connection attempts are limited to 32 per boot and one every 10 seconds.
 Listening and pairing windows do not consume outgoing attempts. Pairing
 approval on the TV is still performed on the TV itself.
+
+## Idle links and reconnecting
+
+HID does not require periodic fake key reports. The Bluetooth HID 1.1.1
+specification deprecates idle-rate commands; input is normally reported when it
+changes. Its `HIDReconnectInitiate` behavior permits reconnecting when the owner
+has new input. This app now does that while retaining passive listening between
+presses. See [HID 1.1.1, sections 3.1.2.7–8 and 5.3.4.6](https://www.bluetooth.org/docman/handlers/downloaddoc.ashx?doc_id=309012).
+
+Read [Bluetooth traces](bluetooth-trace.md) before restarting the device when a
+link drops. A `local host terminated` HCI event establishes which endpoint issued
+the final disconnect, but does not identify the caller or prove an idle timeout.
+Pairing again is not needed for an ordinary dropped connection. Explicit OFF
+remains an exception: use LINK to re-enable it.
+
+[Recovery evidence](../firmware/tv-key-reconnect-evidence/verification.json)
+records a forced disconnect from the real TV followed by reconnection from an
+injected control-key callback, with one submitted and released report and no
+new pairing. The previous app fails the corresponding native regression.
+The original local-host disconnect was not reproduced during the observation;
+its caller is still unknown.
 
 ## Lua API
 

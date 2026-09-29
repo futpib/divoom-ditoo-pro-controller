@@ -1,0 +1,78 @@
+{
+  "firmware": 306025,
+  "firmware_changed": false,
+  "control_transport": "ble",
+  "source": {
+    "path": "examples/lua/tv-keyboard.lua",
+    "bytes": 7629,
+    "sha256": "ad41563e4bc2b50283e8afc0822e54c8e5465e7c3aeada124c7e4c4e421c62ee"
+  },
+  "previous_disconnect": {
+    "link_open_device_ms": 16089836,
+    "disconnect_device_ms": 16745343,
+    "duration_ms": 655507,
+    "hci_reason": 22,
+    "hci_reason_name": "local host terminated",
+    "preceding_hid_error_observed": false,
+    "caller_identified": false
+  },
+  "observation": {
+    "same_tv_link_duration_ms": 748261,
+    "generated_keepalive_reports": 0,
+    "injected_keys_during_observation": 0,
+    "ble_watcher_present_for_most_of_observation": true,
+    "drop_reproduced": false,
+    "ended_by_forced_test_disconnect": true
+  },
+  "host_validation": {
+    "native_32bit_asan_ubsan": true,
+    "previous_app_fails_new_reconnect_regression": true,
+    "offline_key_initiates_saved_peer_connection": true,
+    "one_deferred_action_sent_on_connection": true,
+    "action_expires_after_five_seconds": true,
+    "explicit_off_ignores_control_keys": true,
+    "existing_controls_menu_storage_and_listen_regressions": true,
+    "lua_lint_and_format": true,
+    "bundle_size_guard": true,
+    "sustained_peak_memory_bytes": 43360
+  },
+  "live_recovery": {
+    "forced_native_hid_disconnect": true,
+    "returned_to_listening": true,
+    "injected_physical_adc_id": 1,
+    "reconnected_to_saved_tv": true,
+    "pairing_reset": false,
+    "sent_and_released_before": [
+      58,
+      58
+    ],
+    "sent_and_released_after": [
+      59,
+      59
+    ],
+    "native_errors": 0,
+    "keyboard_only": true,
+    "audio_channels": 0,
+    "inverse_volume_report_sent_after_test": true,
+    "ble_diagnostic_session_interrupted_during_reconnect": true,
+    "outcome_confirmed_on_fresh_ble_connection": true,
+    "last_disconnected_probe_device_ms": 19382216,
+    "both_hid_channels_reopened_device_ms": 19383473,
+    "reopened_within_ms_of_pre_key_probe": 1257
+  },
+  "installation": {
+    "startup_app_saved_with_readback": true,
+    "generation": 14,
+    "runtime_state": "active",
+    "screen": "TV: READY",
+    "peak_memory_bytes": 40808,
+    "dropped_keys": 0,
+    "firmware_changed": false
+  },
+  "limits": [
+    "The original disconnect trigger remains unidentified; this change fixes recovery, not a proven idle-timeout cause.",
+    "The selected device trace omits outgoing commands and HID control payloads.",
+    "No TV-side logs or independent physical-button test in this run.",
+    "No power-cycle test in this revision."
+  ]
+}
