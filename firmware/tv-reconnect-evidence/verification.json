@@ -1,0 +1,62 @@
+{
+  "firmware": 306025,
+  "control_transport": "ble",
+  "firmware_changed": false,
+  "source": {
+    "path": "examples/lua/tv-keyboard.lua",
+    "bytes": 7902,
+    "sha256": "30c786ce7066391927f6f9319ae95faf7352dbce465b793fb287099f8e0374b9"
+  },
+  "before": {
+    "app_active": true,
+    "hid_state": 0,
+    "saved_tv_bond_present": true,
+    "native_hid_error": 0,
+    "incoming_tv_encryption_succeeded": true,
+    "incoming_control_channel_rejected": true,
+    "screen": "WAIT: CONNECT ON TV OR TAP MENU"
+  },
+  "recovery": {
+    "listen_ticket_accepted": true,
+    "hid_listening_state": 4,
+    "existing_tv_connect_succeeded": true,
+    "owner_confirmed_connected": true,
+    "probe_hid_state": 2,
+    "probe_native_hid_error": 0,
+    "probe_audio_channels": 0,
+    "pairing_reset": false
+  },
+  "link_loss_test": {
+    "method": "Temporary message wrapper calls keyboard.disconnect without changing the app online flag",
+    "hid_state_after_2000ms": 4,
+    "native_hid_error": 0,
+    "app_remained_active": true,
+    "tv_automatically_reconnected_within_30s": false,
+    "note": "Passive listening accepts a subsequent TV connection; it does not force a TV to initiate one."
+  },
+  "installation": {
+    "startup_app_saved_and_readback_verified": true,
+    "runtime_generation": 7,
+    "hid_state_after_install": 2,
+    "saved_settings_preserved": "TV2|0C:CD:B4:D0:0C:26|4,10,9,0",
+    "power_cycle_tested_this_run": false,
+    "hid_encrypted_after_install": true,
+    "hid_opened_psms": [
+      17,
+      19
+    ],
+    "outgoing_connection_reused_bond": true
+  },
+  "validation": {
+    "native_32bit_asan_ubsan_passed": true,
+    "original_app_fails_new_regression": true,
+    "lua_lint_and_format_passed": true,
+    "bundle_headroom_test_passed": true,
+    "standalone_test_wrapper_bytes": 8190,
+    "physical_smarttube_play_pause": "awaiting owner confirmation"
+  },
+  "limitations": [
+    "BLE dropped during some classic connection attempts; later BLE queries and persistent installation succeeded.",
+    "Incoming channel acceptance is covered by the native HID tests and by the owner-triggered live TV connection; forced disconnect recovery verified listening state on the device."
+  ]
+}

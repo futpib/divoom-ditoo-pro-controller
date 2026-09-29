@@ -6,7 +6,8 @@ local target, keys, pending = nil, {}, nil
 local b, job, flow, stage, stage_at = {}, nil, nil, 0, 0
 local dirty, save_at, retries, retry_at, saving = false, 0, 0, 0, nil
 local menu, confirm, notice, notice_at = nil, false, nil, 0
-local last_key, seen_errors, was_connected = 0, 0, false
+local key_at, errors, linked = 0, 0, false
+local online = true
 local choices = { 'CONNECT', 'PAIR', 'KEYS', 'OFF', 'BACK' }
 local labels = { 'PLAY', 'MUTE', 'SPACE', 'MENU' }
 local function now()
@@ -44,6 +45,7 @@ local function begin(kind)
   notice = nil
   pending = nil
   flow = kind
+  online = kind ~= 'off'
   stage = 1
   retries = 0
 end
@@ -53,14 +55,14 @@ local function press(action)
     inform('OFFLINE TAP MENU')
     return
   end
-  if age(last_key) < 300 then
+  if age(key_at) < 300 then
     return
   end
   if job or b.busy then
     pending = action
     return
   end
-  last_key = now()
+  key_at = now()
   if action == 'space' then
     queue('key', keyboard.tap, 44)
   else
@@ -96,7 +98,7 @@ local function paint()
   end
   view.draw(b.connected, value, total)
 end
-local function connect_step()
+local function connect()
   if not b.keyboard_only and not job and (b.enabled or not flow or stage > 1) then
     queue('mode', keyboard.mode, 'keyboard')
     return
@@ -153,20 +155,20 @@ local function connect_step()
     and not job
     and not menu
     and not confirm
-    and not b.connected
     and b.state == 0
-    and retries > 0
-    and age(retry_at) > 15000
+    and online
+    and target
+    and age(retry_at) > (retries > 0 and 15000 or 1000)
   then
-    if retries < 3 then
+    if retries > 0 and retries < 3 then
       if queue('done', keyboard.connect, target) then
         retries = retries + 1
-        retry_at = now()
       end
     else
       retries = 0
       queue('done', keyboard.listen, target)
     end
+    retry_at = now()
   end
 end
 
@@ -198,7 +200,7 @@ return {
       end
     end
     keyboard.status(b)
-    seen_errors = b.errors
+    errors = b.errors
     if b.connected then
       target = b.peer
       changed()
@@ -265,8 +267,8 @@ return {
       changed()
     elseif s == 'menu' then
       menu = 1
-    elseif s == 'pair' then
-      begin('pair')
+    elseif s == 'pair' or s == 'connect' or s == 'listen' then
+      begin(s)
     elseif s == 'disconnect' then
       begin('off')
     elseif s == 'status' then
@@ -298,26 +300,27 @@ return {
       end
     end
     if b.connected then
-      if not was_connected then
+      if not linked then
         target = b.peer
         changed()
         notice = nil
       end
       retries = 0
+      retry_at = now()
     end
-    was_connected = b.connected
+    linked = b.connected
     if pending and not job and not b.busy then
       local a = pending
       pending = nil
       press(a)
     end
-    connect_step()
+    connect()
     if dirty and not flow and not job and age(save_at) > 1200 then
       saving = settings()
       queue('save', storage.set, saving)
     end
-    if b.errors ~= seen_errors then
-      seen_errors = b.errors
+    if b.errors ~= errors then
+      errors = b.errors
       inform('LINK FAILED TAP MENU')
     end
     if notice and age(notice_at) > 3500 then

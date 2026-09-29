@@ -262,9 +262,37 @@ static void test_tv_keyboard(void) {
     for(unsigned i=0;i<3;++i) tick();tv_frame(5);
     for(unsigned i=0;i<1000;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
     printf("Standalone sustained: used %u, peak %u, reserved %u, stock heap %u\n",app.used,app.peak,app.reserved,stock_free_heap());
+    /* Close the menu, then model loss of an outgoing connection. Native HID
+       disables incoming acceptance until the app explicitly listens again. */
+    runtime_adc_result(1U<<16 | 3);tick();runtime_adc_result(2U<<16 | 3);tick();
+    fake_hid_status.state=0;bt_queued.op=0;
+    for(unsigned i=0;i<80;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
+    unsigned reconnect[4];memcpy(reconnect,bt_payload,sizeof reconnect);
+    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_LISTEN);
+    assert(!memcmp(bt_payload+16,fake_hid_status.peer,6));
+    fake_hid_status.state=4;bt_queued.op=0;
+    for(unsigned i=0;i<1000;++i) { tick();runtime_native_service(); }
+    assert(!bt_queued.op); /* Listening is passive, without outgoing attempts. */
+    fake_hid_status.state=2;
+    for(unsigned i=0;i<80;++i) { tick();runtime_native_service(); }
+    assert(app.state==ACTIVE && strstr(app.result,"TV: READY"));
+    /* Explicit OFF must not be undone by automatic recovery. */
+    memcpy(app.message,"disconnect",10);app.message_size=10;bt_queued.op=0;
+    for(unsigned i=0;i<30;++i) { tick();runtime_native_service(); }
+    memcpy(reconnect,bt_payload,sizeof reconnect);
+    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_DISCONNECT);
+    fake_hid_status.state=0;bt_queued.op=0;
+    for(unsigned i=0;i<1000;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
+    assert(!bt_queued.op);
+    /* A developer/listen request re-enables the remote without clearing bonds. */
+    memcpy(app.message,"listen",6);app.message_size=6;
+    for(unsigned i=0;i<160;++i) { tick();runtime_native_service(); }
+    memcpy(reconnect,bt_payload,sizeof reconnect);
+    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_LISTEN);
     app.cancel=1;service();runtime_native_service();assert(!allocations);fake_hid_status.state=0;
     stock_config_context=NULL;saved.settings_size=0;track_heap=0;free_heap=100000;
     puts("TV keyboard binds four silent keys, sends three actions once per press and opens its physical menu");
+    puts("TV keyboard resumes listening after link loss, stays offline after OFF and can listen again");
 }
 
 static void test_keyboard_lifecycle(void) {

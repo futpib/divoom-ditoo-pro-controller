@@ -35,7 +35,11 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
 The top line shows the current step; the lower line scrolls its instructions.
 The remote remembers both the key assignments and the connected TV. Later boots
 try the saved TV up to three times, then listen for it. If necessary use Connect
-in the menu or the TV's Connect action. Reconnection reuses the saved bond;
+in the menu or the TV's Connect action. After a connected TV disconnects, the
+remote automatically resumes listening for that saved TV. This also works when
+the Ditoo initiated the previous connection. Listening does not consume outgoing
+connection attempts. OFF stays offline until Connect or Pair is selected.
+Reconnection reuses the saved bond;
 Pair deliberately resets the selected bond after confirmation.
 
 ## Menu and recovery
@@ -64,8 +68,12 @@ is only temporary and does not replace the saved app. See [storage and boot
 recovery](lua-storage.md).
 
 The developer messages `toggle`/`play_pause`, `mute`, `space`, `bind`, `menu`,
-`pair`, `disconnect`, `status`, and `target XX:XX:XX:XX:XX:XX` remain available.
+`pair`, `connect`, `listen`, `disconnect`, `status`, and
+`target XX:XX:XX:XX:XX:XX` remain available.
 `status` reports HID state and peer; `target` saves a peer without connecting.
+`connect` initiates a connection to the saved TV; `listen` waits for that TV to
+connect. These reuse its bond. Control commands also work with
+`--transport ble --device DEVICE_MAC`; the TV remains the classic HID peer.
 Ordinary use does not require these messages.
 
 There is one resident Lua app. Replacing it preserves the Bluetooth profile
@@ -250,6 +258,18 @@ replaced. Installing the larger app while audio was streaming hit the unchanged
 50 ms startup guard. A small temporary app enabled keyboard-only mode first,
 then installation succeeded. The saved updated app started successfully on the
 subsequent restart. The guard and heap limits have not been relaxed.
+
+The [reconnection fix](../firmware/tv-reconnect-evidence/verification.json) was
+installed over BLE on 306025 without changing firmware. Previously, losing a
+Ditoo-initiated connection left native HID inactive: the TV could authenticate
+with its saved bond but its incoming HID channel was rejected. The app now
+resumes listening after link loss. The native runtime regression fails with the
+old bundle and passes with the fix, including explicit OFF and subsequent Listen.
+A live forced disconnect returned to listening, and the TV's Connect action
+reused the existing pairing. Installation saved the corrected startup app with
+native readback verification; a power cycle was not repeated in this test.
+The TV did not automatically reconnect within 30 seconds of the forced
+disconnect; listening allows incoming connections but does not initiate them.
 
 The profile follows the [Bluetooth HID 1.1.1 specification](https://www.bluetooth.com/specifications/specs/hid-1-1-1/).
 The related [vendor SDK](https://github.com/leadercxn/bp1048_sdk_v0.1.12/tree/8105bd864b04995d81c9f9ae77cb158259f39015/MVsB1_Base_SDK/middleware/bluetooth)
