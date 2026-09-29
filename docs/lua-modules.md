@@ -46,9 +46,12 @@ chunk directly and does not resolve imports.
   host tries the same compaction. Syntax errors in compacted source refer to
   generated lines, so use `lua bundle` to inspect them.
 - The **resulting text must fit 8,192 bytes**. This is the current native upload
-  buffer and saved-app record limit, not a Lua language or transport limit.
+  and saved-app record limit, not a Lua language or transport limit.
   Bundling cannot increase it. The separate Lua memory ceiling is 48 KiB;
   compiled functions, tables, and runtime allocations still consume that memory.
+  Firmware 306023 consumes source in 512-byte blocks during compilation and
+  frees each consumed block. Source does not remain resident; see
+  [memory accounting and measurements](lua-memory.md).
 
 ## Tree shaking
 

@@ -1,0 +1,177 @@
+{
+  "checked_at": "2026-09-29T13:34:23.895478+00:00",
+  "transport": "usb",
+  "firmware_version": 306023,
+  "firmware_sha256": "298c388cd450b650d665b30b3bc8a7e6c44e0ced3e20f4bc82c2bf5994f449a9",
+  "byte_identical_rebuild": true,
+  "flash": {
+    "blocks_verified": 480,
+    "erase_transfer_verify_seconds": 10.914884595,
+    "total_usb_seconds": 16.995055072,
+    "entry_recovery": "Initial entry timed out before any erase. Targeted usbreset exposed the bootloader; explicit port and --reflash completed all blocks and USB version verification."
+  },
+  "bundle_bytes": 7828,
+  "bundle_sha256": "777a29a28e9695031d26e17d7bd5959397cca7f19bb672460d12531547e757e6",
+  "probe_bytes": 8025,
+  "before": {
+    "firmware": 306022,
+    "starts_passed": 5,
+    "startup_memory_bytes": [
+      45984,
+      45984,
+      45984,
+      45984,
+      45984
+    ],
+    "sample_count": 60,
+    "instrumented_samples": {
+      "free_native_heap": {
+        "min": 27732,
+        "median": 28784.0,
+        "max": 29836
+      },
+      "lua_used": {
+        "min": 43072,
+        "median": 45484.0,
+        "max": 48064
+      },
+      "lua_reserved": {
+        "min": 47104,
+        "median": 48128.0,
+        "max": 49152
+      },
+      "lua_peak": {
+        "min": 46520,
+        "median": 48088.0,
+        "max": 48112
+      }
+    },
+    "menu_passed": true
+  },
+  "after": {
+    "firmware": 306023,
+    "starts_passed": 5,
+    "startup_memory_bytes": [
+      41280,
+      41280,
+      41280,
+      41280,
+      41280
+    ],
+    "sample_count": 60,
+    "instrumented_samples": {
+      "free_native_heap": {
+        "min": 24652,
+        "median": 28860.0,
+        "max": 30964
+      },
+      "lua_used": {
+        "min": 39208,
+        "median": 43536.0,
+        "max": 47320
+      },
+      "lua_reserved": {
+        "min": 43008,
+        "median": 45056.0,
+        "max": 49152
+      },
+      "lua_peak": {
+        "min": 41880,
+        "median": 47496.0,
+        "max": 47496
+      }
+    },
+    "menu_passed": true
+  },
+  "native_sanitizer_comparison": {
+    "baseline_commit": "a586981",
+    "workload": "Same TV bundle and key/menu setup, then 1000 ticks; baseline harness had the same sustained measurement added.",
+    "before": {
+      "startup_peak": 44552,
+      "startup_reserved": 46080,
+      "sustained_used": 47448,
+      "sustained_reserved": 49152
+    },
+    "after": {
+      "startup_peak": 39848,
+      "startup_reserved": 41984,
+      "sustained_used": 42744,
+      "sustained_reserved": 44032
+    }
+  },
+  "validation": {
+    "native_32bit_asan_ubsan_passed": true,
+    "random_allocator_operations": 5000,
+    "source_tests": [
+      "partial allocation rollback",
+      "unaligned copies",
+      "progressive reader release",
+      "tokens crossing reader blocks",
+      "syntax error cleanup",
+      "8192-byte save, no-op reinstall and simulated boot"
+    ],
+    "rust_tests_passed": 60,
+    "clippy_passed": true,
+    "device_guard_checks_passed": 43,
+    "device_recovery_version_passed": true,
+    "device_module_ui_checks": [
+      {
+        "result": "Tree shaking passed",
+        "peak_memory_bytes": 17024
+      },
+      {
+        "result": "Bundle execution passed",
+        "peak_memory_bytes": 19936
+      },
+      {
+        "result": "UI helpers passed",
+        "peak_memory_bytes": 29328
+      }
+    ]
+  },
+  "preservation": {
+    "config_bytes_compared": 327680,
+    "config_identical": true,
+    "saved_settings_identical": true,
+    "saved_app_autostart": {
+      "state": "active",
+      "peak_memory_bytes": 42048,
+      "instructions": 112,
+      "result": "WAIT: CONNECT ON TV OR TAP MENU",
+      "abi": 2,
+      "memory_bytes": 42048,
+      "frames": 72,
+      "callbacks": 217,
+      "dropped_keys": 0,
+      "held_keys": 0,
+      "generation": 1
+    }
+  },
+  "unchanged_limits": {
+    "source_bytes": 8192,
+    "lua_arena_bytes": 49152,
+    "native_allocation_reserve_bytes": 24576,
+    "work_units": 100000,
+    "elapsed_ms": 50
+  },
+  "final_status": {
+    "state": "active",
+    "peak_memory_bytes": 43032,
+    "instructions": 98,
+    "result": "WAIT: CONNECT ON TV OR TAP MENU",
+    "abi": 2,
+    "memory_bytes": 43032,
+    "frames": 1164,
+    "callbacks": 3493,
+    "dropped_keys": 0,
+    "held_keys": 0,
+    "generation": 19
+  },
+  "limitations": [
+    "Peak Lua page reservation still reached 49152 bytes on both firmware versions.",
+    "Native heap depends on Bluetooth and other native allocations; before/after reboot free heap is not a controlled savings measurement.",
+    "Hardware input was exercised through app messages; native ADC key dispatch was tested in the sanitizer harness. TV pairing was not repeated.",
+    "Autostart was checked after firmware restart, not a physical power-cycle.",
+    "No larger source or memory quota was qualified."
+  ]
+}

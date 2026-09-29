@@ -52,6 +52,9 @@ const KEYBOARD_PAIRING_SIZE: usize = 2026739;
 const STANDALONE_VERSION: u32 = 306022;
 const STANDALONE_SHA256: &str = "89fad691d2895ac81353a76d56f132c9e1ce0008c6f150fea55c2bbf9693f6b9";
 const STANDALONE_SIZE: usize = 2032883;
+const MEMORY_VERSION: u32 = 306023;
+const MEMORY_SHA256: &str = "298c388cd450b650d665b30b3bc8a7e6c44e0ced3e20f4bc82c2bf5994f449a9";
+const MEMORY_SIZE: usize = 2032883;
 const CHUNK_SIZE: usize = 256;
 const EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -94,7 +97,8 @@ impl Image {
       KEYBOARD_SHA256 => KEYBOARD_VERSION,
       KEYBOARD_PAIRING_SHA256 => KEYBOARD_PAIRING_VERSION,
       STANDALONE_SHA256 => STANDALONE_VERSION,
-      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013/306014/306015/306016/306017/306018/306019/306020/306021/306022 are supported".into()),
+      MEMORY_SHA256 => MEMORY_VERSION,
+      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013/306014/306015/306016/306017/306018/306019/306020/306021/306022/306023 are supported".into()),
     };
     let expected_size = match version {
       LUA_VERSION => LUA_SIZE,
@@ -109,6 +113,7 @@ impl Image {
       LUA_PROBE_VERSION => LUA_PROBE_SIZE,
       KEYBOARD_PAIRING_VERSION => KEYBOARD_PAIRING_SIZE,
       STANDALONE_VERSION => STANDALONE_SIZE,
+      MEMORY_VERSION => MEMORY_SIZE,
       _ => IMAGE_SIZE,
     };
     if bytes.len() != expected_size {
@@ -270,10 +275,10 @@ fn validate_target(
         | DEVICE_VERSION
         | BLUETOOTH_VERSION
         | MUTE_VERSION
-        | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION
+        | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION | MEMORY_VERSION
     ) && version == VERSION)
   {
-    return Err("--restore-stock requires a supported probe device (306008 through 306022) and pinned stock 306007".into());
+    return Err("--restore-stock requires a supported probe device (306008 through 306023) and pinned stock 306007".into());
   }
   if installed / 1000 != version / 1000 {
     return Err(format!("Hardware mismatch: device {installed}, image {version}").into());
@@ -519,6 +524,18 @@ mod tests {
   }
 
   #[test]
+  fn memory_runtime_image_is_pinned() -> Result<(), Box<dyn Error>> {
+    let image = Image::load(Path::new(concat!(
+      env!("CARGO_MANIFEST_DIR"), "/firmware/306023-lua.MVA"
+    )))?;
+    assert_eq!(image.version, MEMORY_VERSION);
+    assert_eq!(image.bytes.len(), MEMORY_SIZE);
+    assert_eq!(image.checksum, 175926281);
+    assert_eq!(image.version, crate::lua::MEMORY_VERSION);
+    Ok(())
+  }
+
+  #[test]
   fn target_validation_rejects_wrong_hardware_and_implicit_reflash() {
     assert!(validate_target(306007, PROBE_VERSION, false, false).is_ok());
     assert!(validate_target(306008, VERSION, false, true).is_ok());
@@ -536,7 +553,8 @@ mod tests {
     assert!(validate_target(306020, VERSION, false, true).is_ok());
     assert!(validate_target(306021, VERSION, false, true).is_ok());
     assert!(validate_target(306022, VERSION, false, true).is_ok());
-    assert!(validate_target(306023, VERSION, false, true).is_err());
+    assert!(validate_target(306023, VERSION, false, true).is_ok());
+    assert!(validate_target(306024, VERSION, false, true).is_err());
     assert!(validate_target(306007, VERSION, false, true).is_err());
     assert!(validate_target(306008, PROBE_VERSION, false, true).is_err());
     assert!(validate_target(306006, VERSION, false, false).is_ok());

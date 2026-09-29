@@ -1,6 +1,6 @@
 # Saved apps and settings
 
-Firmware 306022 stores one startup app (up to 8,192 source bytes) and one shared
+Firmware 306022 and 306023 store one startup app (up to 8,192 source bytes) and one shared
 settings string (up to 128 bytes). After a one-time installation, neither a USB
 connection nor a Bluetooth controller is needed to run the app.
 
@@ -53,7 +53,7 @@ been tested. Keep a private backup before experimentation:
 python3 scripts/backup-lua-config.py --output firmware/runs/config-backup
 ```
 
-The read-only 306022 diagnostic backs up all five 64-KiB sectors and checks that
+The read-only 306022/306023 diagnostic backs up all five 64-KiB sectors and checks that
 the native context remains unchanged. The backup can contain Bluetooth link
 keys; it is private and ignored by Git. Opcode 12 uses the same framing as the
 filesystem diagnostic below, with magic `DCFG`, a 20-byte context plus 12 bytes of padding, and indices
@@ -76,7 +76,7 @@ python3 scripts/backup-lua-storage.py B1:21:81:DD:B8:9B \
 ```
 
 Use a new output directory. The script first queries ordinary firmware version
-and requires a supported version from 306015 through 306022 before sending any extension command. It reads 1,024
+and requires a supported version from 306015 through 306023 before sending any extension command. It reads 1,024
 128-byte chunks, checks every response and driver status, requires identical
 filesystem context snapshots throughout, and checks firmware version again.
 `--probe-only` reads the first 1 KiB. Backups, requests and raw logs stay ignored

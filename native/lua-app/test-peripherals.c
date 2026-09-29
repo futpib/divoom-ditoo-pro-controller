@@ -256,6 +256,8 @@ static void test_tv_keyboard(void) {
     }
     runtime_adc_result(1U<<16 | 5);tick();runtime_adc_result(2U<<16 | 5);tick();assert(!bt_queued.op);
     for(unsigned i=0;i<3;++i) tick();tv_frame(5);
+    for(unsigned i=0;i<1000;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
+    printf("Standalone sustained: used %u, peak %u, reserved %u, stock heap %u\n",app.used,app.peak,app.reserved,stock_free_heap());
     app.cancel=1;service();runtime_native_service();assert(!allocations);fake_hid_status.state=0;
     stock_config_context=NULL;saved.settings_size=0;track_heap=0;free_heap=100000;
     puts("TV keyboard binds four silent keys, sends three actions once per press and opens its physical menu");

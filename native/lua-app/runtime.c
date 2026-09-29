@@ -10,6 +10,8 @@
 #include <stdlib.h>
 
 #define SOURCE_LIMIT 8192
+#define SOURCE_CHUNK 512
+#define SOURCE_PAGES ((SOURCE_LIMIT+SOURCE_CHUNK-1)/SOURCE_CHUNK)
 #define RESULT_LIMIT 192
 #define MEMORY_LIMIT 49152
 #define STARTUP_HEAP_BUDGET 40960
@@ -50,6 +52,7 @@ enum { IDLE, RUNNING, DONE, ERROR, ACTIVE, PAUSED, UPLOADING, SAVING };
 struct key_event { unsigned char key, event, kind, pad; };
 struct timer { int ref; unsigned deadline, interval; };
 struct block { unsigned size, free; };
+struct source { unsigned size; unsigned char *pages[SOURCE_PAGES]; };
 static struct {
     volatile unsigned state, cancel, action, owner, key_read, key_write, dropped;
     volatile unsigned held, suppressed;
@@ -66,7 +69,7 @@ static struct {
     int app_ref;
     unsigned resident, install, source_size, received, used, peak, steps, started, guarded;
     unsigned last_tick, frames, callbacks, dirty, native_calls, generation, native_alarm;
-    char *source;
+    struct source *source;
     char result[RESULT_LIMIT];
     unsigned char frame[768];
     unsigned char leds[LED_COUNT * 3], led_buffers[2][LED_COUNT * 3];
@@ -77,6 +80,50 @@ static struct {
 } app;
 static unsigned runtime_boot_key(unsigned,unsigned);
 static void runtime_boot_service(void);
+
+static void source_free(struct source *s) {
+    if(!s) return;
+    for(unsigned i=0;i<SOURCE_PAGES;++i) stock_free(s->pages[i]);
+    stock_free(s);
+}
+static struct source *source_new(unsigned size) {
+    struct source *s=stock_alloc(sizeof *s);
+    if(!s) return NULL;
+    memset(s,0,sizeof *s);s->size=size;
+    for(unsigned offset=0;offset<size;offset+=SOURCE_CHUNK) {
+        unsigned n=size-offset;if(n>SOURCE_CHUNK) n=SOURCE_CHUNK;
+        s->pages[offset/SOURCE_CHUNK]=stock_alloc(n);
+        if(!s->pages[offset/SOURCE_CHUNK]) { source_free(s);return NULL; }
+    }
+    return s;
+}
+static void source_copy(struct source *s,unsigned offset,void *data,unsigned size,unsigned writing) {
+    unsigned char *p=data;
+    while(size) {
+        unsigned part=offset%SOURCE_CHUNK,n=SOURCE_CHUNK-part;if(n>size) n=size;
+        unsigned char *chunk=s->pages[offset/SOURCE_CHUNK]+part;
+        if(writing) memcpy(chunk,p,n);else memcpy(p,chunk,n);
+        offset+=n;p+=n;size-=n;
+    }
+}
+static unsigned source_matches(const struct source *s,const void *data,unsigned size) {
+    const unsigned char *p=data;
+    for(unsigned offset=0;offset<size;offset+=SOURCE_CHUNK) {
+        unsigned n=size-offset;if(n>SOURCE_CHUNK) n=SOURCE_CHUNK;
+        if(memcmp(s->pages[offset/SOURCE_CHUNK],p+offset,n)) return 0;
+    }
+    return 1;
+}
+struct source_cursor { struct source *source; unsigned page; };
+static const char *source_reader(lua_State *L,void *data,size_t *size) {
+    (void)L;struct source_cursor *cursor=data;struct source *s=cursor->source;
+    /* Lua no longer references the previous reader block on its next call. */
+    if(cursor->page) { stock_free(s->pages[cursor->page-1]);s->pages[cursor->page-1]=NULL; }
+    unsigned offset=cursor->page*SOURCE_CHUNK;
+    if(offset>=s->size) { *size=0;return NULL; }
+    *size=s->size-offset;if(*size>SOURCE_CHUNK) *size=SOURCE_CHUNK;
+    return (const char *)s->pages[cursor->page++];
+}
 
 void runtime_init(void) {
     stock_heap_init();
@@ -125,12 +172,38 @@ static void arena_free(void *ptr) {
         return;
     }
 }
+static void arena_trim(struct block *b,unsigned needed) {
+    if (b->size>=needed+sizeof(struct block)+8) {
+        struct block *tail=(struct block *)((unsigned char *)b+needed);
+        *tail=(struct block){b->size-needed,1};
+        app.used-=b->size-needed;b->size=needed;
+    }
+}
 static void *allocate(void *ud, void *ptr, size_t old, size_t size) {
     (void)ud; runtime_poll();
     if (!size) { if (ptr) arena_free(ptr); return NULL; }
     if (size > MEMORY_LIMIT-sizeof(struct block)) return NULL;
     unsigned needed = ((size+7)&~7U)+sizeof(struct block);
-    if (ptr && needed<=((struct block *)ptr-1)->size) return ptr;
+    if (ptr) {
+        struct block *b=(struct block *)ptr-1;
+        if (needed<=b->size) { arena_trim(b,needed);return ptr; }
+        for (unsigned i=0;i<ARENA_PAGES;++i) {
+            uintptr_t address=(uintptr_t)b,base=(uintptr_t)app.arena[i];
+            if (!base || address<base || address>=base+app.capacity[i]) continue;
+            unsigned available=b->size;
+            while (address+available<base+app.capacity[i]) {
+                struct block *next=(struct block *)(address+available);
+                if (!next->free) break;
+                available+=next->size;
+            }
+            if (available>=needed) {
+                app.used+=available-b->size;b->size=available;arena_trim(b,needed);
+                if (app.used>app.peak) app.peak=app.used;
+                return ptr;
+            }
+            break;
+        }
+    }
     struct block *chosen = NULL; unsigned empty = ARENA_PAGES;
     for (unsigned i=0;i<ARENA_PAGES && !chosen;++i) {
         if (!app.arena[i]) { empty=i; continue; }
@@ -182,7 +255,7 @@ static void discard(unsigned state) {
     app.guarded = app.owner = app.dirty = 0;
     app.led_owner = app.led_dirty = 0; led_refresh();
     app.L = NULL; app.used = 0; app.held = 0;
-    stock_free(app.source); app.source = NULL;
+    source_free(app.source); app.source = NULL;
     peripherals_release();
     for (unsigned i=0;i<ARENA_PAGES;++i) {
         stock_free(app.arena_base[i]); app.arena_base[i] = NULL; app.arena[i] = NULL; app.capacity[i] = 0;
@@ -457,7 +530,8 @@ static int untimer(lua_State *L) {
 
 static int panic(lua_State *L) { (void)L; abort_script("Lua panic"); return 0; }
 static void module(lua_State *L, const char *name, const luaL_Reg *functions) {
-    lua_newtable(L); luaL_setfuncs(L,functions,0); lua_setglobal(L,name);
+    unsigned count=0;while(functions[count].name) ++count;
+    lua_createtable(L,0,count); luaL_setfuncs(L,functions,0); lua_setglobal(L,name);
 }
 static void remove_field(lua_State *L, const char *key) { lua_pushnil(L); lua_setfield(L,-2,key); }
 #include "persistence.c"
@@ -473,14 +547,14 @@ static unsigned runtime_boot_key(unsigned key,unsigned event) {
 static void runtime_boot_service(void) {
     if (!saved.clock_started) { saved.clock_started=1;saved.boot_started=stock_ticks(); }
     if (app.state==SAVING && app.cancel) {
-        stock_free(app.source);app.source=NULL;app.state=DONE;result("stopped");return;
+        source_free(app.source);app.source=NULL;app.state=DONE;result("stopped");return;
     }
     if (!saved.initialized && (unsigned)(stock_ticks()-saved.boot_started)>=10000) saved.boot_done=1;
     if (native_priority()) return;
     if (!saved.initialized) {
         if (!persist_layout() || stock_free_heap()<2*(SOURCE_LIMIT+512)+STOCK_HEAP_RESERVE) {
             if (app.state==SAVING) {
-                stock_free(app.source);app.source=NULL;app.state=ERROR;result("storage unavailable");
+                source_free(app.source);app.source=NULL;app.state=ERROR;result("storage unavailable");
             }
             return;
         }
@@ -494,7 +568,7 @@ static void runtime_boot_service(void) {
         else if (peripheral.writes && (unsigned)(stock_ticks()-peripheral.last_write)<1000) return;
         else error=persist_save(1,app.source,app.source_size,&changed);
         if (changed) { ++peripheral.writes;peripheral.last_write=stock_ticks(); }
-        if (error) { result(error);stock_free(app.source);app.source=NULL;app.state=ERROR;return; }
+        if (error) { result(error);source_free(app.source);app.source=NULL;app.state=ERROR;return; }
         if (!app.source_size) { app.state=DONE;result("autostart removed");return; }
         app.state=RUNNING;return;
     }
@@ -503,12 +577,12 @@ static void runtime_boot_service(void) {
     if (saved.boot_skip || app.state!=IDLE) { if(app.state==IDLE) result("autostart skipped: key held");return; }
     unsigned bank=0,foreign=0;struct saved_record *r=persist_latest(1,&bank,&foreign);
     if (!r || !r->length) { stock_free(r);return; }
-    app.source=stock_alloc(r->length);
-    if (app.source) { app.source_size=r->length;memcpy(app.source,r->data,r->length); }
+    app.source=source_new(r->length);
+    if (app.source) { app.source_size=r->length;source_copy(app.source,0,r->data,r->length,1); }
     stock_free(r);
     if (!app.source) { result("autostart allocation failed");app.state=ERROR;return; }
     if (!app.task) app.task=stock_task(runtime_worker_entry,"lua_app",NULL,4096,1,0);
-    if (!app.task) { stock_free(app.source);app.source=NULL;result("autostart worker unavailable");app.state=ERROR;return; }
+    if (!app.task) { source_free(app.source);app.source=NULL;result("autostart worker unavailable");app.state=ERROR;return; }
     app.cancel=app.action=0;app.resident=1;app.install=0;app.state=RUNNING;
 }
 
@@ -582,9 +656,12 @@ static void launch(void) {
     app.L = lua_newstate(allocate,NULL);
     if (!app.L) abort_script("Lua allocation failed");
     lua_atpanic(app.L,panic);
-    int loaded = luaL_loadbufferx(app.L,app.source,app.source_size,"app","t");
+    /* Collect before the bounded arena forces an emergency full collection. */
+    lua_gc(app.L,LUA_GCINC,120,200,10);
+    struct source_cursor cursor={app.source,0};
+    int loaded = lua_load(app.L,source_reader,&cursor,"app","t");
     /* The compiled function owns its strings; source bytes are no longer read. */
-    stock_free(app.source); app.source = NULL;
+    source_free(app.source); app.source = NULL;
     if (loaded) abort_script(lua_tostring(app.L,-1));
     /* Parse before creating API tables, then reclaim compiler temporaries.
      * Neither the source buffer nor parser scratch needs to coexist with them. */
@@ -676,14 +753,14 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
                 if (!app.task) error = 3;
                 else {
                     saved.boot_done=1;
-                    char *source = stock_alloc(n);
+                    struct source *source = source_new(n);
                     if (!source) { error = 3; goto reply; }
-                    stock_free(app.source); app.source = source;
+                    source_free(app.source); app.source = source;
                     app.cancel = app.action = 0; app.result[0] = 0;
                     app.source_size = n; app.received = op == 1 ? n : 0;
                     app.resident = op == 3 ? data[9] != 0 : 0;
                     app.install=op==3 && data[9]==2;
-                    if (op == 1) memcpy(app.source,data+9,n);
+                    if (op == 1) source_copy(app.source,0,(void *)(data+9),n,1);
                     __asm__ volatile ("" ::: "memory");
                     app.state = op == 1 ? RUNNING : UPLOADING;
                 }
@@ -693,7 +770,7 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         saved.boot_done=1;
         app.cancel = 1;
         if (app.state == UPLOADING) {
-            stock_free(app.source); app.source = NULL; app.state = IDLE;
+            source_free(app.source); app.source = NULL; app.state = IDLE;
         }
     } else if (op == 4) {
         if (app.state != UPLOADING) error = 2;
@@ -701,7 +778,7 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         else {
             unsigned offset = data[7] | ((unsigned)data[8] << 8), n = length-11;
             if (offset != app.received || n > 512 || n > app.source_size-app.received) error = 1;
-            else { memcpy(app.source+offset,data+9,n); app.received += n; }
+            else { source_copy(app.source,offset,(void *)(data+9),n,1); app.received += n; }
         }
     } else if (op == 5) {
         if (app.state != UPLOADING || app.received != app.source_size) error = 2;

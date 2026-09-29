@@ -1,6 +1,6 @@
 # Resident Lua apps
 
-Firmware **306022** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
+Firmware **306023** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
 over Bluetooth, disconnect, and it keeps running. Changing scripts does not flash
 firmware. 306014 adds independent RGB control of 12 keyboard LED positions;
 306013 remains supported for the original resident app API. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
@@ -18,7 +18,7 @@ and does not replace the saved app. See [persistence and recovery](lua-storage.m
 
 ```sh
 # Install the runtime once; see docs/usb.md for USB permissions.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306022-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306023-lua.MVA
 
 # Save the standalone remote once; it runs after subsequent power-ons.
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
@@ -118,11 +118,15 @@ is no `io`, `os`, `package`, `debug`, `load`, `loadfile`, `dofile`,
 ## Execution limits and recovery
 
 - Source: 1–8,192 bytes, text only, uploaded in at most 512-byte chunks.
+  306023 frees consumed source blocks during compilation; it does not retain
+  the source after compilation. See [memory accounting](lua-memory.md).
 - Lua memory: a 48 KiB ceiling in 306021 (40 KiB previously), acquired in
   nonmoving KiB pages. The quota includes allocator headers, alignment and
   temporary allocations during realloc. Startup requires a 40 KiB budget plus
   24 KiB of native headroom. Every new arena allocation also preserves at least
   24 KiB for native tasks, so available native heap can lower the Lua ceiling.
+  306023 reclaims shrunk allocation tails, grows into adjacent free space,
+  pre-sizes native API tables and starts incremental GC earlier.
   Empty pages return to native audio; stop/error frees all pages without running
   Lua finalizers. Native tasks can still allocate independently afterward.
 - Each setup or complete app tick has a 100,000-unit work budget. The guard runs
@@ -176,7 +180,7 @@ python3 scripts/build-lua-app-runtime.py
 python3 scripts/test-lua-app-runtime.py
 cargo test --locked --no-default-features
 cargo build --locked --release --no-default-features
-# Requires an already-installed 306022; stops the current app, performs no flash writes.
+# Requires an already-installed 306023; stops the current app, performs no flash writes.
 python3 scripts/check-lua-app-device.py B1:21:81:DD:B8:9B \
   --output firmware/runs/lua-app-check
 ```
@@ -199,7 +203,9 @@ To reproduce the previous 306013 image exactly, build the source at commit
 `9a9d89c`; use `59b5e28` for 306014 and `842115b` for 306015.
 Use `ae62a69` for 306016, `95d7f6e` for 306017 and `ac82bb9` for 306018.
 Use `606eb91` to reproduce 306019, `b703bc0` for 306020 and `c79d982` for 306021.
-The current builder produces 306022 with saved apps, settings,
+Use `a586981` to reproduce 306022.
+The current builder produces 306023 with [lower Lua memory use](lua-memory.md),
+saved apps, settings,
 [Bluetooth HID keyboard support](lua-keyboard.md) and full USB control, retaining the queued AVRCP mute toggle and
 [native Bluetooth media connection APIs](lua-bluetooth.md). Previous images
 remain pinned.

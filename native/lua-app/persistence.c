@@ -61,6 +61,7 @@ static struct saved_record *persist_latest(unsigned kind,unsigned *bank,unsigned
     if (b && (!a || (int32_t)(b->sequence-a->sequence)>0)) { stock_free(a);*bank=1;return b; }
     stock_free(b);*bank=0;return a;
 }
+/* App records consume source blocks; settings remain a contiguous byte string. */
 static const char *persist_save(unsigned kind,const void *data,unsigned size,unsigned *changed) {
     *changed=0;
     if ((kind!=1 && kind!=2) || size>persist_capacity(kind) || (!data && size)) return "invalid storage value";
@@ -70,7 +71,7 @@ static const char *persist_save(unsigned kind,const void *data,unsigned size,uns
     if (stock_free_heap()<bytes*4+8192) return "insufficient storage heap";
     struct saved_record *old=persist_latest(kind,&bank,&foreign);
     if (foreign) { stock_free(old);return "storage namespace occupied"; }
-    if (old && old->length==size && (!size || !memcmp(old->data,data,size))) { stock_free(old);return NULL; }
+    if (old && old->length==size && (!size || (kind==1 ? source_matches(data,old->data,size) : !memcmp(old->data,data,size)))) { stock_free(old);return NULL; }
     unsigned seq=old ? old->sequence+1 : 1,slot=(kind-1)*2+(old ? bank^1 : 0);
     stock_free(old);
     unsigned char entry[8],scratch[256];
@@ -79,7 +80,11 @@ static const char *persist_save(unsigned kind,const void *data,unsigned size,uns
     struct saved_record *r=stock_alloc(bytes);
     if (!r) return "storage allocation failed";
     memset(r,0,bytes);r->magic=0x41554c44;r->kind=kind;r->sequence=seq;r->length=size;
-    if (size) memcpy(r->data,data,size);r->crc=persist_crc(r);
+    if (size) {
+        if(kind==1) source_copy((struct source *)data,0,r->data,size,0);
+        else memcpy(r->data,data,size);
+    }
+    r->crc=persist_crc(r);
     *changed=1;stock_config_write(PERSIST_MODEL,slot,r,bytes);
     unsigned bad=0;struct saved_record *verify=persist_read(kind,slot&1,&bad);
     unsigned ok=verify && !bad && !memcmp(r,verify,bytes);
