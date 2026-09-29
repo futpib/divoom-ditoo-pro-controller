@@ -6,6 +6,7 @@
 #define __data_load host__data_load
 #define __bss_start host__bss_start
 #define __bss_end host__bss_end
+#define ASSET_TEST_ROM
 #include "runtime.c"
 #include "storage.c"
 #include "bluetooth-trace.c"
@@ -48,11 +49,16 @@ static unsigned char reply[1200];
 static unsigned reply_size;
 static uint32_t fs_context[8] = {0,0x9200,0x9000,0,0x9100,0,0,1760};
 static unsigned page_reads;
+unsigned char stock_asset_rom[0x80000];
+static unsigned font_reads,font_page,font_bad_layout,font_read_error;
 static unsigned char config_context[20];
 unsigned char *volatile stock_config_context;
 static unsigned char persisted[4][SOURCE_LIMIT+24];
 static unsigned persisted_size[4],persist_writes,persist_torn;
-unsigned stock_partition(unsigned kind,unsigned *p) { assert(kind==5);*p=0x6000;return 0; }
+unsigned stock_partition(unsigned kind,unsigned *p) {
+    if (kind==3) { *p=font_bad_layout ? 0 : 0x1f30;return 0x119000; }
+    assert(kind==5);*p=0x6000;return 0;
+}
 unsigned stock_config_find(unsigned model,unsigned id,void *e,void *scratch) {
     assert(model==PERSIST_MODEL && id<4);(void)scratch;
     if (!persisted_size[id]) return 0xffff;
@@ -61,6 +67,11 @@ unsigned stock_config_find(unsigned model,unsigned id,void *e,void *scratch) {
 }
 unsigned char *runtime_fs_context(void) { return (unsigned char *)fs_context; }
 unsigned stock_page_read(unsigned page, void *data, unsigned n) {
+    if (page>=0x1f30 && page<0x30c0) {
+        assert(n==1);++font_reads;font_page=page;
+        for (unsigned i=0;i<256;++i) ((unsigned char *)data)[i]=i;
+        return font_read_error;
+    }
     if (page>=0x6100 && page<0x6500) {
         assert(n==1);unsigned slot=(page-0x6100)/40;assert(slot<4);
         unsigned char *p=data;memset(p,255,256);p[0]=persisted_size[slot];p[1]=persisted_size[slot]>>8;
@@ -100,8 +111,10 @@ static void tick(void) { clock_ms += FRAME_MS; service(); }
 #include "test-persistence.c"
 #include "test-allocator.c"
 #include "test-source.c"
+#include "test-assets.c"
 
 int main(void) {
+    test_assets();
     test_allocator();
     test_source();
     test_persistence();

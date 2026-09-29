@@ -537,6 +537,7 @@ static void module(lua_State *L, const char *name, const luaL_Reg *functions) {
 static void remove_field(lua_State *L, const char *key) { lua_pushnil(L); lua_setfield(L,-2,key); }
 #include "persistence.c"
 #include "peripherals.c"
+#include "assets.c"
 
 static unsigned runtime_boot_key(unsigned key,unsigned event) {
     if (saved.boot_done || app.state!=IDLE) return 0;
@@ -602,7 +603,10 @@ static int setup(lua_State *L) {
     for (int i = 0; strings[i]; ++i) remove_field(L,strings[i]);
     lua_pop(L,1);
     static const luaL_Reg drawing[] = {{"clear",clear},{"pixel",setpixel},{"get",getpixel},
-        {"line",line},{"rect",rect},{"blit",blit},{"text",text},{"present",present},{"frame",frame},{NULL,NULL}};
+        {"line",line},{"rect",rect},{"blit",blit},{"text",text},{"present",present},{"frame",frame},
+        {"image",draw_image},{"glyph",draw_glyph},{NULL,NULL}};
+    static const luaL_Reg assets[] = {{"count",asset_count},{"info",asset_info},
+        {"image",asset_image},{"glyph",asset_glyph},{NULL,NULL}};
     static const luaL_Reg timing[] = {{"millis",ticks},{"calendar",calendar},{NULL,NULL}};
     static const luaL_Reg timers[] = {{"after",after},{"every",every},{"cancel",untimer},{NULL,NULL}};
     static const luaL_Reg keyboard[] = {{"held",held},{NULL,NULL}};
@@ -614,6 +618,7 @@ static int setup(lua_State *L) {
     module(L,"display",drawing); module(L,"time",timing); module(L,"timer",timers);
     module(L,"keys",keyboard); module(L,"device",device); module(L,"app",control); module(L,"comms",comms);
     module(L,"lights",lights);
+    module(L,"assets",assets);
     peripherals_modules(L);
     lua_getglobal(L,"lights"); lua_pushinteger(L,LED_COUNT); lua_setfield(L,-2,"count"); lua_pop(L,1);
     lua_pushcfunction(L,brightness); lua_setglobal(L,"brightness");

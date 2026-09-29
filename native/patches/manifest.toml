@@ -28,7 +28,7 @@ patches = [
 ]
 
 [profiles.app]
-version = 306025
+version = 306026
 source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch"]
 patches = [
     "command_dispatch",

@@ -1,0 +1,137 @@
+{
+  "firmware": 306026,
+  "sha256": "33182f367e8a97bb2472b28b3ed79bbc68f871002f8912cc9587a53382d50dd5",
+  "bytes": 2032883,
+  "status": "offline verified; hardware not connected; not flashed",
+  "assets": {
+    "independent_image_frames": 598,
+    "image_ids": [
+      1,
+      598
+    ],
+    "sound_modes": [
+      0,
+      13
+    ],
+    "sound_native_ids": [
+      41,
+      41,
+      34,
+      35,
+      33,
+      36,
+      32,
+      37,
+      38,
+      39,
+      41,
+      40,
+      43,
+      42
+    ],
+    "image_pixels_sha256": "1b84733369ad8c06eeb0141a509eb06055c4f4903444822bec7da71a0edc6205",
+    "stock_resource_bytes_preserved": true,
+    "font_source": "partition 3, physical 0x1f3000..0x30bfff; contents not read from hardware"
+  },
+  "memory": {
+    "image_index_flash_bytes": 2392,
+    "permanent_native_ram_added_bytes": 0,
+    "image_decode_stack_bytes": 768,
+    "font_read_stack_page_bytes": 256,
+    "glyph_bytes": 32,
+    "native_globals_data_bytes": 1760,
+    "native_globals_bss_bytes": 5992,
+    "native_globals_reserved_bytes": 8192,
+    "app_text_bytes": 152552,
+    "app_text_limit_bytes": 153600,
+    "lua_vm_limit_bytes": 49152,
+    "lua_api_tables_and_retained_asset_strings_count_against_quota": true
+  },
+  "checks": {
+    "rust_tests_passed": 63,
+    "python_tests_passed": 30,
+    "asan_ubsan_32bit_runtime_and_usb_hid_trace": "passed",
+    "all_598_frames_compared_to_independent_decode": "passed",
+    "host_runs_exact_device_probe_and_browser_example": "passed",
+    "lua_style_and_lint": "passed",
+    "clippy_production": "passed",
+    "clippy_all_targets": "blocked by pre-existing unwrap/unwrap_err warnings in unchanged test expressions; new range warning fixed",
+    "firmware_manifest": "passed",
+    "hardware_check_dry_run": "passed",
+    "reproducibility": [
+      {
+        "run": "first",
+        "profile": "reflash",
+        "version": 306008,
+        "sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "probe",
+        "version": 306009,
+        "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "runtime",
+        "version": 306012,
+        "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "app",
+        "version": 306026,
+        "sha256": "33182f367e8a97bb2472b28b3ed79bbc68f871002f8912cc9587a53382d50dd5",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "reflash",
+        "version": 306008,
+        "sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "probe",
+        "version": 306009,
+        "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "runtime",
+        "version": 306012,
+        "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "app",
+        "version": 306026,
+        "sha256": "33182f367e8a97bb2472b28b3ed79bbc68f871002f8912cc9587a53382d50dd5",
+        "identical": true
+      }
+    ]
+  },
+  "hardware": {
+    "attempted_transport": "usb",
+    "available_ditoo_devices": 0,
+    "flash_performed": false,
+    "image_display_font_contents_and_audio_output_verified": false
+  },
+  "commands": [
+    "python3 scripts/test-lua-app-runtime.py",
+    "python3 -m unittest discover -s scripts -p test_*.py",
+    "cargo test --locked --no-default-features",
+    "cargo clippy --locked --no-default-features -- -D warnings",
+    "cargo build --locked --release --no-default-features",
+    "scripts/check-lua.sh",
+    "python3 scripts/check-firmware-repro.py --output target/assets-repro",
+    "python3 scripts/firmware-manifest.py firmware/306026-lua.MVA --check",
+    "python3 scripts/check-lua-assets.py --dry-run --output firmware/runs/assets-dry-run --restore-app examples/lua/tv-keyboard.lua"
+  ]
+}

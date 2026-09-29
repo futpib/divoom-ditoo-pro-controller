@@ -259,9 +259,9 @@ async fn session(
   if !reply.ack
     || reply.data.len() != 5
     || reply.data[0] != 1
-    || !matches!(number(&reply.data[1..]), 306024 | 306025)
+    || !matches!(number(&reply.data[1..]), 306024..=306026)
   {
-    return Err("Bluetooth trace requires firmware 306024 or 306025; no diagnostic sent".into());
+    return Err("Bluetooth trace requires firmware 306024, 306025 or 306026; no diagnostic sent".into());
   }
   let firmware = number(&reply.data[1..]);
   let deadline = Instant::now() + duration;

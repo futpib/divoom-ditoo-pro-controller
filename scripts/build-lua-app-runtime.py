@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the pinned NDS32 Lua runtime and its installable 306025 firmware."""
+"""Build the pinned NDS32 Lua runtime and its installable 306026 firmware."""
 import binascii
 import hashlib
 import importlib.util
@@ -19,6 +19,7 @@ spec.loader.exec_module(base)
 
 
 def build():
+    subprocess.run(['python3',str(ROOT/'scripts/stock-assets.py'),'--check','--index-only'],check=True)
     out = ROOT/'target/lua-app/runtime'
     out.mkdir(parents=True, exist_ok=True)
     archive = ROOT/'native/lua/vendor/lua-5.4.9.tar.gz'

@@ -1,6 +1,6 @@
 # Resident Lua apps
 
-Firmware **306023** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
+Firmware **306026** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
 over Bluetooth, disconnect, and it keeps running. Changing scripts does not flash
 firmware. 306014 adds independent RGB control of 12 keyboard LED positions;
 306013 remains supported for the original resident app API. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
@@ -8,6 +8,10 @@ and supported by the CLI.
 
 Firmware **306016** adds [native battery, alarms, power schedules, speaker and
 microphone APIs](lua-peripherals.md).
+
+Firmware **306026** exposes a [stock asset catalogue](lua-assets.md): native sound
+modes, flash-backed 16×16 font glyphs and 598 stock image frames, with bounded
+direct drawing into the Lua framebuffer.
 
 Firmware **306015** introduced a host-only, read-only
 [filesystem metadata diagnostic](lua-storage.md). Firmware **306022** adds one
@@ -18,7 +22,7 @@ and does not replace the saved app. See [persistence and recovery](lua-storage.m
 
 ```sh
 # Install the runtime once; see docs/usb.md for USB permissions.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306023-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306026-lua.MVA
 
 # Save the standalone remote once; it runs after subsequent power-ons.
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
@@ -159,12 +163,12 @@ messages; its physical direction labels still need mapping on this device.
 
 | # | Capability | Current state |
 | --- | --- | --- |
-| 1 | Drawing, animations and custom games | Implemented primitives; clock and Snake examples. Custom fonts/palettes can be represented in Lua/packed RGB data. |
+| 1 | Drawing, animations and custom games | Implemented primitives; clock and Snake examples. 306026 adds native font and stock image access; see [assets](lua-assets.md). |
 | 2 | Controls and lifecycle | Physical input, held state, ownership, pause/resume/stop/reload implemented. |
 | 3 | Clocks, timers, stopwatch, scoreboards | RTC, timers and drawing implemented. 306016 binds native alarms and power schedules, with native alarm priority. |
 | 4 | Keyboard lighting | 12 independently controlled RGB LED positions, custom effects and ownership restoration implemented in 306014. |
 | 5 | Audio | 306016 binds native playback, sound previews, voice memos and noise readings; see the peripheral API and its hardware evidence. |
-| 6 | Installed apps, assets and settings | One saved startup app, bounded shared settings, CRC-checked generations and boot escape in 306022. General asset files and modules remain unimplemented. |
+| 6 | Installed apps, assets and settings | Saved app/settings and boot escape in 306022; local modules are bundled by the host; read-only stock assets in 306026. General asset files remain unimplemented. |
 | 7 | Communications | BLE and USB upload, bidirectional app messages and status implemented. USB requires 306019; see [USB control](usb-control.md). |
 | 8 | Stock modes/settings | Brightness/volume implemented; other mode APIs and precedence still need integration. |
 
@@ -204,7 +208,7 @@ To reproduce the previous 306013 image exactly, build the source at commit
 Use `ae62a69` for 306016, `95d7f6e` for 306017 and `ac82bb9` for 306018.
 Use `606eb91` to reproduce 306019, `b703bc0` for 306020 and `c79d982` for 306021.
 Use `a586981` to reproduce 306022.
-The current builder produces 306023 with [lower Lua memory use](lua-memory.md),
+The current builder produces 306026 with [stock assets](lua-assets.md), [lower Lua memory use](lua-memory.md),
 saved apps, settings,
 [Bluetooth HID keyboard support](lua-keyboard.md) and full USB control, retaining the queued AVRCP mute toggle and
 [native Bluetooth media connection APIs](lua-bluetooth.md). Previous images

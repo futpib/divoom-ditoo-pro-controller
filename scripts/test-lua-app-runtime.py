@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Exercise the resident runtime with 32-bit pointers and its patched Lua VM under ASan/UBSan."""
 from pathlib import Path
+import importlib.util
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 source = ROOT/'target/lua-app/runtime/lua-5.4.9/src'
 if not source.exists():
     raise SystemExit('Run scripts/build-lua-app-runtime.py first')
+spec = importlib.util.spec_from_file_location('stock_assets',ROOT/'scripts/stock-assets.py')
+assets = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(assets)
+(source.parent.parent/'stock-images.rgb').write_bytes(b''.join(f['pixels'] for f in assets.frames(assets.stock_code())))
 # Use the same host bundler as uploads; the firmware still accepts one text chunk.
 for name, entry in [('tv-keyboard','examples/lua/tv-keyboard.lua'),
                     ('ui-test','tests/lua/ui.lua'), ('bundle-test','tests/lua/bundle.lua'),

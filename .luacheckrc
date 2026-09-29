@@ -25,7 +25,8 @@ local function api(names)
   return { fields = fields }
 end
 read_globals = {
-  display = api('clear pixel get line rect blit text present frame'),
+  display = api('clear pixel get line rect blit text present frame image glyph'),
+  assets = api('count info image glyph'),
   time = api('millis calendar'),
   timer = api('after every cancel'),
   keys = api('held'),
@@ -41,7 +42,7 @@ read_globals = {
   ),
   microphone = api('noise level record stop'),
   bluetooth = api('status connect_media disconnect_media media mute'),
-  keyboard = api('connect listen disconnect pair forget bonds tap media status'),
+  keyboard = api('connect listen disconnect pair forget bonds tap media status mode'),
   storage = api('get set'),
   'brightness',
   'volume',

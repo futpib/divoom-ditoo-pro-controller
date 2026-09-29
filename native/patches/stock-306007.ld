@@ -36,6 +36,7 @@ stock_config_write = 0x6b97c;
 stock_config_find = 0x6aa88;
 stock_config_context = 0x2000d2f8 - 33700;
 stock_partition = 0x73b8c;
+stock_asset_rom = 0x150000;
 stock_alarm_reschedule = 0x3575c;
 stock_wake_reschedule = 0x47e70;
 stock_seconds = 0x77588;

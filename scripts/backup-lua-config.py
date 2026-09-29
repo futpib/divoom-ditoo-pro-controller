@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Back up the entire native configuration journal through the bounded 306022–306025 diagnostic.
+"""Back up the entire native configuration journal through the bounded 306022–306026 diagnostic.
 
 Read-only; output can contain Bluetooth link keys and is made private.
 """
@@ -25,7 +25,7 @@ def batch(name,requests):
   subprocess.run(base+[str(source)],stdout=out,check=True,timeout=240)
  return [bytes.fromhex(json.loads(s)['response']['data_hex']) for s in (a.output/(name+'-replies.jsonl')).read_text().splitlines()]
 def query(payload):return {'command':'0x37','payload_hex':payload.hex(),'response':'0x37'}
-version,=batch('version',[query(b'\0')]);assert version in [b'\1'+v.to_bytes(4,'little') for v in (306022,306023,306024,306025)]
+version,=batch('version',[query(b'\0')]);assert version in [b'\1'+v.to_bytes(4,'little') for v in (306022,306023,306024,306025,306026)]
 requests=[query(b'\x7fDLUA\x0c'+struct.pack('<HB',i,1)) for i in range(2560)]
 rows=batch('backup',requests);assert len(rows)==2560
 contents=bytearray();contexts=[]
