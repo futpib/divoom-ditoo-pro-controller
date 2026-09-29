@@ -1,0 +1,2 @@
+# Unified diffs preserve blank context lines and their leading space.
+native/patches/lua/*.patch whitespace=-blank-at-eol,-blank-at-eof

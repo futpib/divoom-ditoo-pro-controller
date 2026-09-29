@@ -26,21 +26,14 @@ def build():
     with tarfile.open(archive) as tar:
         tar.extractall(out, filter='data')
     src = out/'lua-5.4.9/src'
-    config = src/'luaconf.h'
-    text = config.read_text()
-    for before, after in [('#define LUA_32BITS\t0','#define LUA_32BITS\t1'),
-                          ('#define LUAI_MAXSTACK\t\t1000000','#define LUAI_MAXSTACK\t\t512'),
-                          ('#define LUAI_MAXSTACK\t\t15000','#define LUAI_MAXSTACK\t\t512')]:
-        assert before in text
-        text = text.replace(before, after)
-    config.write_text(text)
+    patches = PatchSet(ROOT, PATCH_PROFILE, out)
+    patches.prepare_sources(src)
     flags = ['-mcpu=d1088-spu','-mabi=2','-mno-fp-as-gp','-Os','-ffunction-sections',
              '-fdata-sections','-fno-stack-protector','-DLUAI_MAXCCALLS=20',
              '-Dluai_makeseed(L)=((unsigned)(L)^0x44554c41)', '-I'+str(src)]
     skip = {'lua.c','luac.c','linit.c','liolib.c','loslib.c','loadlib.c','ldblib.c'}
     sources = sorted(p for p in src.glob('*.c') if p.name not in skip)
     sources += [ROOT/'native/lua'/n for n in ['runtime.c','libc.c','runtime-entry.S']]
-    patches = PatchSet(ROOT, PATCH_PROFILE, out)
     patch_object = patches.prepare()
     objects = []
     def run(*args): subprocess.run(args, cwd=ROOT, check=True)

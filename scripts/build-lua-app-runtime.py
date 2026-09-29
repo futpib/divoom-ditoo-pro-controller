@@ -26,49 +26,8 @@ def build():
     with tarfile.open(archive) as tar:
         tar.extractall(out, filter='data')
     src = out/'lua-5.4.9/src'
-    config = src/'luaconf.h'
-    text = config.read_text()
-    for before, after in [('#define LUA_32BITS\t0','#define LUA_32BITS\t1'),
-                          ('#define LUAI_MAXSTACK\t\t1000000','#define LUAI_MAXSTACK\t\t512'),
-                          ('#define LUAI_MAXSTACK\t\t15000','#define LUAI_MAXSTACK\t\t512')]:
-        assert before in text
-        text = text.replace(before, after)
-    before = 'l_sprintf((s), sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)(n))'
-    assert before in text
-    text = text.replace(before, 'runtime_number((s), (sz), (n))')
-    text = 'extern int runtime_number(char *, unsigned, float);\n' + text
-    config.write_text(text)
-    # The guard is outside Lua's protected-call mechanism and covers every coroutine.
-    vm = src/'lvm.c'
-    text = vm.read_text()
-    anchor = '#define vmfetch()\t{ \\\n'
-    assert anchor in text
-    vm.write_text(text.replace(anchor, 'extern void runtime_poll(void);\n' + anchor + '  runtime_poll(); \\\n'))
-    patterns = src/'lstrlib.c'
-    text = patterns.read_text()
-    anchor = '  init: /* using goto to optimize tail recursion */'
-    assert anchor in text
-    text = text.replace(anchor, '  init: runtime_poll(); /* includes pattern backtracking */')
-    # Remove inaccessible functions from the registration tables so LTO can omit them.
-    import re
-    for name in ['format','dump','pack','unpack','packsize']:
-        text, count = re.subn(r'  \{"'+name+r'",[^\n]+\n', '', text)
-        assert count == 1
-    patterns.write_text('extern void runtime_poll(void);\n' + text)
-    base_lib = src/'lbaselib.c'
-    text = base_lib.read_text()
-    for name in ['dofile','loadfile','load','collectgarbage','print']:
-        text, count = re.subn(r'  \{"'+name+r'",[^\n]+\n', '', text)
-        assert count == 1
-    base_lib.write_text(text)
-    table_lib = src/'ltablib.c'
-    table_lib.write_text('#define l_randomizePivot() (~0U)\n' + table_lib.read_text())
-    math_lib = src/'lmathlib.c'
-    text = math_lib.read_text()
-    assert text.count('time(NULL)') == 1
-    math_lib.write_text('extern unsigned stock_ticks(void);\n' + text.replace('time(NULL)', 'stock_ticks()'))
-
-
+    patches = PatchSet(ROOT, PATCH_PROFILE, out)
+    patches.prepare_sources(src)
     flags = ['-mcpu=d1088-spu','-mabi=2','-mno-fp-as-gp','-Os','-ffunction-sections',
              '-flto','-fdata-sections','-fno-stack-protector','-DLUAI_MAXCCALLS=20',
              '-I/usr/nds32le-elf/include/newlib-nano','-Dluai_makeseed(L)=((unsigned)(L)^0x44554c41)', '-I'+str(src)]
@@ -76,7 +35,6 @@ def build():
     sources = sorted(p for p in src.glob('*.c') if p.name not in skip)
     sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','usb-control.c','bluetooth-hid.c','bluetooth-trace.c','runtime-entry.S']]
     sources += [ROOT/'native/lua/libc.c']
-    patches = PatchSet(ROOT, PATCH_PROFILE, out)
     patch_object = patches.prepare()
     objects = []
     def run(*args): subprocess.run(args, cwd=ROOT, check=True)
@@ -93,16 +51,6 @@ def build():
         assert not any(line.split()[-1] == symbol for line in symbols.splitlines()), symbol
 
     stock = (ROOT/'firmware/306007.MVA').read_bytes()
-    # Check the stock SDP and L2CAP layouts used by keyboard-only mode.
-    stock_code = stock[base.CODE:-4]
-    for offset, expected in [
-        (0x12eb7a,'c016fc01f0813c0ddd79'),
-        (0x123faa,'3c1ddd795050a8fc5010a91ca2a9'),
-        (0x12409e,'3c2ddd798060505128fc5021291c'),
-        (0x123e34,'fc403c2ddd7984e04410007c'),
-    ]:
-        expected = bytes.fromhex(expected)
-        assert stock_code[offset:offset+len(expected)] == expected
     code = patches.apply(stock, out/'runtime.elf')
     sections = {name: patches.extract('.'+name) for name in ('text','data')}
     for address, section in [(0x1ca000,'text'),(0x1ef800,'data')]:

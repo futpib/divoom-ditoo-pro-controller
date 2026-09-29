@@ -1,0 +1,114 @@
+Apply resident-app execution guards, sandbox restrictions and native helpers.
+
+The VM guard runs outside Lua's protected-call mechanism and covers every
+coroutine. Pattern matching also polls during backtracking. Removing disabled
+functions from registration tables lets LTO discard their implementations.
+Native ticks and number formatting avoid unsupported libc dependencies.
+
+--- a/lbaselib.c
++++ b/lbaselib.c
+@@ -505,17 +505,12 @@
+ 
+ static const luaL_Reg base_funcs[] = {
+   {"assert", luaB_assert},
+-  {"collectgarbage", luaB_collectgarbage},
+-  {"dofile", luaB_dofile},
+   {"error", luaB_error},
+   {"getmetatable", luaB_getmetatable},
+   {"ipairs", luaB_ipairs},
+-  {"loadfile", luaB_loadfile},
+-  {"load", luaB_load},
+   {"next", luaB_next},
+   {"pairs", luaB_pairs},
+   {"pcall", luaB_pcall},
+-  {"print", luaB_print},
+   {"warn", luaB_warn},
+   {"rawequal", luaB_rawequal},
+   {"rawlen", luaB_rawlen},
+--- a/lmathlib.c
++++ b/lmathlib.c
+@@ -1,3 +1,4 @@
++extern unsigned stock_ticks(void);
+ /*
+ ** $Id: lmathlib.c $
+ ** Standard mathematical library
+@@ -626,7 +627,7 @@
+ ** randomization).
+ */
+ static void randseed (lua_State *L, RanState *state) {
+-  lua_Unsigned seed1 = (lua_Unsigned)time(NULL);
++  lua_Unsigned seed1 = (lua_Unsigned)stock_ticks();
+   lua_Unsigned seed2 = (lua_Unsigned)(size_t)L;
+   setseed(L, state->s, seed1, seed2);
+ }
+--- a/lstrlib.c
++++ b/lstrlib.c
+@@ -1,3 +1,4 @@
++extern void runtime_poll(void);
+ /*
+ ** $Id: lstrlib.c $
+ ** Standard library for string operations and pattern-matching
+@@ -570,7 +571,7 @@
+ static const char *match (MatchState *ms, const char *s, const char *p) {
+   if (l_unlikely(ms->matchdepth-- == 0))
+     luaL_error(ms->L, "pattern too complex");
+-  init: /* using goto to optimize tail recursion */
++  init: runtime_poll(); /* includes pattern backtracking */
+   if (p != ms->p_end) {  /* end of pattern? */
+     switch (*p) {
+       case '(': {  /* start capture */
+@@ -1829,9 +1830,7 @@
+ static const luaL_Reg strlib[] = {
+   {"byte", str_byte},
+   {"char", str_char},
+-  {"dump", str_dump},
+   {"find", str_find},
+-  {"format", str_format},
+   {"gmatch", gmatch},
+   {"gsub", str_gsub},
+   {"len", str_len},
+@@ -1841,9 +1840,6 @@
+   {"reverse", str_reverse},
+   {"sub", str_sub},
+   {"upper", str_upper},
+-  {"pack", str_pack},
+-  {"packsize", str_packsize},
+-  {"unpack", str_unpack},
+   {NULL, NULL}
+ };
+ 
+--- a/ltablib.c
++++ b/ltablib.c
+@@ -1,3 +1,4 @@
++#define l_randomizePivot() (~0U)
+ /*
+ ** $Id: ltablib.c $
+ ** Library for Table Manipulation
+--- a/luaconf.h
++++ b/luaconf.h
+@@ -1,3 +1,4 @@
++extern int runtime_number(char *, unsigned, float);
+ /*
+ ** $Id: luaconf.h $
+ ** Configuration file for Lua
+@@ -418,7 +419,7 @@
+ #define l_floor(x)		(l_mathop(floor)(x))
+ 
+ #define lua_number2str(s,sz,n)  \
+-	l_sprintf((s), sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)(n))
++	runtime_number((s), (sz), (n))
+ 
+ /*
+ @@ lua_numbertointeger converts a float number with an integral value
+--- a/lvm.c
++++ b/lvm.c
+@@ -1143,7 +1143,9 @@
+ 
+ 
+ /* fetch an instruction and prepare its execution */
++extern void runtime_poll(void);
+ #define vmfetch()	{ \
++  runtime_poll(); \
+   if (l_unlikely(trap)) {  /* stack reallocation or hooks? */ \
+     trap = luaG_traceexec(L, pc);  /* handle hooks */ \
+     updatebase(ci);  /* correct stack */ \

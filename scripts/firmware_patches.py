@@ -11,7 +11,7 @@ MANIFEST = 'native/patches/manifest.toml'
 
 def load_manifest(root):
     data = tomllib.loads((Path(root)/MANIFEST).read_text())
-    if data.get('format') != 1:
+    if data.get('format') != 2:
         raise ValueError('unsupported patch manifest format')
     patches = data['patches']
     names = [p['name'] for p in patches]
@@ -22,10 +22,25 @@ def load_manifest(root):
             raise ValueError('patch must have a name and purpose')
         if not re.fullmatch(r'\.[a-z][a-z0-9_]*', p['section']) or not re.fullmatch(r'\w+', p['site']):
             raise ValueError('invalid patch section or site')
-        expected = bytes.fromhex(p['expected'])
-        if not 0 < p['max_size'] == len(expected) <= 256:
-            raise ValueError(f'{p["name"]}: expected bytes must cover the full overwrite budget')
+        if not 0 < p['max_size'] <= p['original_size'] <= 256:
+            raise ValueError(f'{p["name"]}: original instructions must cover the overwrite budget')
+    for entry in [*patches, *data.get('guards', [])]:
+        if not re.fullmatch(r'[a-zA-Z_]\w*', entry['site']):
+            raise ValueError('invalid original instruction site')
+        if not entry['original'].strip() or re.search(r'^\s*\.', entry['original'], re.M):
+            raise ValueError('original must contain instructions, not assembler data directives')
+        if not 0 < entry['original_size'] <= 256 or not entry['purpose'].strip():
+            raise ValueError('original instructions need a bounded size and purpose')
+    guards = data.get('guards', [])
+    if len({g['site'] for g in guards}) != len(guards):
+        raise ValueError('duplicate ABI guard')
+    for guard in guards:
+        if not set(guard['profiles']) <= set(data['profiles']):
+            raise ValueError('unknown ABI guard profile')
     for profile in data['profiles'].values():
+        for name in profile.get('source_patches', []):
+            if Path(name).is_absolute() or '..' in Path(name).parts or not name.endswith('.patch'):
+                raise ValueError('invalid source patch path')
         selected = profile['patches']
         if len(selected) != len(set(selected)) or not set(selected) <= set(names):
             raise ValueError('unknown or repeated patch in profile')
@@ -35,7 +50,7 @@ def load_manifest(root):
     return data
 
 
-def apply_patches(code, patches, symbols, sections):
+def apply_patches(code, patches, symbols, sections, originals):
     """Validate the entire edit set before returning a modified copy."""
     planned = []
     for p in patches:
@@ -44,9 +59,12 @@ def apply_patches(code, patches, symbols, sections):
         limit = p['max_size']
         if not replacement or len(replacement) > limit:
             raise ValueError(f'{p["name"]}: empty replacement or overwrite budget exceeded')
-        if address < 0 or address + limit > len(code):
+        expected = originals[p['site']]
+        if len(expected) != p['original_size'] or len(expected) < limit:
+            raise ValueError(f'{p["name"]}: original assembly size mismatch')
+        if address < 0 or address + len(expected) > len(code):
             raise ValueError(f'{p["name"]}: site outside stock code')
-        if code[address:address+limit] != bytes.fromhex(p['expected']):
+        if code[address:address+len(expected)] != expected:
             raise ValueError(f'{p["name"]}: original bytes differ at {address:#x}')
         planned.append((address, address+limit, p, replacement))
     planned.sort(key=lambda row: row[0])
@@ -69,9 +87,41 @@ class PatchSet:
         self.patches = [by_name[n] for n in selected['patches']]
         self.out.mkdir(parents=True, exist_ok=True)
         self.symbols, self.sections, self.rows = {}, {}, []
+        self.guards = [g for g in self.manifest.get('guards', []) if profile in g['profiles']]
+        self.originals, self.guard_rows = {}, []
+        self.source_patches = selected.get('source_patches', [])
 
     def run(self, *args):
         return subprocess.check_output(args, cwd=self.root, text=True)
+
+    def prepare_sources(self, source):
+        """Apply the profile's ordered unified diffs to a fresh vendored source tree."""
+        for name in self.source_patches:
+            path = self.root/'native/patches'/name
+            subprocess.run(['patch', '--batch', '--forward', '--fuzz=0',
+                            '--no-backup-if-mismatch', '-p1', '-i', str(path)],
+                           cwd=source, check=True)
+
+    def prepare_originals(self):
+        """Assemble stock instructions separately; these sections are never flashed."""
+        source = ['.flag verbatim']
+        layout = ['INCLUDE native/patches/stock-306007.ld', 'SECTIONS {']
+        checks = [*self.patches, *self.guards]
+        for i, entry in enumerate(checks):
+            section = f'.original_{i}'
+            source += [f'.section {section},"ax"', entry['original']]
+            layout += [f'{section} {entry["site"]} : {{ KEEP(*({section})) }}',
+                       f'ASSERT(SIZEOF({section}) == {entry["original_size"]}, "{entry["site"]}: original size")']
+        layout += [' /DISCARD/ : { *(.comment) *(.note*) }', '}']
+        (self.out/'originals.S').write_text('\n'.join(source)+'\n')
+        (self.out/'originals.ld').write_text('\n'.join(layout)+'\n')
+        self.run('nds32le-elf-gcc','-mcpu=d1088-spu','-mabi=2','-c',
+                 str(self.out/'originals.S'),'-o',str(self.out/'originals.o'))
+        elf = self.out/'originals.elf'
+        self.run('nds32le-elf-ld','--no-relax','-T',str(self.out/'originals.ld'),
+                 '-o',str(elf),str(self.out/'originals.o'))
+        for i, entry in enumerate(checks):
+            self.originals[entry['site']] = self.extract(f'.original_{i}',elf)
 
     def prepare(self):
         """Generate checked section placement, then assemble the readable stock edits."""
@@ -81,6 +131,7 @@ class PatchSet:
             layout += [f'{section} {p["site"]} : {{ KEEP(*({section})) }}',
                        f'ASSERT(SIZEOF({section}) > 0 && SIZEOF({section}) <= {p["max_size"]}, "{p["name"]}: overwrite budget")']
         (self.out/'patch-layout.ld').write_text('\n'.join(layout)+'\n')
+        self.prepare_originals()
         obj = self.out/'stock-edits.o'
         self.run('nds32le-elf-gcc', '-mcpu=d1088-spu', '-mabi=2', '-mno-fp-as-gp',
                  f'-DFIRMWARE_VERSION={self.version}', f'-DPROFILE_{self.profile.upper()}',
@@ -110,27 +161,27 @@ class PatchSet:
             if header['size'] and (name.startswith('.patch_') or name.endswith('hook')) and name not in allowed:
                 raise ValueError(f'unlisted patch section: {name}')
         code = stock[0x60f:-4]
-        for guard in self.manifest.get('guards', []):
-            if self.profile not in guard['profiles']:
-                continue
+        for guard in self.guards:
             address = self.symbols[guard['site']]
-            expected = bytes.fromhex(guard['expected'])
-            if code[address:address+len(expected)] != expected:
+            expected = self.originals[guard['site']]
+            if len(expected) != guard['original_size'] or code[address:address+len(expected)] != expected:
                 raise ValueError(f'native ABI guard failed: {guard["site"]}')
-        result = apply_patches(code, self.patches, self.symbols, self.sections)
+            self.guard_rows.append(dict(site=guard['site'],purpose=guard['purpose'],
+                address=address,size=len(expected),instructions=self.disassemble(expected,address)))
+        result = apply_patches(code, self.patches, self.symbols, self.sections, self.originals)
         for p in self.patches:
             address = self.symbols[p['site']]
             replacement = self.sections[p['section']]
-            before = code[address:address+len(replacement)]
+            before = self.originals[p['site']]
             self.rows.append(dict(name=p['name'], purpose=p['purpose'], site=p['site'],
-                address=address, max_size=p['max_size'], size=len(replacement),
+                address=address, max_size=p['max_size'], size=len(replacement), original_size=len(before),
                 before_hex=before.hex(), after_hex=replacement.hex(),
                 before=self.disassemble(before,address), after=self.disassemble(replacement,address)))
         return result
 
-    def extract(self, section):
+    def extract(self, section, elf=None):
         path = self.out/(section.lstrip('.')+'.bin')
-        self.run('nds32le-elf-objcopy', '-O', 'binary', '-j', section, str(self.elf), str(path))
+        self.run('nds32le-elf-objcopy', '-O', 'binary', '-j', section, str(elf or self.elf), str(path))
         return path.read_bytes()
 
     def disassemble(self, data, address):
@@ -158,15 +209,24 @@ class PatchSet:
             limit = self.headers.get('.data',{}).get('lma') if self.profile in ('app','runtime') else 0x1d0000
             memory['code'] = dict(remaining=limit-h['vma']-h['size'], limit_address=limit)
         report = dict(profile=self.profile, version=self.version, stock_sha256=self.manifest['stock_sha256'],
-                      sha256=hashlib.sha256(image).hexdigest(), bytes=len(image), patches=self.rows, memory=memory)
+                      sha256=hashlib.sha256(image).hexdigest(), bytes=len(image), patches=self.rows, memory=memory,
+                      guards=self.guard_rows, source_patches=self.source_patches)
         (self.out/'patch-report.json').write_text(json.dumps(report,indent=2)+'\n')
         lines = [f'# Firmware {self.version} patch review', '', f'SHA-256: `{report["sha256"]}`', '',
                  'All addresses below are decoded code addresses. The build verifies the stock image hash and every reserved overwrite byte.', '',
                  '## Memory', '', '```json', json.dumps(memory,indent=2), '```', '', '## Stock instruction edits', '']
         for row in self.rows:
             lines += [f'### {row["name"]}', '', row['purpose'], '',
-                      f'`{row["site"]}` at `{row["address"]:#x}`; {row["size"]}/{row["max_size"]} bytes.', '',
+                      f'`{row["site"]}` at `{row["address"]:#x}`; {row["size"]}/{row["max_size"]} bytes written/reserved; {row["original_size"]} stock bytes checked.', '',
                       'Before:', '', '```asm', *row['before'], '```', '', 'After:', '', '```asm', *row['after'], '```', '']
+        lines += ['## Native ABI guards', '']
+        for row in self.guard_rows:
+            lines += [f'### {row["site"]}', '', row['purpose'], '',
+                      '```asm', *row['instructions'], '```', '']
+        lines += ['## Lua source patches', '']
+        for name in self.source_patches:
+            lines += [f'### {name}', '', '```diff',
+                      (self.root/'native/patches'/name).read_text().rstrip(), '```', '']
         lines += ['## Container metadata', '',
                   'The builder also recalculates the application change marker, code CRC, package CRC, and (for extended images) length headers.',
                   'The stock bootloader executable is retained; its CRC must remain 0x5f08.', '']

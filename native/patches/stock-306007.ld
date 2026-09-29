@@ -126,3 +126,18 @@ stock_patch_wake_cleanup = 0x4818e;
 stock_patch_wake_slot = 0x47eba;
 stock_bt_dispatch_guard = 0x138c7a;
 stock_bt_dispatch_tail = 0x1395ee;
+
+/* Keyboard-only mode ABI guard sites. */
+stock_sdp_remove = 0x12eb7a;
+stock_l2_psm_lookup = 0x123faa;
+stock_l2_psm_search = 0x12409e;
+stock_l2_channel_lookup = 0x123e34;
+
+/* Branch destinations in checked original instructions. */
+stock_patch_dispatch_branch_2 = 0x3aba8;
+stock_bt_dispatch_guard_branch_2 = 0x1395f2;
+stock_bt_dispatch_tail_branch_1 = 0x138c3c;
+stock_avrcp_panel_branch_1 = 0x11c61a;
+stock_avrcp_play_branch_3 = 0x1139e6;
+stock_avrcp_pause_branch_3 = 0x113a00;
+stock_sdp_remove_branch_1 = 0x12eba6;

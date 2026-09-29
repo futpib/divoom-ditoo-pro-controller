@@ -1,229 +1,457 @@
-format = 1
+format = 2
 stock_sha256 = "fc16341c005b11d0ac476917dc2fd98c9bc7481b92a183e64bfe209801566544"
 
 [profiles.reflash]
 version = 306008
-patches = ["firmware_version", "allow_reflash"]
+patches = [
+    "firmware_version",
+    "allow_reflash",
+]
 
 [profiles.probe]
 version = 306009
-patches = ["command_dispatch", "firmware_version", "allow_reflash"]
+patches = [
+    "command_dispatch",
+    "firmware_version",
+    "allow_reflash",
+]
 
 [profiles.runtime]
 version = 306012
-patches = ["command_dispatch", "runtime_init", "heap_reservation", "firmware_version", "allow_reflash"]
+source_patches = ["lua/0001-bounded-runtime.patch"]
+patches = [
+    "command_dispatch",
+    "runtime_init",
+    "heap_reservation",
+    "firmware_version",
+    "allow_reflash",
+]
 
 [profiles.app]
 version = 306025
-patches = ["command_dispatch", "runtime_init", "screen_ownership", "physical_keys", "keyboard_lights", "native_jobs", "usb_receive", "usb_send", "usb_response", "usb_connected", "bluetooth_commands", "bluetooth_stack_trace", "bluetooth_hci_trace", "battery_indicator", "microphone_level", "wake_selection", "heap_reservation", "alarm_cleanup", "wake_cleanup", "wake_slot", "firmware_version", "allow_reflash"]
+source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch"]
+patches = [
+    "command_dispatch",
+    "runtime_init",
+    "screen_ownership",
+    "physical_keys",
+    "keyboard_lights",
+    "native_jobs",
+    "usb_receive",
+    "usb_send",
+    "usb_response",
+    "usb_connected",
+    "bluetooth_commands",
+    "bluetooth_stack_trace",
+    "bluetooth_hci_trace",
+    "battery_indicator",
+    "microphone_level",
+    "wake_selection",
+    "heap_reservation",
+    "alarm_cleanup",
+    "wake_cleanup",
+    "wake_slot",
+    "firmware_version",
+    "allow_reflash",
+]
 
 [[patches]]
 name = "command_dispatch"
 section = ".hook"
 site = "stock_patch_dispatch"
 max_size = 28
-expected = "a639c80549008642480003b35003800249008656480003ada6394e03"
+original_size = 30
 purpose = "Route the native extension command to the bounded runtime."
+original = '''
+    lbi333 $r0, [$r7 + 1]
+    bnez38 $r0, stock_patch_dispatch_branch_2
+    jal stock_version
+    j stock_dispatch_end
+    addi $r0, $r7, 2
+    jal stock_set_version
+    j stock_dispatch_end
+    lbi333 $r0, [$r7 + 1]
+    bnez $r0, stock_dispatch_end
+'''
 
 [[patches]]
 name = "runtime_init"
 section = ".init_hook"
 site = "stock_patch_init"
 max_size = 4
-expected = "4902b436"
+original_size = 4
 purpose = "Start the Lua worker after stock initialization."
+original = '''
+    jal stock_heap_init
+'''
 
 [[patches]]
 name = "screen_ownership"
 section = ".screen_hook"
 site = "stock_patch_screen"
 max_size = 4
-expected = "3a6f98bc"
+original_size = 4
 purpose = "Let active Lua apps own the screen."
+original = '''
+    smw.adm $r6, [$sp], $r6, 0x2
+'''
 
 [[patches]]
 name = "physical_keys"
 section = ".key_hook"
 site = "stock_patch_key"
 max_size = 4
-expected = "49fff590"
+original_size = 4
 purpose = "Deliver physical keys to Lua while retaining native power handling."
+original = '''
+    jal stock_adc_scan
+'''
 
 [[patches]]
 name = "keyboard_lights"
 section = ".led_hook"
 site = "stock_patch_led"
 max_size = 4
-expected = "3bfffcbc"
+original_size = 4
 purpose = "Apply Lua keyboard lighting on the native task."
+original = '''
+    smw.adm $sp, [$sp], $sp, 0x2
+'''
 
 [[patches]]
 name = "native_jobs"
 section = ".native_hook"
 site = "stock_patch_native"
 max_size = 4
-expected = "49001752"
+original_size = 4
 purpose = "Dispatch bounded peripheral jobs and service USB."
+original = '''
+    jal stock_native_pump
+'''
 
 [[patches]]
 name = "usb_receive"
 section = ".usb_receive_hook"
 site = "stock_patch_usb_receive"
 max_size = 4
-expected = "49fd87e1"
+original_size = 4
 purpose = "Receive controller commands over USB."
+original = '''
+    jal stock_usb_receive
+'''
 
 [[patches]]
 name = "usb_send"
 section = ".usb_send_hook"
 site = "stock_patch_usb_send"
 max_size = 4
-expected = "49008a1d"
+original_size = 4
 purpose = "Send controller replies over USB."
+original = '''
+    jal stock_usb_send
+'''
 
 [[patches]]
 name = "usb_response"
 section = ".usb_response_hook"
 site = "stock_patch_usb_response"
 max_size = 4
-expected = "3a6fb0bc"
+original_size = 4
 purpose = "Route protocol replies to the requesting transport."
+original = '''
+    smw.adm $r6, [$sp], $r12, 0x2
+'''
 
 [[patches]]
 name = "usb_connected"
 section = ".usb_connected_hook"
 site = "stock_patch_usb_connected"
 max_size = 4
-expected = "4900044b"
+original_size = 4
 purpose = "Preserve native USB connection notifications."
+original = '''
+    jal stock_control_connected
+'''
 
 [[patches]]
 name = "bluetooth_commands"
 section = ".bt_command_hook"
 site = "stock_patch_bt_command"
 max_size = 4
-expected = "49ffffc0"
+original_size = 4
 purpose = "Dispatch Lua Bluetooth commands on the Bluetooth task."
+original = '''
+    jal stock_bt_peek
+'''
 
 [[patches]]
 name = "bluetooth_stack_trace"
 section = ".bt_stack_hook"
 site = "stock_patch_bt_stack"
 max_size = 4
-expected = "8e01e610"
+original_size = 4
 purpose = "Observe stock Bluetooth stack events before forwarding them."
+original = '''
+    subi45 $r0, 1
+    slti45 $r0, 0x10
+'''
 
 [[patches]]
 name = "bluetooth_hci_trace"
 section = ".bt_hci_hook"
 site = "stock_patch_bt_hci"
 max_size = 6
-expected = "fc633fcf75e4"
+original_size = 6
 purpose = "Observe selected HCI event metadata before native processing."
+original = '''
+    push25 $r14, 24
+    addi.gp $fp, -35356
+'''
 
 [[patches]]
 name = "battery_indicator"
 section = ".indicator_hook"
 site = "stock_patch_indicator"
 max_size = 4
-expected = "3a6f98bc"
+original_size = 4
 purpose = "Allow Lua indicator ownership while retaining native behavior."
+original = '''
+    smw.adm $r6, [$sp], $r6, 0x2
+'''
 
 [[patches]]
 name = "microphone_level"
 section = ".noise_hook"
 site = "stock_patch_noise"
 max_size = 4
-expected = "49ff14eb"
+original_size = 4
 purpose = "Capture native microphone level samples."
+original = '''
+    jal stock_noise_display
+'''
 
 [[patches]]
 name = "wake_selection"
 section = ".wake_select_hook"
 site = "stock_patch_wake_select"
 max_size = 4
-expected = "3c0fdbd1"
+original_size = 4
 purpose = "Save the earliest wake schedule and its matching slot."
+original = '''
+    swi.gp $r0, [ + -37052]
+'''
 
 [[patches]]
 name = "heap_reservation"
 section = ".patch_heap_limit"
 site = "stock_patch_heap"
 max_size = 4
-expected = "4602004c"
+original_size = 4
 purpose = "Reserve 8 KiB of RAM for the runtime globals."
+original = '''
+    sethi $r0, 0x2004c
+'''
 
 [[patches]]
 name = "alarm_cleanup"
 section = ".patch_alarm_cleanup"
 site = "stock_patch_alarm_cleanup"
 max_size = 4
-expected = "44300048"
+original_size = 4
 purpose = "Retain all nine 16-byte native schedules during alarm cleanup."
+original = '''
+    movi $r3, 0x48
+'''
 
 [[patches]]
 name = "wake_cleanup"
 section = ".patch_wake_cleanup"
 site = "stock_patch_wake_cleanup"
 max_size = 4
-expected = "44300048"
+original_size = 4
 purpose = "Retain all nine 16-byte native schedules during wake cleanup."
+original = '''
+    movi $r3, 0x48
+'''
 
 [[patches]]
 name = "wake_slot"
 section = ".patch_wake_slot"
 site = "stock_patch_wake_slot"
 max_size = 4
-expected = "3e177b1c"
+original_size = 4
 purpose = "Remove the stale slot write; wake_selection records the chosen slot."
+original = '''
+    sbi.gp $r1, [ + -34020]
+'''
 
 [[patches]]
 name = "firmware_version"
 section = ".patch_firmware_version"
 site = "stock_patch_version"
 max_size = 4
-expected = "4404ab57"
+original_size = 4
 purpose = "Return this build profile firmware version."
+original = '''
+    movi $r0, 0x4ab57
+'''
 
 [[patches]]
 name = "allow_reflash"
 section = ".patch_allow_reflash"
 site = "stock_patch_version_gate"
 max_size = 2
-expected = "c816"
+original_size = 2
 purpose = "Skip the version-only rejection so stock firmware can be restored."
+original = '''
+    bnez38 $r0, stock_update_accept
+'''
 
 [[guards]]
 site = "stock_bt_dispatch_guard"
 profiles = ["app"]
-expected = "f0034e0204bb8e015cf0004a4ef204b4"
+original_size = 16
+purpose = "Validate the native ABI used by bt_dispatch_guard."
+original = '''
+    lwi37.sp $r0, [ + 0xc]
+    beqz $r0, stock_bt_dispatch_guard_branch_2
+    subi45 $r0, 1
+    slti $r15, $r0, 0x4a
+    beqz $r15, stock_bt_dispatch_tail
+'''
 
 [[guards]]
 site = "stock_bt_dispatch_tail"
 profiles = ["app"]
-expected = "49fffb27fcc6"
+original_size = 6
+purpose = "Validate the native ABI used by bt_dispatch_tail."
+original = '''
+    jal stock_bt_dispatch_tail_branch_1
+    pop25 $r10, 48
+'''
 
 [[guards]]
 site = "stock_avrcp_panel"
 profiles = ["app"]
-expected = "c076fc20007002bb66508080001002ba"
+original_size = 16
+purpose = "Validate the native ABI used by avrcp_panel."
+original = '''
+    beqz38 $r0, stock_avrcp_panel_branch_1
+    push25 $r8, 0
+    lbi $r7, [$r0 + 0x2bb]
+    bitci $r5, $r1, 0x80
+    lbi $r1, [$r0 + 0x2ba]
+'''
 
 [[guards]]
 site = "stock_avrcp_connect"
 profiles = ["app"]
-expected = "fc01f081f1018446fa02490128ddfc81"
+original_size = 16
+purpose = "Validate the native ABI used by avrcp_connect."
+original = '''
+    push25 $r6, 8
+    swi37.sp $r0, [ + 4]
+    lwi37.sp $r1, [ + 4]
+    movi55 $r2, 6
+    movpi45 $r0, 0x12
+    jal stock_bt_enqueue
+    pop25 $r6, 8
+'''
 
 [[guards]]
 site = "stock_avrcp_disconnect"
 profiles = ["app"]
-expected = "fc0084208041fa03490128d6fc80"
+original_size = 14
+purpose = "Validate the native ABI used by avrcp_disconnect."
+original = '''
+    push25 $r6, 0
+    movi55 $r1, 0
+    mov55 $r2, $r1
+    movpi45 $r0, 0x13
+    jal stock_bt_enqueue
+    pop25 $r6, 0
+'''
 
 [[guards]]
 site = "stock_avrcp_play"
 profiles = ["app"]
-expected = "3c0de560000000a6c008fc0084208041fa04490128cafc80dd9e"
+original_size = 26
+purpose = "Validate the native ABI used by avrcp_play."
+original = '''
+    lwi.gp $r0, [ + -27264]
+    lbi $r0, [$r0 + 0xa6]
+    beqz38 $r0, stock_avrcp_play_branch_3
+    push25 $r6, 0
+    movi55 $r1, 0
+    mov55 $r2, $r1
+    movpi45 $r0, 0x14
+    jal stock_bt_enqueue
+    pop25 $r6, 0
+    ret5 $lp
+'''
 
 [[guards]]
 site = "stock_avrcp_pause"
 profiles = ["app"]
-expected = "3c0de560000000a6c008fc0084208041fa05490128bdfc80dd9e"
+original_size = 26
+purpose = "Validate the native ABI used by avrcp_pause."
+original = '''
+    lwi.gp $r0, [ + -27264]
+    lbi $r0, [$r0 + 0xa6]
+    beqz38 $r0, stock_avrcp_pause_branch_3
+    push25 $r6, 0
+    movi55 $r1, 0
+    mov55 $r2, $r1
+    movpi45 $r0, 0x15
+    jal stock_bt_enqueue
+    pop25 $r6, 0
+    ret5 $lp
+'''
+
+[[guards]]
+site = "stock_sdp_remove"
+profiles = ["app"]
+original_size = 10
+purpose = "Validate synchronous SDP record unlinking."
+original = '''
+    beqz38 $r0, stock_sdp_remove_branch_1
+    push25 $r6, 8
+    swi37.sp $r0, [ + 4]
+    lwi.gp $r0, [ + -35356]
+'''
+
+[[guards]]
+site = "stock_l2_psm_lookup"
+profiles = ["app"]
+original_size = 14
+purpose = "Validate the stock PSM table lookup layout."
+original = '''
+    lwi.gp $r1, [ + -35356]
+    addi $r5, $r1, 0x28fc
+    addi $r1, $r1, 0x291c
+    lwi333.bi $r2, [$r5], 4
+'''
+
+[[guards]]
+site = "stock_l2_psm_search"
+profiles = ["app"]
+original_size = 14
+purpose = "Validate the stock PSM search layout."
+original = '''
+    lwi.gp $r2, [ + -35356]
+    mov55 $r3, $r0
+    addi $r5, $r2, 0x28fc
+    addi $r2, $r2, 0x291c
+'''
+
+[[guards]]
+site = "stock_l2_channel_lookup"
+profiles = ["app"]
+original_size = 12
+purpose = "Validate channel stride and table access."
+original = '''
+    push25 $r10, 0
+    lwi.gp $r2, [ + -35356]
+    movi55 $r7, 0
+    movi $r1, 0x7c
+'''
