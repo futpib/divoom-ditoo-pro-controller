@@ -19,18 +19,32 @@
     ],
     "laptop_btmon_agrees_on_pairing_success": true,
     "captured_keys_absent_from_device_trace": 7,
-    "tv_observation": {
+    "lua_observation": {
+      "same_generation": true,
+      "callbacks_advanced": 128
+    },
+    "overflow_notices_observed": true,
+    "tv_observation_before_fresh_pairing": {
       "acl_connection": "success",
       "authentication_status": 5,
       "disconnect_reason": 5,
       "hid_opened": false,
       "conclusion": "Authentication failure before HID; stale or mismatched bonds possible, not proven"
     },
-    "lua_observation": {
-      "same_generation": true,
-      "callbacks_advanced": 128
-    },
-    "overflow_notices_observed": true
+    "tv_fresh_pairing": {
+      "hci_pairing_status": 0,
+      "encrypted": true,
+      "hid_psms_opened": [
+        17,
+        19
+      ],
+      "owner_confirmed_smarttube_play_pause": true,
+      "app_state": "active",
+      "keyboard_state": 2,
+      "lua_generation_unchanged": 18,
+      "method": "TV selected the accessory after the app Pair action; no firmware change since the authentication failure",
+      "audio_profile_note": "Owner reports TV also connected the stock speaker profile and had to disable it manually; keyboard-only mode is pending"
+    }
   },
   "validation": {
     "rust_tests_passed": 62,
@@ -68,5 +82,10 @@
     "preexisting_discovery_preserved": true,
     "btmon_and_pairing_agent_stopped": true
   },
-  "tv_controls_verified": false
+  "tv_controls_verified": {
+    "smarttube_play_pause": true,
+    "mute": null,
+    "space": null,
+    "tv_reboot_reconnect": null
+  }
 }

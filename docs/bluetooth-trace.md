@@ -100,8 +100,11 @@ its generation unchanged while callbacks continued. Temporary laptop bonds and
 pairing settings were restored, and the saved TV settings were unchanged.
 
 The TV connection recorded HCI authentication failure 0x05 and disconnection
-before HID opened. This narrows the failing stage; it does not identify which
-endpoint has incorrect pairing state or establish working TV controls.
+before HID opened. A subsequent fresh pairing succeeded, enabled encryption
+and opened both HID channels. The owner then confirmed physical Play/Pause in
+SmartTube. The earlier authentication failure does not identify which endpoint
+had incorrect pairing state. The TV also connected the stock audio profile,
+which the owner disabled manually; this remains a separate behavior to fix.
 
 42 of 43 hardware runtime checks passed. The maximum 8192-byte upload was refused
 by the stock-heap headroom guard after Bluetooth lifecycle testing; a targeted

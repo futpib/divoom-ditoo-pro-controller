@@ -27,8 +27,9 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
    needed. A blue bar shows the two-minute pairing window.
 5. **TV / READY** with a green dot means the keyboard connection is established.
    Play, Mute and Space now send their corresponding keys. A sent report does
-   not prove that the current TV app handles it; TV/SmartTube compatibility still
-   needs a test on the actual TV.
+   not prove that every TV app handles it. SmartTube Play/Pause was confirmed
+   by the owner on the test TV with firmware 306024; Mute and Space still need
+   TV-specific verification.
 
 The top line shows the current step; the lower line scrolls its instructions.
 The remote remembers both the key assignments and the connected TV. Later boots
@@ -190,7 +191,7 @@ record fresh pairing initiated from either end, incoming/outgoing encrypted HID 
 disconnected, connection reuse, targeted bond deletion, pairing-window expiry
 and cleanup after a Lua infinite loop. The same saved bond was reused after
 reflash/reboot. These extend the earlier key-input tests below; TV accessory
-pairing and SmartTube input still require a test on that TV.
+pairing and SmartTube input were not tested in that earlier run.
 
 The committed [hardware results](../firmware/keyboard-evidence/verification.json)
 cover all three real Linux key events, release after a Lua infinite loop, all
@@ -198,9 +199,13 @@ cover all three real Linux key events, release after a Lua infinite loop, all
 reflash/reboot without fresh pairing. A second build produced the identical
 image. Native sanitizer tests also exercise the three physical key bindings,
 packet ownership, stale commands, stack reconstruction, and bounded bond saves.
-The TV connection returned to disconnected during handoff; TV pairing and
-SmartTube behavior remain unverified. Linux input success does not establish
-compatibility with that TV.
+The TV connection returned to disconnected during that earlier handoff.
+A later [306024 TV test](../firmware/bluetooth-trace-evidence/verification.json)
+recorded successful fresh pairing, encryption and both HID channels opening.
+The owner confirmed that the physical Play/Pause button pauses/resumes SmartTube.
+The TV also connected the stock speaker profile, which the owner disabled on
+the TV. Mute, Space and reconnection after a TV/Ditoo reboot were not checked
+in that follow-up.
 
 The profile follows the [Bluetooth HID 1.1.1 specification](https://www.bluetooth.com/specifications/specs/hid-1-1-1/).
 The related [vendor SDK](https://github.com/leadercxn/bp1048_sdk_v0.1.12/tree/8105bd864b04995d81c9f9ae77cb158259f39015/MVsB1_Base_SDK/middleware/bluetooth)
