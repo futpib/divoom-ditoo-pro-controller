@@ -40,6 +40,18 @@ class ManifestTests(unittest.TestCase):
         path.write_text(path.read_text().replace('const USB_SIZE: usize = 2026511;', 'const USB_SIZE: usize = 2_026_511;'))
         self.assertEqual(*manifest.plan(self.root, self.image, self.meta))
 
+    def test_named_patch_profile_must_match_image(self):
+        folder = self.root/'native/patches'
+        folder.mkdir(parents=True)
+        spec = folder/'manifest.toml'
+        spec.write_text('[profiles.app]\nversion = 306019\n')
+        builder = self.root/'scripts/example-builder.py'
+        builder.write_text("PATCH_PROFILE = 'app'\n")
+        self.assertEqual(*manifest.plan(self.root,self.image,self.meta,builder=builder))
+        spec.write_text('[profiles.app]\nversion = 306020\n')
+        with self.assertRaisesRegex(ValueError,'profile version'):
+            manifest.plan(self.root,self.image,self.meta,builder=builder)
+
     def test_concurrent_edit_is_preserved(self):
         name = 'src/firmware.rs'
         before = {name:(self.root/name).read_text()}

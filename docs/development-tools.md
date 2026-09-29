@@ -10,6 +10,11 @@ Firmware 306024 adds `--transport usb bluetooth trace --seconds 120`. It records
 controller, stack and HID events without replacing the running Lua app. See
 [Bluetooth diagnostics](bluetooth-trace.md) for limits and capture instructions.
 
+## Build and review firmware patches
+
+See [readable firmware patches](firmware-patches.md) for named assembly edits,
+stock symbols, overwrite guards, generated disassembly, and deterministic CI builds.
+
 ## Inspect firmware
 
 `scripts/fw-inspect.py` replaces the scratch `target/lua-app/inspect.py`.

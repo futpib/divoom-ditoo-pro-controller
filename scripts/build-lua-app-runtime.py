@@ -8,6 +8,9 @@ from pathlib import Path
 import struct
 import subprocess
 import tarfile
+from firmware_patches import PatchSet
+
+PATCH_PROFILE = 'app'
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('reflash', ROOT/'scripts/build-reflash-probe.py')
@@ -73,6 +76,8 @@ def build():
     sources = sorted(p for p in src.glob('*.c') if p.name not in skip)
     sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','usb-control.c','bluetooth-hid.c','bluetooth-trace.c','runtime-entry.S']]
     sources += [ROOT/'native/lua/libc.c']
+    patches = PatchSet(ROOT, PATCH_PROFILE, out)
+    patch_object = patches.prepare()
     objects = []
     def run(*args): subprocess.run(args, cwd=ROOT, check=True)
     for source in sources:
@@ -81,58 +86,15 @@ def build():
         objects.append(str(obj))
     run('nds32le-elf-gcc','-mcpu=d1088-spu','-mabi=2','-mno-fp-as-gp','-nostartfiles','-flto','-Os',
         '-Wl,--gc-sections,--no-relax,-T,native/lua-app/runtime.ld,-Map,'+str(out/'runtime.map'),
-        '-o',str(out/'runtime.elf'),*objects,'-lm','-lc_nano','-lgcc')
+        '-o',str(out/'runtime.elf'),*objects,patch_object,'-lm','-lc_nano','-lgcc')
     run('nds32le-elf-size',str(out/'runtime.elf'))
     symbols = subprocess.check_output(['nds32le-elf-nm',str(out/'runtime.elf')],text=True)
     for symbol in ['_gettimeofday','_gettimeofday_r','_times','_times_r','_open','_system']:
         assert not any(line.split()[-1] == symbol for line in symbols.splitlines()), symbol
 
-    sections = {}
-    for section in ['hook','init_hook','screen_hook','key_hook','led_hook','native_hook','indicator_hook','noise_hook','wake_select_hook','bt_command_hook','bt_stack_hook','bt_hci_hook','usb_receive_hook','usb_send_hook','usb_response_hook','usb_connected_hook','text','data']:
-        path = out/(section+'.bin')
-        run('nds32le-elf-objcopy','-O','binary','-j','.'+section,str(out/'runtime.elf'),str(path))
-        sections[section] = path.read_bytes()
     stock = (ROOT/'firmware/306007.MVA').read_bytes()
-    assert hashlib.sha256(stock).hexdigest() == base.STOCK_SHA
-    code = bytearray(stock[base.CODE:-4])
-    # Match the native queue wrappers used by the bounded Bluetooth API.
-    for offset, expected in [
-        (0x138c7a,'f0034e0204bb8e015cf0004a4ef204b4'),
-        (0x1395ee,'49fffb27fcc6'),
-        (0x11c52e,'c076fc20007002bb66508080001002ba'),
-        (0x1139b0,'fc01f081f1018446fa02490128ddfc81'),
-        (0x1139c0,'fc0084208041fa03490128d6fc80'),
-        (0x1139ce,'3c0de560000000a6c008fc0084208041fa04490128cafc80dd9e'),
-        (0x1139e8,'3c0de560000000a6c008fc0084208041fa05490128bdfc80dd9e')]:
-        expected = bytes.fromhex(expected)
-        assert code[offset:offset+len(expected)] == expected
-    patches = [(0x7ec20, bytes.fromhex('8e01e610'), sections['bt_stack_hook']),
-               (0x121c6c, bytes.fromhex('fc633fcf75e4'), sections['bt_hci_hook']),
-               (0x387b2, bytes.fromhex('4900044b'), sections['usb_connected_hook']),
-               (0x7a27e, bytes.fromhex('49fd87e1'), sections['usb_receive_hook']),
-               (0x7a29c, bytes.fromhex('49008a1d'), sections['usb_send_hook']),
-               (0x38f00, bytes.fromhex('3a6fb0bc'), sections['usb_response_hook']),
-               (0x3ab9c, bytes.fromhex('a639c805'), sections['hook']),
-               (0x2ec58, bytes.fromhex('4902b436'), sections['init_hook']),
-               (0x854d0, bytes.fromhex('4602004c'), bytes.fromhex('4602004a')),
-               (0x75dcc, bytes.fromhex('3a6f98bc'), sections['screen_hook']),
-               (0x2d490, bytes.fromhex('49fff590'), sections['key_hook']),
-               (0x7580c, bytes.fromhex('3bfffcbc'), sections['led_hook']),
-               (0x47838, bytes.fromhex('49001752'), sections['native_hook']),
-               (0x138c76, bytes.fromhex('49ffffc0'), sections['bt_command_hook']),
-               (0x2d6e8, bytes.fromhex('3a6f98bc'), sections['indicator_hook']),
-               (0x72192, bytes.fromhex('49ff14eb'), sections['noise_hook']),
-               # Native one-shot cleanup must retain all nine 16-byte schedules.
-               (0x47fdc, bytes.fromhex('44300048'), bytes.fromhex('44300090')),
-               (0x4818e, bytes.fromhex('44300048'), bytes.fromhex('44300090')),
-               # Remember the selected earliest slot, not the last eligible slot.
-               (0x47eba, bytes.fromhex('3e177b1c'), bytes.fromhex('92009200')),
-               (0x47eea, bytes.fromhex('3c0fdbd1'), sections['wake_select_hook']),
-               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab68')),
-               (0x4b550, bytes.fromhex('c816'), bytes.fromhex('d516'))]
-    for offset, before, after in patches:
-        assert code[offset:offset+len(before)] == before
-        code[offset:offset+len(after)] = after
+    code = patches.apply(stock, out/'runtime.elf')
+    sections = {name: patches.extract('.'+name) for name in ('text','data')}
     for address, section in [(0x1ca000,'text'),(0x1ef800,'data')]:
         assert len(code) <= address
         code.extend(bytes(address-len(code)))
@@ -150,15 +112,16 @@ def build():
     struct.pack_into('<I', image,0x607,length+4)
     image.extend(code)
     image.extend(struct.pack('<I',binascii.crc_hqx(image,0)))
-    report = {'version':306024,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
+    patches.report(image)
+    report = {'version':patches.version,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
               'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':49152,'arena_page_unit':1024,'arena_page_slots':48,
               'task_stack_words':4096,'globals_reserved':8192,'source_limit':8192,'source_chunk_bytes':512,
               'gc_pause_percent':120,'gc_step_multiplier':200,'gc_step_bytes':1024,
               'allocator_reclaims_shrunk_blocks':True,'allocator_grows_in_place':True,
               'instruction_limit':100000,'callback_ms_limit':50,'boot_crc16':0x5f08,
               'status':'offline-built; hardware-unverified'}
-    (ROOT/'firmware/306024-lua.MVA').write_bytes(image)
-    (ROOT/'firmware/306024-lua.json').write_text(json.dumps(report,indent=2)+'\n')
+    (ROOT/f'firmware/{patches.version}-lua.MVA').write_bytes(image)
+    (ROOT/f'firmware/{patches.version}-lua.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 
 if __name__ == '__main__': build()

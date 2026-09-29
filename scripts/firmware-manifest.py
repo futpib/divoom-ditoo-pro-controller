@@ -176,14 +176,21 @@ def plan(root, image, meta, register=None, builder=None):
         after['scripts/backup-lua-storage.py'] = backup
     if builder:
         source = (root/builder).read_text()
-        versions_in_builder = set()
-        for match in re.finditer(r"'version':\s*(306\d+)|firmware/(306\d+)-lua", source):
-            versions_in_builder.add(int(match[1] or match[2]))
-        if versions_in_builder != {version}:
-            raise ValueError(f'builder output/report versions disagree: {sorted(versions_in_builder)}')
-        opcode = f'{0x44000000 | version:08x}'
-        if f"bytes.fromhex('{opcode}')" not in source:
-            raise ValueError('builder version instruction does not match image')
+        profile = re.search(r"^PATCH_PROFILE = ['\"](\w+)['\"]", source, re.M)
+        if profile:
+            import tomllib
+            spec = tomllib.loads((root/'native/patches/manifest.toml').read_text())
+            if spec['profiles'][profile[1]]['version'] != version:
+                raise ValueError('builder patch profile version does not match image')
+        else:
+            versions_in_builder = set()
+            for match in re.finditer(r"'version':\s*(306\d+)|firmware/(306\d+)-lua", source):
+                versions_in_builder.add(int(match[1] or match[2]))
+            if versions_in_builder != {version}:
+                raise ValueError(f'builder output/report versions disagree: {sorted(versions_in_builder)}')
+            opcode = f'{0x44000000 | version:08x}'
+            if f"bytes.fromhex('{opcode}')" not in source:
+                raise ValueError('builder version instruction does not match image')
     return before, after
 
 

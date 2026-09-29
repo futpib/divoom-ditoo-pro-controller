@@ -52,14 +52,14 @@ key_filter:
 .global runtime_led_context
 runtime_led_context:
     /* Stock lwi.gp r0, [gp - 33664]; preserve the verified instruction bytes. */
-    .byte 0x3c, 0x0d, 0xdf, 0x20
+    lwi.gp $r0, [+ -33664]
     ret
 
 .section .text.runtime_fs_context,"ax"
 .global runtime_fs_context
 runtime_fs_context:
     /* Stock lwi.gp r0, [gp - 33692]. */
-    .byte 0x3c, 0x0d, 0xdf, 0x19
+    lwi.gp $r0, [+ -33692]
     ret
 
 .section .text.led_filter,"ax"
@@ -92,7 +92,8 @@ bt_stack_trace:
     move $r0, $r6
     move $r1, $r7
     lmw.bim $r6, [$sp], $r7, 2
-    .byte 0x8e,0x01,0xe6,0x10
+    subi45 $r0, 1
+    slti45 $r0, 16
     j stock_bt_stack_resume
 .section .text.bt_hci_trace,"ax"
 bt_hci_trace:
@@ -102,7 +103,8 @@ bt_hci_trace:
     move $r0, $r6
     lmw.bim $r6, [$sp], $r6, 2
     /* Reproduce the exact push25 and gp-relative fp setup at HciProcessEvent. */
-    .byte 0xfc,0x63,0x3f,0xcf,0x75,0xe4
+    push25 $r14, 24
+    addi.gp $fp, -35356
     j stock_bt_hci_resume
 .section .indicator_hook,"ax"
     j indicator_filter
@@ -183,9 +185,9 @@ stock_indicator_write:
 .section .text.wake_selected,"ax"
 wake_selected:
     /* r0 is the new earliest time; r6/r7 are the entry and its slot. */
-    .byte 0x3c, 0x0f, 0xdb, 0xd1
+    swi.gp $r0, [+ -37052]
     lbi $r1, [$r6 + 5]
     movi $r0, -1
     cmovz $r0, $r7, $r1
-    .byte 0x3e, 0x07, 0x7b, 0x1c
+    sbi.gp $r0, [+ -34020]
     ret

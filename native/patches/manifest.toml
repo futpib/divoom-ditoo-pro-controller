@@ -1,0 +1,229 @@
+format = 1
+stock_sha256 = "fc16341c005b11d0ac476917dc2fd98c9bc7481b92a183e64bfe209801566544"
+
+[profiles.reflash]
+version = 306008
+patches = ["firmware_version", "allow_reflash"]
+
+[profiles.probe]
+version = 306009
+patches = ["command_dispatch", "firmware_version", "allow_reflash"]
+
+[profiles.runtime]
+version = 306012
+patches = ["command_dispatch", "runtime_init", "heap_reservation", "firmware_version", "allow_reflash"]
+
+[profiles.app]
+version = 306024
+patches = ["command_dispatch", "runtime_init", "screen_ownership", "physical_keys", "keyboard_lights", "native_jobs", "usb_receive", "usb_send", "usb_response", "usb_connected", "bluetooth_commands", "bluetooth_stack_trace", "bluetooth_hci_trace", "battery_indicator", "microphone_level", "wake_selection", "heap_reservation", "alarm_cleanup", "wake_cleanup", "wake_slot", "firmware_version", "allow_reflash"]
+
+[[patches]]
+name = "command_dispatch"
+section = ".hook"
+site = "stock_patch_dispatch"
+max_size = 28
+expected = "a639c80549008642480003b35003800249008656480003ada6394e03"
+purpose = "Route the native extension command to the bounded runtime."
+
+[[patches]]
+name = "runtime_init"
+section = ".init_hook"
+site = "stock_patch_init"
+max_size = 4
+expected = "4902b436"
+purpose = "Start the Lua worker after stock initialization."
+
+[[patches]]
+name = "screen_ownership"
+section = ".screen_hook"
+site = "stock_patch_screen"
+max_size = 4
+expected = "3a6f98bc"
+purpose = "Let active Lua apps own the screen."
+
+[[patches]]
+name = "physical_keys"
+section = ".key_hook"
+site = "stock_patch_key"
+max_size = 4
+expected = "49fff590"
+purpose = "Deliver physical keys to Lua while retaining native power handling."
+
+[[patches]]
+name = "keyboard_lights"
+section = ".led_hook"
+site = "stock_patch_led"
+max_size = 4
+expected = "3bfffcbc"
+purpose = "Apply Lua keyboard lighting on the native task."
+
+[[patches]]
+name = "native_jobs"
+section = ".native_hook"
+site = "stock_patch_native"
+max_size = 4
+expected = "49001752"
+purpose = "Dispatch bounded peripheral jobs and service USB."
+
+[[patches]]
+name = "usb_receive"
+section = ".usb_receive_hook"
+site = "stock_patch_usb_receive"
+max_size = 4
+expected = "49fd87e1"
+purpose = "Receive controller commands over USB."
+
+[[patches]]
+name = "usb_send"
+section = ".usb_send_hook"
+site = "stock_patch_usb_send"
+max_size = 4
+expected = "49008a1d"
+purpose = "Send controller replies over USB."
+
+[[patches]]
+name = "usb_response"
+section = ".usb_response_hook"
+site = "stock_patch_usb_response"
+max_size = 4
+expected = "3a6fb0bc"
+purpose = "Route protocol replies to the requesting transport."
+
+[[patches]]
+name = "usb_connected"
+section = ".usb_connected_hook"
+site = "stock_patch_usb_connected"
+max_size = 4
+expected = "4900044b"
+purpose = "Preserve native USB connection notifications."
+
+[[patches]]
+name = "bluetooth_commands"
+section = ".bt_command_hook"
+site = "stock_patch_bt_command"
+max_size = 4
+expected = "49ffffc0"
+purpose = "Dispatch Lua Bluetooth commands on the Bluetooth task."
+
+[[patches]]
+name = "bluetooth_stack_trace"
+section = ".bt_stack_hook"
+site = "stock_patch_bt_stack"
+max_size = 4
+expected = "8e01e610"
+purpose = "Observe stock Bluetooth stack events before forwarding them."
+
+[[patches]]
+name = "bluetooth_hci_trace"
+section = ".bt_hci_hook"
+site = "stock_patch_bt_hci"
+max_size = 6
+expected = "fc633fcf75e4"
+purpose = "Observe selected HCI event metadata before native processing."
+
+[[patches]]
+name = "battery_indicator"
+section = ".indicator_hook"
+site = "stock_patch_indicator"
+max_size = 4
+expected = "3a6f98bc"
+purpose = "Allow Lua indicator ownership while retaining native behavior."
+
+[[patches]]
+name = "microphone_level"
+section = ".noise_hook"
+site = "stock_patch_noise"
+max_size = 4
+expected = "49ff14eb"
+purpose = "Capture native microphone level samples."
+
+[[patches]]
+name = "wake_selection"
+section = ".wake_select_hook"
+site = "stock_patch_wake_select"
+max_size = 4
+expected = "3c0fdbd1"
+purpose = "Save the earliest wake schedule and its matching slot."
+
+[[patches]]
+name = "heap_reservation"
+section = ".patch_heap_limit"
+site = "stock_patch_heap"
+max_size = 4
+expected = "4602004c"
+purpose = "Reserve 8 KiB of RAM for the runtime globals."
+
+[[patches]]
+name = "alarm_cleanup"
+section = ".patch_alarm_cleanup"
+site = "stock_patch_alarm_cleanup"
+max_size = 4
+expected = "44300048"
+purpose = "Retain all nine 16-byte native schedules during alarm cleanup."
+
+[[patches]]
+name = "wake_cleanup"
+section = ".patch_wake_cleanup"
+site = "stock_patch_wake_cleanup"
+max_size = 4
+expected = "44300048"
+purpose = "Retain all nine 16-byte native schedules during wake cleanup."
+
+[[patches]]
+name = "wake_slot"
+section = ".patch_wake_slot"
+site = "stock_patch_wake_slot"
+max_size = 4
+expected = "3e177b1c"
+purpose = "Remove the stale slot write; wake_selection records the chosen slot."
+
+[[patches]]
+name = "firmware_version"
+section = ".patch_firmware_version"
+site = "stock_patch_version"
+max_size = 4
+expected = "4404ab57"
+purpose = "Return this build profile firmware version."
+
+[[patches]]
+name = "allow_reflash"
+section = ".patch_allow_reflash"
+site = "stock_patch_version_gate"
+max_size = 2
+expected = "c816"
+purpose = "Skip the version-only rejection so stock firmware can be restored."
+
+[[guards]]
+site = "stock_bt_dispatch_guard"
+profiles = ["app"]
+expected = "f0034e0204bb8e015cf0004a4ef204b4"
+
+[[guards]]
+site = "stock_bt_dispatch_tail"
+profiles = ["app"]
+expected = "49fffb27fcc6"
+
+[[guards]]
+site = "stock_avrcp_panel"
+profiles = ["app"]
+expected = "c076fc20007002bb66508080001002ba"
+
+[[guards]]
+site = "stock_avrcp_connect"
+profiles = ["app"]
+expected = "fc01f081f1018446fa02490128ddfc81"
+
+[[guards]]
+site = "stock_avrcp_disconnect"
+profiles = ["app"]
+expected = "fc0084208041fa03490128d6fc80"
+
+[[guards]]
+site = "stock_avrcp_play"
+profiles = ["app"]
+expected = "3c0de560000000a6c008fc0084208041fa04490128cafc80dd9e"
+
+[[guards]]
+site = "stock_avrcp_pause"
+profiles = ["app"]
+expected = "3c0de560000000a6c008fc0084208041fa05490128bdfc80dd9e"

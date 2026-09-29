@@ -8,6 +8,9 @@ from pathlib import Path
 import struct
 import subprocess
 import tarfile
+from firmware_patches import PatchSet
+
+PATCH_PROFILE = 'runtime'
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('reflash', ROOT/'scripts/build-reflash-probe.py')
@@ -37,6 +40,8 @@ def build():
     skip = {'lua.c','luac.c','linit.c','liolib.c','loslib.c','loadlib.c','ldblib.c'}
     sources = sorted(p for p in src.glob('*.c') if p.name not in skip)
     sources += [ROOT/'native/lua'/n for n in ['runtime.c','libc.c','runtime-entry.S']]
+    patches = PatchSet(ROOT, PATCH_PROFILE, out)
+    patch_object = patches.prepare()
     objects = []
     def run(*args): subprocess.run(args, cwd=ROOT, check=True)
     for source in sources:
@@ -45,24 +50,11 @@ def build():
         objects.append(str(obj))
     run('nds32le-elf-gcc','-mcpu=d1088-spu','-nostartfiles',
         '-Wl,--gc-sections,--no-relax,-T,native/lua/runtime.ld,-Map,'+str(out/'runtime.map'),
-        '-o',str(out/'runtime.elf'),*objects,'-lm','-lc','-lgcc')
+        '-o',str(out/'runtime.elf'),*objects,patch_object,'-lm','-lc','-lgcc')
     run('nds32le-elf-size',str(out/'runtime.elf'))
-    sections = {}
-    for section in ['hook','init_hook','text','data']:
-        path = out/(section+'.bin')
-        run('nds32le-elf-objcopy','-O','binary','-j','.'+section,str(out/'runtime.elf'),str(path))
-        sections[section] = path.read_bytes()
     stock = (ROOT/'firmware/306007.MVA').read_bytes()
-    assert hashlib.sha256(stock).hexdigest() == base.STOCK_SHA
-    code = bytearray(stock[base.CODE:-4])
-    patches = [(0x3ab9c, bytes.fromhex('a639c805'), sections['hook']),
-               (0x2ec58, bytes.fromhex('4902b436'), sections['init_hook']),
-               (0x854d0, bytes.fromhex('4602004c'), bytes.fromhex('4602004a')),
-               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab5c')),
-               (0x4b550, bytes.fromhex('c816'), bytes.fromhex('d516'))]
-    for offset, before, after in patches:
-        assert code[offset:offset+len(before)] == before
-        code[offset:offset+len(after)] = after
+    code = patches.apply(stock, out/'runtime.elf')
+    sections = {name: patches.extract('.'+name) for name in ('text','data')}
     for address, section in [(0x1ca000,'text'),(0x1ee000,'data')]:
         assert len(code) <= address
         code.extend(bytes(address-len(code)))
@@ -80,13 +72,14 @@ def build():
     struct.pack_into('<I', image,0x607,length+4)
     image.extend(code)
     image.extend(struct.pack('<I',binascii.crc_hqx(image,0)))
-    report = {'version':306012,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
+    patches.report(image)
+    report = {'version':patches.version,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
               'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':32768,
               'task_stack_words':4096,'globals_reserved':8192,'source_limit':2048,
               'instruction_limit':20000,'boot_crc16':0x5f08,
               'status':'offline-built; hardware-unverified'}
-    (ROOT/'firmware/306012-lua.MVA').write_bytes(image)
-    (ROOT/'firmware/306012-lua.json').write_text(json.dumps(report,indent=2)+'\n')
+    (ROOT/f'firmware/{patches.version}-lua.MVA').write_bytes(image)
+    (ROOT/f'firmware/{patches.version}-lua.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 
 if __name__ == '__main__': build()

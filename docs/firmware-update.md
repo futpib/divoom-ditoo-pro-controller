@@ -148,6 +148,7 @@ prove that downstream bootloader checks permit reinstalling the same code.
 ### Run from this repository
 
 Prerequisites: Linux with BlueZ running, a Rust/Cargo toolchain, Python 3,
+the [pinned NDS32 toolchain](firmware-patches.md#reproduce-in-the-pinned-container),
 `pkg-config` and libdbus development files, and `systemd-inhibit` for the live
 run. The runner builds with `--locked --no-default-features`; fontconfig and
 libmpv are not required. Cargo may need network access to obtain locked crates
