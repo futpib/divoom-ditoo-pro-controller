@@ -328,6 +328,10 @@ enum LuaCommand {
   Decode { file: PathBuf },
   /// Start or replace a resident app; the device continues after disconnect
   Start { file: PathBuf },
+  /// Save an app for automatic startup after power-on, then start it (306022+)
+  Install { file: PathBuf },
+  /// Remove the saved startup app and stop the running app
+  Uninstall,
   /// Stop the app and release its controls
   Stop,
   /// Pause callbacks and release display/input ownership
@@ -471,6 +475,8 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
       let status = match action {
         LuaCommand::Run { file } => lua::control(address, Action::Run(&std::fs::read(file)?)).await?,
         LuaCommand::Start { file } => lua::control(address, Action::Start(&std::fs::read(file)?)).await?,
+        LuaCommand::Install { file } => lua::control(address, Action::Install(&std::fs::read(file)?)).await?,
+        LuaCommand::Uninstall => lua::control(address, Action::Uninstall).await?,
         LuaCommand::Eval { source } => lua::control(address, Action::Run(source.as_bytes())).await?,
         LuaCommand::Status => lua::control(address, Action::Status).await?,
         LuaCommand::Cancel | LuaCommand::Stop => lua::control(address, Action::Stop).await?,

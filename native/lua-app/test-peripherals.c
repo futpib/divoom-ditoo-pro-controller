@@ -222,15 +222,26 @@ static void test_keyboard_bonds(void) {
     puts("HID-only bond flush is delayed, bounded and skips unchanged records");
 }
 
+static void tv_frame(unsigned stage) {
+    const char *directory=getenv("DITOO_UI_FRAMES");if(!directory) return;
+    char path[512];snprintf(path,sizeof path,"%s/%u.ppm",directory,stage);
+    FILE *f=fopen(path,"wb");assert(f);fputs("P6\n16 16\n255\n",f);
+    assert(fwrite(app.frame,1,sizeof app.frame,f)==sizeof app.frame);fclose(f);
+}
 static void test_tv_keyboard(void) {
     char source[8193];
     FILE *file=fopen("examples/lua/tv-keyboard.lua","rb");assert(file);
     size_t n=fread(source,1,sizeof source-1,file);assert(!ferror(file));fclose(file);source[n]=0;
-    fake_hid_status=(struct hid_status){.state=2,.enabled=1};bt_queued.op=0;
-    load(source,1);assert(app.state==ACTIVE);
-    for (unsigned key=2;key<=4;++key) {
+    fake_hid_status=(struct hid_status){.state=2,.enabled=1};memset(fake_hid_status.peer,8,6);bt_queued.op=0;
+    saved.initialized=saved.boot_done=1;stock_config_context=config_context;saved.settings_size=0;
+    track_heap=1;free_heap=76000;load(source,1);
+    if(app.state!=ACTIVE) { fprintf(stderr,"Standalone app: %s peak %u\n",app.result,app.peak);abort(); }
+    printf("Standalone startup: peak %u, reserved %u, stock heap %u\n",app.peak,app.reserved,stock_free_heap());
+    for(unsigned i=0;i<3;++i) tick();tv_frame(0);
+    for (unsigned key=2;key<=5;++key) {
         runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);tick();
         assert(!bt_queued.op); /* Binding is silent. */
+        for(unsigned i=0;i<3;++i) tick();tv_frame(key-1);
     }
     for (unsigned key=2;key<=4;++key) {
         clock_ms+=600;runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);
@@ -244,8 +255,10 @@ static void test_tv_keyboard(void) {
         assert(!bt_queued.op);
     }
     runtime_adc_result(1U<<16 | 5);tick();runtime_adc_result(2U<<16 | 5);tick();assert(!bt_queued.op);
+    for(unsigned i=0;i<3;++i) tick();tv_frame(5);
     app.cancel=1;service();runtime_native_service();assert(!allocations);fake_hid_status.state=0;
-    puts("TV keyboard binds three silent keys and sends play/pause, mute and Space once per press");
+    stock_config_context=NULL;saved.settings_size=0;track_heap=0;free_heap=100000;
+    puts("TV keyboard binds four silent keys, sends three actions once per press and opens its physical menu");
 }
 
 static void test_keyboard_lifecycle(void) {

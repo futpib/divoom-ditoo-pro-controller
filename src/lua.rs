@@ -21,6 +21,7 @@ pub const MUTE_VERSION: u32 = 306018;
 pub const USB_VERSION: u32 = 306019;
 pub const KEYBOARD_VERSION: u32 = 306020;
 pub const KEYBOARD_PAIRING_VERSION: u32 = 306021;
+pub const STANDALONE_VERSION: u32 = 306022;
 pub const APP_SOURCE_LIMIT: usize = 8192;
 
 #[derive(Debug, Serialize)]
@@ -70,6 +71,7 @@ pub fn decode(reply: Response) -> Result<Status, Box<dyn Error>> {
     4 => "active",
     5 => "paused",
     6 => "uploading",
+    7 => "saving",
     _ => return Err("Unknown Lua execution state".into()),
   };
   Ok(Status {
@@ -151,6 +153,8 @@ async fn exchange(conn: &mut DeviceConnection, packet: &Packet) -> Result<Status
 pub enum Action<'a> {
   Run(&'a [u8]),
   Start(&'a [u8]),
+  Install(&'a [u8]),
+  Uninstall,
   Status,
   Stop,
   Pause,
@@ -174,8 +178,8 @@ async fn wait_for_worker(
   mut status: Status,
   stopping: bool,
 ) -> Result<Status, Box<dyn Error>> {
-  let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
-  while status.state == "running" || (stopping && matches!(status.state, "active" | "paused")) {
+  let deadline = tokio::time::Instant::now() + Duration::from_secs(if status.state=="saving" { 15 } else { 5 });
+  while matches!(status.state, "running" | "saving") || (stopping && matches!(status.state, "active" | "paused")) {
     if tokio::time::Instant::now() >= deadline {
       let _ = exchange(conn, &operation(2, &[])).await;
       return Err("Lua worker timed out; cancellation requested".into());
@@ -209,10 +213,10 @@ pub(crate) async fn execute(
       | STORAGE_VERSION
       | DEVICE_VERSION
       | BLUETOOTH_VERSION
-      | MUTE_VERSION | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION
+      | MUTE_VERSION | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION
   ) {
     return Err(
-      format!("Lua requires firmware {VERSION}, {APP_VERSION}, {IO_VERSION}, {STORAGE_VERSION}, {DEVICE_VERSION}, {BLUETOOTH_VERSION}, {MUTE_VERSION}, {USB_VERSION}, {KEYBOARD_VERSION} or {KEYBOARD_PAIRING_VERSION}; no program sent")
+      format!("Lua requires firmware {VERSION}, {APP_VERSION}, {IO_VERSION}, {STORAGE_VERSION}, {DEVICE_VERSION}, {BLUETOOTH_VERSION}, {MUTE_VERSION}, {USB_VERSION}, {KEYBOARD_VERSION}, {KEYBOARD_PAIRING_VERSION} or {STANDALONE_VERSION}; no program sent")
         .into(),
     );
   }
@@ -230,15 +234,18 @@ pub(crate) async fn execute(
       Ok(status)
     };
   }
+  if matches!(action, Action::Install(_) | Action::Uninstall) && installed < STANDALONE_VERSION {
+    return Err(format!("Saved apps require firmware {STANDALONE_VERSION}; no program sent").into());
+  }
   match action {
-    Action::Run(source) | Action::Start(source) => {
+    Action::Run(source) | Action::Start(source) | Action::Install(source) => {
       if source.is_empty() || source.len() > APP_SOURCE_LIMIT {
         return Err(format!("Lua source must contain 1..={APP_SOURCE_LIMIT} bytes").into());
       }
       let status = exchange(conn, &operation(2, &[])).await?;
       wait_for_worker(conn, status, true).await?;
       let mut begin = (source.len() as u16).to_le_bytes().to_vec();
-      begin.push(u8::from(matches!(action, Action::Start(_))));
+      begin.push(if matches!(action, Action::Install(_)) { 2 } else { u8::from(matches!(action, Action::Start(_))) });
       exchange(conn, &operation(3, &begin)).await?;
       for (index, chunk) in source.chunks(512).enumerate() {
         let mut data = ((index * 512) as u16).to_le_bytes().to_vec();
@@ -246,6 +253,12 @@ pub(crate) async fn execute(
         exchange(conn, &operation(4, &data)).await?;
       }
       let status = exchange(conn, &operation(5, &[])).await?;
+      wait_for_worker(conn, status, false).await
+    }
+    Action::Uninstall => {
+      let status = exchange(conn, &operation(2, &[])).await?;
+      wait_for_worker(conn, status, true).await?;
+      let status = exchange(conn, &operation(11, &[])).await?;
       wait_for_worker(conn, status, false).await
     }
     Action::Stop => {

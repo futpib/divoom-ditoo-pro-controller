@@ -179,6 +179,11 @@ static void l2_event(unsigned cid,struct l2_event *p) {
     if (psm->id!=0x11 && psm->id!=0x13) return;
     if (p->event==1) {
         ++hid.status.incoming;
+        unsigned any=0;for(unsigned j=0;j<6;++j) any|=hid.status.peer[j];
+        if (hid.active && hid.status.pairing && !elapsed(hid.pair_started,hid.pair_duration) &&
+                !any && !i && p->remote && hid.status.state==4) {
+            memcpy(hid.status.peer,p->remote+0x54,6);++hid.status.generation;
+        }
         if (!hid.active || hid.status.state==3 || !p->remote || memcmp(p->remote+0x54,hid.status.peer,6) ||
                 (hid.cid[i] && hid.cid[i]!=cid)) { stock_l2_accept(cid,3,0);return; }
         hid.cid[i]=cid;hid.pending[i]=1;

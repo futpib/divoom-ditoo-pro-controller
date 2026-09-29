@@ -49,7 +49,7 @@ enum { ALARM_GET=1, ALARM_SET, WAKE_GET, WAKE_SET, ALARM_CANCEL,
        ALARM_SNOOZE, AUDIO_PLAY, AUDIO_DIRECTION, AUDIO_TRACK, AUDIO_SEEK,
        AUDIO_REPEAT, AUDIO_PREVIEW, AUDIO_STOP, NOISE_ENABLE,
        MEMO_START, MEMO_STOP, MEMO_PLAY, MEMO_DELETE, AUDIO_SOURCE,
-       BT_CONNECT, BT_DISCONNECT, BT_MEDIA, BT_MUTE, BT_HID };
+       BT_CONNECT, BT_DISCONNECT, BT_MEDIA, BT_MUTE, BT_HID, SETTINGS_SAVE };
 static struct {
     volatile unsigned state, epoch, cleanup;
     unsigned ticket, sequence, job_epoch, op, slot, mask, value;
@@ -176,6 +176,17 @@ static const char *config_job(void) {
 }
 
 static const char *perform_job(void) {
+    if (peripheral.op==SETTINGS_SAVE) {
+        if (native_priority()) return "native alarm has priority";
+        if (!saved.initialized) return "storage not ready";
+        if (saved.settings_size==saved.pending_size && !memcmp(saved.settings,saved.pending,saved.pending_size)) return NULL;
+        if (peripheral.writes>=64) return "64 saved changes per boot exceeded";
+        if (peripheral.writes && (unsigned)(stock_ticks()-peripheral.last_write)<1000) return "saved settings rate limited";
+        unsigned changed=0;const char *error=persist_save(2,saved.pending,saved.pending_size,&changed);
+        if (changed) { ++peripheral.writes;peripheral.last_write=stock_ticks(); }
+        if (!error) { saved.settings_size=saved.pending_size;memcpy(saved.settings,saved.pending,saved.pending_size); }
+        return error;
+    }
     unsigned op = peripheral.op, n = peripheral.value;
     if (op <= WAKE_SET) return config_job();
     if (op == ALARM_CANCEL) { if (stock_alarm_state) stock_alarm_cancel(1); return NULL; }
@@ -345,6 +356,7 @@ static void save_keyboard_bond(void) {
 }
 
 void runtime_native_service(void) {
+    runtime_boot_service();
     save_keyboard_bond();
     if (peripheral.recording && stock_memo_context) {
         unsigned count; memcpy(&count,stock_memo_context+12,4);
@@ -531,6 +543,11 @@ static int hex_digit(unsigned char c) {
     return -1;
 }
 static int bt_address_connect(lua_State *L,unsigned hid) {
+    if (hid==HID_PAIR && lua_isnoneornil(L,1)) {
+        unsigned seconds=(unsigned)luaL_optinteger(L,2,120);unsigned char address[16]={0};
+        luaL_argcheck(L,seconds>=1 && seconds<=120,2,"pairing window must be 1..120 seconds");
+        return submit(L,BT_HID,HID_PAIR,seconds*1000,address,0);
+    }
     size_t len; const char *s=luaL_checklstring(L,1,&len);
     unsigned char address[16]={0}; unsigned any=0,all=255;
     luaL_argcheck(L,len==17,1,"expected XX:XX:XX:XX:XX:XX");
@@ -574,6 +591,17 @@ static int keyboard_bonds(lua_State *L) {
     return 1;
 }
 static int keyboard_disconnect(lua_State *L) { return submit(L,BT_HID,HID_DISCONNECT,0,NULL,0); }
+static int settings_get(lua_State *L) {
+    if (!saved.initialized || !saved.settings_size) { lua_pushnil(L);return 1; }
+    lua_pushlstring(L,(const char *)saved.settings,saved.settings_size);return 1;
+}
+static int settings_set(lua_State *L) {
+    size_t n;const char *s=luaL_checklstring(L,1,&n);
+    luaL_argcheck(L,n<=SETTINGS_LIMIT,1,"settings exceed 128 bytes");
+    if (peripheral.cleanup || peripheral.state==JOB_QUEUED || peripheral.state==JOB_RUNNING) return failure(L,"busy");
+    memcpy(saved.pending,s,n);saved.pending_size=n;
+    return submit(L,SETTINGS_SAVE,0,0,NULL,0);
+}
 static int keyboard_tap(lua_State *L) {
     unsigned key=luaL_checkinteger(L,1),modifiers=luaL_optinteger(L,2,0);
     luaL_argcheck(L,key>=4 && key<=0xe7,1,"keyboard usage must be 4..231");
@@ -603,7 +631,8 @@ static int keyboard_status(lua_State *L) {
         field(L,"authentication_state",s.authentication_state);field(L,"encryption_state",s.encryption_state);
         field(L,"key_type",s.key_type);field(L,"security_mode",s.security_mode);field(L,"ssp",s.ssp);
     }
-    if (s.enabled) {
+    unsigned any=0;for(unsigned i=0;i<6;++i) any|=s.peer[i];
+    if (s.enabled && any) {
         push_bt_address(L,s.peer);lua_setfield(L,-2,"peer");
     } else { lua_pushnil(L);lua_setfield(L,-2,"peer"); }
     return 1;
@@ -634,6 +663,8 @@ static int bt_status(lua_State *L) {
     return 1;
 }
 static void peripherals_modules(lua_State *L) {
+    static const luaL_Reg storage[]={{"get",settings_get},{"set",settings_set},{NULL,NULL}};
+    luaL_newlib(L,storage);lua_setglobal(L,"storage");
     static const luaL_Reg keyboard[]={{"connect",keyboard_connect},{"listen",keyboard_listen},{"disconnect",keyboard_disconnect},
         {"pair",keyboard_pair},{"forget",keyboard_forget},{"bonds",keyboard_bonds},
         {"tap",keyboard_tap},{"media",keyboard_media},{"status",keyboard_status},{NULL,NULL}};

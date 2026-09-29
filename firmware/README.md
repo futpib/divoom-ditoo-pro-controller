@@ -100,7 +100,15 @@ persistence results. TV behavior remains unverified.
 
 `306021-lua.MVA` adds Lua-controlled pairing windows, incoming HID connections,
 bond listing/removal, encrypted-channel checks and connection diagnostics.
-The current `scripts/build-lua-app-runtime.py` builds it from pinned stock 306007.
+Build 306021 from commit `c79d982`.
 The Lua heap ceiling is 48 KiB, subject to a 24 KiB native reserve on every growth.
 See `keyboard-pairing-evidence/verification.json` for laptop lifecycle tests,
 firmware readback and hostile-Lua recovery. TV behavior remains unverified.
+
+`306022-lua.MVA` adds a saved startup app, bounded Lua settings, a boot-key escape
+and first-host HID pairing windows. The standalone TV example guides button
+setup, pairing and reconnection on the display. Compile-time scratch is reclaimed
+before creating device APIs so the complete app fits alongside the native heap
+reserve. The current builder produces this image from pinned stock 306007.
+See [storage](../docs/lua-storage.md), [the remote guide](../docs/lua-keyboard.md)
+and `standalone-evidence/verification.json` for verification and limitations.

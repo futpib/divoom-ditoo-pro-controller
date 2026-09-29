@@ -46,7 +46,7 @@ extern void runtime_worker_entry(void *);
 extern void runtime_storage_diagnostic(unsigned, const unsigned char *, unsigned);
 extern unsigned char __data_start[], __data_end[], __data_load[], __bss_start[], __bss_end[];
 
-enum { IDLE, RUNNING, DONE, ERROR, ACTIVE, PAUSED, UPLOADING };
+enum { IDLE, RUNNING, DONE, ERROR, ACTIVE, PAUSED, UPLOADING, SAVING };
 struct key_event { unsigned char key, event, kind, pad; };
 struct timer { int ref; unsigned deadline, interval; };
 struct block { unsigned size, free; };
@@ -64,7 +64,7 @@ static struct {
     unsigned capacity[ARENA_PAGES], reserved;
     lua_State *L;
     int app_ref;
-    unsigned resident, source_size, received, used, peak, steps, started, guarded;
+    unsigned resident, install, source_size, received, used, peak, steps, started, guarded;
     unsigned last_tick, frames, callbacks, dirty, native_calls, generation, native_alarm;
     char *source;
     char result[RESULT_LIMIT];
@@ -75,6 +75,8 @@ static struct {
     struct timer timers[TIMER_COUNT];
     jmp_buf escape;
 } app;
+static unsigned runtime_boot_key(unsigned,unsigned);
+static void runtime_boot_service(void);
 
 void runtime_init(void) {
     stock_heap_init();
@@ -197,6 +199,7 @@ unsigned runtime_key(const unsigned char *raw) {
     if (native_priority()) return 0;
     if (!raw || raw[1] != 0 || raw[0] >= KEY_COUNT) return 0;
     unsigned key = raw[0], event = raw[2], mask = 1U << key;
+    if (runtime_boot_key(key,event)) return 1;
     if (app.suppressed & mask) {
         if (event == 2 || event == 5) app.suppressed &= ~mask;
         return 1;
@@ -457,7 +460,57 @@ static void module(lua_State *L, const char *name, const luaL_Reg *functions) {
     lua_newtable(L); luaL_setfuncs(L,functions,0); lua_setglobal(L,name);
 }
 static void remove_field(lua_State *L, const char *key) { lua_pushnil(L); lua_setfield(L,-2,key); }
+#include "persistence.c"
 #include "peripherals.c"
+
+static unsigned runtime_boot_key(unsigned key,unsigned event) {
+    if (saved.boot_done || app.state!=IDLE) return 0;
+    if (event==1 || event==3 || event==4) {
+        saved.boot_skip=1;app.suppressed|=1U<<key;return 1;
+    }
+    return 0;
+}
+static void runtime_boot_service(void) {
+    if (!saved.clock_started) { saved.clock_started=1;saved.boot_started=stock_ticks(); }
+    if (app.state==SAVING && app.cancel) {
+        stock_free(app.source);app.source=NULL;app.state=DONE;result("stopped");return;
+    }
+    if (!saved.initialized && (unsigned)(stock_ticks()-saved.boot_started)>=10000) saved.boot_done=1;
+    if (native_priority()) return;
+    if (!saved.initialized) {
+        if (!persist_layout() || stock_free_heap()<2*(SOURCE_LIMIT+512)+STOCK_HEAP_RESERVE) {
+            if (app.state==SAVING) {
+                stock_free(app.source);app.source=NULL;app.state=ERROR;result("storage unavailable");
+            }
+            return;
+        }
+        unsigned bank=0,foreign=0;struct saved_record *r=persist_latest(2,&bank,&foreign);
+        if (r) { saved.settings_size=r->length;memcpy(saved.settings,r->data,r->length);stock_free(r); }
+        saved.initialized=1;saved.boot_started=stock_ticks();
+    }
+    if (app.state==SAVING) {
+        const char *error=NULL;unsigned changed=0;
+        if (peripheral.writes>=64) error="64 saved changes per boot exceeded";
+        else if (peripheral.writes && (unsigned)(stock_ticks()-peripheral.last_write)<1000) return;
+        else error=persist_save(1,app.source,app.source_size,&changed);
+        if (changed) { ++peripheral.writes;peripheral.last_write=stock_ticks(); }
+        if (error) { result(error);stock_free(app.source);app.source=NULL;app.state=ERROR;return; }
+        if (!app.source_size) { app.state=DONE;result("autostart removed");return; }
+        app.state=RUNNING;return;
+    }
+    if (saved.boot_done || (unsigned)(stock_ticks()-saved.boot_started)<3000) return;
+    saved.boot_done=1;
+    if (saved.boot_skip || app.state!=IDLE) { if(app.state==IDLE) result("autostart skipped: key held");return; }
+    unsigned bank=0,foreign=0;struct saved_record *r=persist_latest(1,&bank,&foreign);
+    if (!r || !r->length) { stock_free(r);return; }
+    app.source=stock_alloc(r->length);
+    if (app.source) { app.source_size=r->length;memcpy(app.source,r->data,r->length); }
+    stock_free(r);
+    if (!app.source) { result("autostart allocation failed");app.state=ERROR;return; }
+    if (!app.task) app.task=stock_task(runtime_worker_entry,"lua_app",NULL,4096,1,0);
+    if (!app.task) { stock_free(app.source);app.source=NULL;result("autostart worker unavailable");app.state=ERROR;return; }
+    app.cancel=app.action=0;app.resident=1;app.install=0;app.state=RUNNING;
+}
 
 static int setup(lua_State *L) {
     luaL_requiref(L,"_G",luaopen_base,1);
@@ -529,11 +582,14 @@ static void launch(void) {
     app.L = lua_newstate(allocate,NULL);
     if (!app.L) abort_script("Lua allocation failed");
     lua_atpanic(app.L,panic);
-    lua_pushcfunction(app.L,setup); check_call(app.L,0,0);
     int loaded = luaL_loadbufferx(app.L,app.source,app.source_size,"app","t");
     /* The compiled function owns its strings; source bytes are no longer read. */
     stock_free(app.source); app.source = NULL;
     if (loaded) abort_script(lua_tostring(app.L,-1));
+    /* Parse before creating API tables, then reclaim compiler temporaries.
+     * Neither the source buffer nor parser scratch needs to coexist with them. */
+    lua_gc(app.L,LUA_GCCOLLECT);
+    lua_pushcfunction(app.L,setup); check_call(app.L,0,0);
     check_call(app.L,0,1);
     if (!app.resident) { scalar(app.L); present_outputs(); discard(DONE); return; }
     if (!lua_istable(app.L,-1)) abort_script("app must return a callback table");
@@ -607,8 +663,8 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         stock_set_version(data+2); return;
     }
     unsigned op = data[6], error = 0;
-    if (op == 10) { runtime_storage_diagnostic(context,data,length); return; }
-    unsigned busy = app.state == RUNNING || app.state == ACTIVE || app.state == PAUSED;
+    if (op == 10 || op == 12) { runtime_storage_diagnostic(context,data,length); return; }
+    unsigned busy = app.state == RUNNING || app.state == ACTIVE || app.state == PAUSED || app.state==SAVING;
     if (op == 1 || op == 3) {
         if (busy) error = 2;
         else if (length < 11) error = 1;
@@ -619,12 +675,14 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
                 if (!app.task) app.task = stock_task(runtime_worker_entry,"lua_app",NULL,4096,1,0);
                 if (!app.task) error = 3;
                 else {
+                    saved.boot_done=1;
                     char *source = stock_alloc(n);
                     if (!source) { error = 3; goto reply; }
                     stock_free(app.source); app.source = source;
                     app.cancel = app.action = 0; app.result[0] = 0;
                     app.source_size = n; app.received = op == 1 ? n : 0;
                     app.resident = op == 3 ? data[9] != 0 : 0;
+                    app.install=op==3 && data[9]==2;
                     if (op == 1) memcpy(app.source,data+9,n);
                     __asm__ volatile ("" ::: "memory");
                     app.state = op == 1 ? RUNNING : UPLOADING;
@@ -632,6 +690,7 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
             }
         }
     } else if (op == 2) {
+        saved.boot_done=1;
         app.cancel = 1;
         if (app.state == UPLOADING) {
             stock_free(app.source); app.source = NULL; app.state = IDLE;
@@ -646,7 +705,10 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         }
     } else if (op == 5) {
         if (app.state != UPLOADING || app.received != app.source_size) error = 2;
-        else { __asm__ volatile ("" ::: "memory"); app.state = RUNNING; }
+        else { __asm__ volatile ("" ::: "memory"); app.state = app.install ? SAVING : RUNNING; }
+    } else if (op == 11) {
+        if (busy || app.state==UPLOADING) error=2;
+        else { saved.boot_done=1;app.cancel=0;app.source_size=0;app.state=SAVING; }
     } else if (op == 6 || op == 7) {
         if (app.state != ACTIVE && app.state != PAUSED) error = 2;
         else app.action = op == 6 ? 1 : 2;

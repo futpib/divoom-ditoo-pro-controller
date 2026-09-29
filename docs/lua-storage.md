@@ -1,8 +1,70 @@
-# Read-only filesystem research
+# Saved apps and settings
+
+Firmware 306022 stores one startup app (up to 8,192 source bytes) and one shared
+settings string (up to 128 bytes). After a one-time installation, neither a USB
+connection nor a Bluetooth controller is needed to run the app.
+
+```sh
+divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
+divoom-ditoo-pro-controller --transport usb lua uninstall
+```
+
+`lua install` saves then starts the app. Reinstalling identical source skips the
+flash write. `lua start` temporarily replaces the running app without changing
+the saved source. Uninstall stops the app and writes an empty startup record;
+it preserves the settings string. Firmware updates preserve these records.
+
+`storage.get()` returns the cached string, or nil when empty. `storage.set(value)`
+queues a native write and returns a ticket; wait for `device.result(ticket)`
+before treating it as saved. An empty string clears it. Settings are shared
+between apps, so use a format prefix. There is no general filesystem API.
+
+The stock main task serializes writes with other configuration operations and
+native alarm priority. Actual changes share the limit of 64 writes per boot
+and one second between writes. Debounce changes and avoid periodic saves.
+
+## Boot and recovery
+
+Autostart waits three seconds after settings become available. Hold any keyboard
+key during startup to skip it for that boot. The existing five-second held-key
+escape stops a running app. An app that exceeds its time, instruction or memory
+budget releases its controls and is not restarted until the next boot. USB
+`lua stop` and `lua uninstall` work independently of Lua callbacks. An unavailable
+storage layout disables autostart rather than indefinitely consuming keys; save
+failure or cancellation cannot leave the runtime stuck in its saving state.
+
+## Configuration journal
+
+The native configuration partition is selected through `stock_partition(5)`.
+On the tested device it occupies SPI `0x8b0000..0x8fffff`, preceding the larger
+filesystem. The new namespace is model `0xd7`, slots 0/1 for app generations and
+2/3 for settings. Every record has a magic, kind, generation, payload length and
+CRC32. The two banks retain the previous valid generation; boot picks the newer
+valid record and ignores a damaged newer record. Writes use fixed native record
+sizes and are checked by readback. Unexpected allocations or foreign records
+refuse writes. Scripts cannot choose addresses or native record identifiers.
+
+This protects against an interrupted individual record write while the native
+journal remains readable. It does not establish power-loss safety of the stock
+journal garbage collector. Abrupt power loss during journal compaction has not
+been tested. Keep a private backup before experimentation:
+
+```sh
+python3 scripts/backup-lua-config.py --output firmware/runs/config-backup
+```
+
+The read-only 306022 diagnostic backs up all five 64-KiB sectors and checks that
+the native context remains unchanged. The backup can contain Bluetooth link
+keys; it is private and ignored by Git. Opcode 12 uses the same framing as the
+filesystem diagnostic below, with magic `DCFG`, a 20-byte context plus 12 bytes of padding, and indices
+0..2559. It has no write or restore operation.
+
+## Earlier read-only filesystem research
 
 Firmware 306015 preserves the 306014 resident Lua API and adds a host-only
 diagnostic for backing up the stock filesystem's 128 KiB metadata region.
-It does not implement persistent apps, assets, modules, settings or autostart.
+That diagnostic does not provide writes to the large filesystem. The 306022
+app/settings records use the separate configuration journal described above.
 Lua scripts have no access to this diagnostic or to raw flash addresses.
 
 ```sh
@@ -14,7 +76,7 @@ python3 scripts/backup-lua-storage.py B1:21:81:DD:B8:9B \
 ```
 
 Use a new output directory. The script first queries ordinary firmware version
-and requires 306015 or 306016 before sending any extension command. It reads 1,024
+and requires a supported version from 306015 through 306022 before sending any extension command. It reads 1,024
 128-byte chunks, checks every response and driver status, requires identical
 filesystem context snapshots throughout, and checks firmware version again.
 `--probe-only` reads the first 1 KiB. Backups, requests and raw logs stay ignored

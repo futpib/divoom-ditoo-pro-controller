@@ -5,6 +5,8 @@
 
 extern unsigned char *runtime_fs_context(void);
 extern unsigned stock_page_read(unsigned, void *, unsigned);
+extern unsigned char *volatile stock_config_context;
+extern unsigned stock_partition(unsigned, unsigned *);
 extern void stock_reply(unsigned, unsigned, const void *, unsigned);
 
 void runtime_storage_diagnostic(unsigned context, const unsigned char *data, unsigned length) {
@@ -19,20 +21,23 @@ void runtime_storage_diagnostic(unsigned context, const unsigned char *data, uns
     memset(words,0,sizeof words);
     memcpy(reply,"DFSP",4); reply[4] = 1;
     unsigned n = 0, page = 0, result = 0;
-    unsigned char *fs = runtime_fs_context();
+    unsigned config=data[6]==12,base=0,limit=config ? 2560 : 1024;
+    unsigned char *fs = config ? stock_config_context : runtime_fs_context();
+    if (config) { memcpy(reply,"DCFG",4);stock_partition(5,&base); }
     if (length != 12) reply[5] = 1;
     else {
         page = data[7] | ((unsigned)data[8] << 8); n = data[9];
-        if (n > 1 || page >= 1024) reply[5] = 1;
+        if (n > 1 || page >= limit) reply[5] = 1;
         else if (!fs) reply[5] = 3;
         else {
             uint32_t bitmap, payload;
-            memcpy(&bitmap,fs+8,4); memcpy(&payload,fs+4,4);
-            if (bitmap != 0x9000 || payload != 0x9200) reply[5] = 4;
+            memcpy(&bitmap,fs+(config ? 12 : 8),4); memcpy(&payload,fs+(config ? 8 : 4),4);
+            if (config ? (bitmap!=base || base<0x100 || base>0xfb00 || payload!=base+0x100)
+                       : (bitmap != 0x9000 || payload != 0x9200)) reply[5] = 4;
             else {
-                memcpy(reply+16,fs,32);
+                memcpy(reply+16,fs,config ? 20 : 32);
                 if (n) {
-                    result = stock_page_read(0x9000+page/2,page_words,1);
+                    result = stock_page_read((config ? base : 0x9000)+page/2,page_words,1);
                     memcpy(reply+48,(unsigned char *)page_words+(page%2)*128,128);
                 }
             }

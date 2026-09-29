@@ -1,70 +1,83 @@
-# Bluetooth keyboard from Lua
+# Standalone TV keyboard remote
 
-Firmware **306020** adds a native classic Bluetooth HID device to the existing
-AVRCP, BLE and USB support. The Ditoo sends standard keyboard and Consumer
-Control reports directly to the paired host. No laptop relay is involved.
+Firmware **306022** runs the remote directly on the Ditoo. After one installation,
+setup, pairing, reconnection and ordinary use need only the Ditoo and TV.
+Bluetooth HID sends standard Play/Pause, Mute and Space reports. AVRCP and the
+older `tv-remote.lua` remain available separately.
 
 ```sh
-python3 scripts/build-lua-app-runtime.py
-cargo build --locked --release
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306021-lua.MVA
-divoom-ditoo-pro-controller --transport usb lua start examples/lua/tv-keyboard.lua
-divoom-ditoo-pro-controller --transport usb lua send 'connect XX:XX:XX:XX:XX:XX'
+# One-time setup from a computer.
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306022-lua.MVA
+divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
 ```
 
-Put the TV in its Bluetooth accessory screen and accept pairing if requested.
-A host that cached the old audio-only service list may need to rediscover the
-Ditoo. The device name remains `DitooPro-Audio`; the new SDP service is `Ditoo
-Keyboard` (UUID `0x1124`). The profile advertises keyboard class after it starts.
+## On the Ditoo and TV
 
-Firmware **306021** adds explicit pairing, bond inspection/removal, encrypted
-channel checks and a 120-second connection deadline. It also supports
-`lua send 'listen XX:XX:XX:XX:XX:XX'`:
-it waits for the selected host to initiate HID and resumes listening after
-that host disconnects. `disconnect` stops listening. Use `keyboard.status(true)`
-for native incoming/open/close counters, the last
-close status and PSM, and authentication/encryption diagnostics. These describe
-the native stack, not a TV app result.
+1. Power on the Ditoo. It starts the saved remote automatically.
+2. Follow the four screen prompts: **PLAY**, **MUTE**, **SPC**, **MENU**.
+   Press a different keyboard key for each role. These setup presses are silent;
+   choose whichever layout feels natural. The assignments are saved.
+3. On the TV, forget the old **DitooPro-Audio** accessory if it exists, then open
+   **Pair accessory**. This removes the cached audio-only profile and stale bond.
+4. On the Ditoo, press your Play key and confirm pairing with Play again.
+   If a target is already saved, use Menu → Pair → Play to confirm instead.
+   Choose **DitooPro-Audio** on the TV and accept the request. No MAC address is
+   needed. A blue bar shows the two-minute pairing window.
+5. **TV / READY** with a green dot means the keyboard connection is established.
+   Play, Mute and Space now send their corresponding keys. A sent report does
+   not prove that the current TV app handles it; TV/SmartTube compatibility still
+   needs a test on the actual TV.
 
-The first three **different** physical keys bind Play/Pause, Mute and Space,
-in that order. Binding does not send a key. Subsequent presses send the bound
-action; release and hold events are ignored. `lua send toggle`, `mute` and
-`space` also work. `lua send bind` resets bindings; `status` reports the peer,
-connection state and press/release counters. Its compact status message contains
-`state peer error sent released bonds_saved`. `disconnect` closes HID. The old
-`tv-remote.lua` and all `bluetooth.*` AVRCP functions remain available.
+The top line shows the current step; the lower line scrolls its instructions.
+The remote remembers both the key assignments and the connected TV. Later boots
+try the saved TV up to three times, then listen for it. If necessary use Connect
+in the menu or the TV's Connect action. Reconnection reuses the saved bond;
+Pair deliberately resets the selected bond after confirmation.
+
+## Menu and recovery
+
+Press **Menu** to open the menu. Menu (or Space) advances, Play selects, and
+Mute goes back. Items are:
+
+| # | Screen | Action |
+| --- | --- | --- |
+| 1 | LINK | Connect to the saved TV, or start pairing if none is saved. |
+| 2 | PAIR | Confirm, then open a pairing window for the first incoming keyboard host. Forget the old accessory on the TV first. |
+| 3 | KEYS | Choose the four button assignments again. |
+| 4 | OFF | Disconnect the keyboard and stop listening; the Ditoo stays powered on. |
+| 5 | BACK | Return to the remote. |
+
+If the screen asks to disconnect other audio, disconnect Ditoo on the phone,
+computer or TV that currently has its audio connection, then try Pair again.
+The remote can close its HID and AVRCP connections; it does not forcibly remove
+another device's A2DP audio connection. A native link can take a moment to close.
+
+Hold any keyboard key for five seconds to stop the app and return to stock
+controls. Hold a key during power-on to skip the app for that boot. Power cycling
+starts the saved remote again. `lua uninstall` removes autostart; `lua start`
+is only temporary and does not replace the saved app. See [storage and boot
+recovery](lua-storage.md).
+
+The developer messages `toggle`/`play_pause`, `mute`, `space`, `bind`, `menu`,
+`pair`, `disconnect`, `status`, and `target XX:XX:XX:XX:XX:XX` remain available.
+`status` reports HID state and peer; `target` saves a peer without connecting.
+Ordinary use does not require these messages.
 
 There is one resident Lua app. Replacing it preserves the Bluetooth profile
-and connection, while its outstanding key is released independently of Lua.
-To switch hosts, disconnect HID and any audio/media link to the previous host.
-A stock link may remain alive briefly after its profile disconnects; wait for
-it to close before retrying. Connection attempts are limited to 32 per boot
-and one every 10 seconds; listening, pairing windows and reusing a connection
-do not consume outgoing attempts. Selecting Bluetooth as the native audio source is
-necessary for the stock radio task; the TV script does that before connecting.
-
-For autonomous startup, set `local target` in the example to the host's address.
-It reuses a connection to that peer, or connects and retries up to three times
-at 15-second intervals before falling back to listening. Without a configured
-target it adopts an existing HID connection or waits for a message. Use
-`lua send 'pair XX:XX:XX:XX:XX:XX'` to open a 120-second pairing window, then
-select the Ditoo on the host. `lua send bonds` lists saved addresses;
-`lua send forget` removes the selected target after disconnection. The app
-does not erase bonds automatically. A host can still require its own pairing
-confirmation; Lua cannot approve the TV's user interface.
-
-A first outgoing connection can finish pairing before the host finishes HID
-service discovery. BlueZ rejected that initial connection as an unknown input
-device during testing. A retry reuses the newly paired link key; the app's
-bounded retry handles this case without deleting the bond.
+and connection; native code releases any outstanding key independently of Lua.
+Connection attempts are limited to 32 per boot and one every 10 seconds.
+Listening and pairing windows do not consume outgoing attempts. Pairing
+approval on the TV is still performed on the TV itself.
 
 ## Lua API
 
 - `keyboard.connect(address)` queues a connection to one explicit Bluetooth
   address. Reconnecting to the already connected peer succeeds without pairing.
 - `keyboard.disconnect()` queues a HID disconnection and stops listening.
-- `keyboard.pair(address[, seconds])` advertises the keyboard and listens for
-  the selected host. The window defaults to 120 seconds and accepts 1..120.
+- `keyboard.pair([address[, seconds]])` advertises the keyboard and listens for
+  the selected host. In 306022, omit the address (or pass nil) to select the
+  first incoming HID control-channel peer. Other peers are then rejected; an
+  interrupt channel alone cannot select a peer. The window defaults to 120 seconds and accepts 1..120.
   The previous radio access mode is restored on connection, expiration,
   explicit disconnect, or Lua stop/failure. If the stock radio was already
   discoverable, restoring it preserves that pre-existing state.
@@ -143,7 +156,7 @@ cargo test --locked
 # Pair and connect the laptop as a keyboard host first. This grabs only the
 # Ditoo's Bluetooth event node; test presses cannot reach desktop applications.
 sudo python3 scripts/check-bluetooth-keyboard.py --device DEVICE_MAC --guard
-python3 scripts/check-lua-app-device.py --transport usb --firmware 306021 \
+python3 scripts/check-lua-app-device.py --transport usb --firmware 306022 \
   --output firmware/runs/keyboard-guards
 ```
 
@@ -192,3 +205,18 @@ The related [vendor SDK](https://github.com/leadercxn/bp1048_sdk_v0.1.12/tree/81
 contains HID setup code omitted from the Ditoo link. This implementation supplies
 that profile in C, using function and structure layouts checked against the
 pinned stock binary; it does not link SDK binary objects.
+
+The standalone test additionally drives the actual app's key callbacks through
+a temporary message wrapper, learns four buttons, uses the on-screen menu to
+pair a fresh Linux host, checks real input press/release events, and disconnects
+and reconnects. This replaces shared app settings and forgets only the laptop
+bond. It requires an active scoped pairing agent and permission to grab the
+Ditoo event node. Physical ADC routing is tested by the native sanitizer suite.
+
+```sh
+sudo python3 scripts/check-standalone-remote.py --device DEVICE_MAC
+# Reboot the Ditoo with the original app installed, then observe without uploading:
+python3 scripts/check-standalone-remote.py --device DEVICE_MAC --after-reboot
+```
+
+See [306022 device evidence](../firmware/standalone-evidence/verification.json).

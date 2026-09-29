@@ -135,6 +135,17 @@ int main(void) {
     runtime_hid_command(HID_FORGET,0,address,1,hid.status.generation);
     assert(hid.status.error==17 && hid.status.forgotten==before);
     connected();remote[0xb3]=0;event(1,2,NULL);assert(hid.status.error==6);
+    connected();runtime_hid_command(HID_DISCONNECT,0,address,1,hid.status.generation);
+    event(0,4,NULL);event(1,4,NULL);
+    unsigned char unknown[16]={0};
+    runtime_hid_command(HID_PAIR,120000,unknown,1,hid.status.generation);
+    event(1,1,NULL);assert(!hid.cid[1]); /* Control channel selects the peer. */
+    event(0,1,NULL);assert(hid.cid[0] && !memcmp(hid.status.peer,remote+0x54,6));
+    remote[0x54]^=1;event(1,1,NULL);assert(!hid.cid[1]);remote[0x54]^=1;
+    event(0,2,NULL);event(1,1,NULL);event(1,2,NULL);assert(hid.status.state==2 && !hid.status.pairing);
+    runtime_hid_command(HID_DISCONNECT,0,address,1,hid.status.generation);event(0,4,NULL);event(1,4,NULL);
+    runtime_hid_command(HID_PAIR,1000,unknown,1,hid.status.generation);
+    clock_ms+=1000;event(0,1,NULL);assert(!hid.cid[0]); /* Deadline applies even before the service tick. */
     connected();memset(core,0,sizeof core);runtime_hid_service(1);
     assert(!hid.status.enabled && !hid.active); /* Reused stack address. */
     puts("HID report, ownership, stale command, timeout and control tests passed");

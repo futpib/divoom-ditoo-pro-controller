@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the pinned NDS32 Lua runtime and its installable 306021 firmware."""
+"""Build the pinned NDS32 Lua runtime and its installable 306022 firmware."""
 import binascii
 import hashlib
 import importlib.util
@@ -126,12 +126,12 @@ def build():
                # Remember the selected earliest slot, not the last eligible slot.
                (0x47eba, bytes.fromhex('3e177b1c'), bytes.fromhex('92009200')),
                (0x47eea, bytes.fromhex('3c0fdbd1'), sections['wake_select_hook']),
-               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab65')),
+               (0x47924, bytes.fromhex('4404ab57'), bytes.fromhex('4404ab66')),
                (0x4b550, bytes.fromhex('c816'), bytes.fromhex('d516'))]
     for offset, before, after in patches:
         assert code[offset:offset+len(before)] == before
         code[offset:offset+len(after)] = after
-    for address, section in [(0x1ca000,'text'),(0x1ee000,'data')]:
+    for address, section in [(0x1ca000,'text'),(0x1ef800,'data')]:
         assert len(code) <= address
         code.extend(bytes(address-len(code)))
         code.extend(sections[section])
@@ -148,13 +148,13 @@ def build():
     struct.pack_into('<I', image,0x607,length+4)
     image.extend(code)
     image.extend(struct.pack('<I',binascii.crc_hqx(image,0)))
-    report = {'version':306021,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
+    report = {'version':306022,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
               'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':49152,'arena_page_unit':1024,'arena_page_slots':48,
               'task_stack_words':4096,'globals_reserved':8192,'source_limit':8192,
               'instruction_limit':100000,'callback_ms_limit':50,'boot_crc16':0x5f08,
               'status':'offline-built; hardware-unverified'}
-    (ROOT/'firmware/306021-lua.MVA').write_bytes(image)
-    (ROOT/'firmware/306021-lua.json').write_text(json.dumps(report,indent=2)+'\n')
+    (ROOT/'firmware/306022-lua.MVA').write_bytes(image)
+    (ROOT/'firmware/306022-lua.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 
 if __name__ == '__main__': build()

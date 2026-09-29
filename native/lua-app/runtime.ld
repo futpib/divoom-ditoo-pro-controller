@@ -33,6 +33,9 @@ stock_noise_enable = 0x72320;
 stock_noise_display = 0x54b68;
 stock_config_read = 0x6ab10;
 stock_config_write = 0x6b97c;
+stock_config_find = 0x6aa88;
+stock_config_context = 0x2000d2f8 - 33700;
+stock_partition = 0x73b8c;
 stock_alarm_reschedule = 0x3575c;
 stock_wake_reschedule = 0x47e70;
 stock_seconds = 0x77588;
@@ -107,7 +110,7 @@ SECTIONS {
     .indicator_hook 0x2d6e8 : { KEEP(*(.indicator_hook)) }
     .noise_hook 0x72192 : { KEEP(*(.noise_hook)) }
     .wake_select_hook 0x47eea : { KEEP(*(.wake_select_hook)) }
-    .data 0x2004a000 : AT(0x1ee000) {
+    .data 0x2004a000 : AT(0x1ef800) {
         __data_start = .;
         *libm.a:*(.rodata*) *(.data*) *(.sdata*)
         __data_end = .;
@@ -123,7 +126,7 @@ SECTIONS {
 }
 ASSERT(SIZEOF(.hook) <= 28, "command hook exceeds original handler")
 ASSERT(SIZEOF(.init_hook) == 4, "init hook must replace exactly one call")
-ASSERT(ADDR(.text) + SIZEOF(.text) <= 0x1ee000, "Lua overlaps its data load image")
+ASSERT(ADDR(.text) + SIZEOF(.text) <= 0x1ef800, "Lua overlaps its data load image")
 ASSERT(__bss_end <= 0x2004c000, "Lua globals exceed reserved 8 KiB")
 ASSERT(LOADADDR(.data) + SIZEOF(.data) < 0x1f0000, "Lua crosses stock user-data boundary")
 

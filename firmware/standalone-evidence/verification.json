@@ -1,0 +1,382 @@
+{
+  "firmware": 306022,
+  "sha256": "89fad691d2895ac81353a76d56f132c9e1ce0008c6f150fea55c2bbf9693f6b9",
+  "bytes": 2032883,
+  "rebuild_identical": true,
+  "final_flash": [
+    {
+      "application_reenumerated": true,
+      "ble_version_check_requested": false,
+      "blocks_verified": 480,
+      "erase_transfer_verify_seconds": 10.718096952,
+      "event": "usb_complete",
+      "total_usb_seconds": 18.785579149,
+      "usb_port": "1-6",
+      "version": 306022
+    },
+    {
+      "event": "verified",
+      "firmware_versions": [
+        306022
+      ],
+      "transport": "usb",
+      "verification_transport": "usb"
+    }
+  ],
+  "saved_app": {
+    "before_sha256": "42b59950640dd0820425e58b366ac42014ac782dff023e4b1ab7e67a94380737",
+    "after_sha256": "d356bf785d4ea47fe425870049f10bef67b19878996ac99218f971a63f94e74c",
+    "native_records_before": 8,
+    "native_records_after": 8,
+    "changed_native_records": [],
+    "lua_namespace_was_unused": true,
+    "added_records": [
+      [
+        215,
+        0
+      ],
+      [
+        215,
+        1
+      ],
+      [
+        215,
+        2
+      ],
+      [
+        215,
+        3
+      ]
+    ],
+    "saved_source_bytes": 7760,
+    "saved_source_sha256": "9959dad79baf28a4e3decfda94eadb1b1f64c7f9e520076452e2698246505dec",
+    "saved_source_matches_repository": true,
+    "crc_valid": true
+  },
+  "final_image_autostart": [
+    {
+      "check": "autostart-and-bonded-reconnect",
+      "passed": true,
+      "status": {
+        "state": "active",
+        "peak_memory_bytes": 43232,
+        "instructions": 82,
+        "result": "TV: READY",
+        "abi": 2,
+        "memory_bytes": 43232,
+        "frames": 30,
+        "callbacks": 90,
+        "dropped_keys": 0,
+        "held_keys": 0,
+        "generation": 1
+      },
+      "peer": "84:5C:F3:EF:87:78"
+    }
+  ],
+  "final_image_bond_reuse": {
+    "Link Key Request": 2,
+    "Link Key Request Reply": 2,
+    "Link Key Request Negative Reply": 0,
+    "Link Key Notification": 0,
+    "User Confirmation Request": 0,
+    "IO Capability Request": 0,
+    "Simple Pairing Complete": 0,
+    "Encryption Change": 2
+  },
+  "reboot_method": "USB firmware reflash and hardware reset; no app upload or connect command before observing autostart. A physical battery power cycle was not performed.",
+  "app_menu_checks": [
+    {
+      "check": "four-button-setup-saved",
+      "passed": true,
+      "settings": "four distinct buttons"
+    },
+    {
+      "check": "physical-menu-opens-first-host-pairing",
+      "passed": true
+    },
+    {
+      "check": "fresh-wildcard-pair-and-learned-peer",
+      "passed": true
+    },
+    {
+      "check": "button-0",
+      "passed": true,
+      "events": [
+        [
+          164,
+          1
+        ],
+        [
+          164,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "button-1",
+      "passed": true,
+      "events": [
+        [
+          113,
+          1
+        ],
+        [
+          113,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "button-2",
+      "passed": true,
+      "events": [
+        [
+          57,
+          1
+        ],
+        [
+          57,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "menu-disconnect-and-reconnect",
+      "passed": true
+    },
+    {
+      "check": "original-app-reloads-saved-bindings",
+      "passed": true
+    }
+  ],
+  "linux_input_and_infinite_loop_release": [
+    {
+      "check": "toggle",
+      "events": [
+        [
+          164,
+          1
+        ],
+        [
+          164,
+          0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "check": "mute",
+      "events": [
+        [
+          113,
+          1
+        ],
+        [
+          113,
+          0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "check": "space",
+      "events": [
+        [
+          57,
+          1
+        ],
+        [
+          57,
+          0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "check": "infinite-loop-release",
+      "events": [
+        [
+          57,
+          1
+        ],
+        [
+          57,
+          0
+        ]
+      ],
+      "state": "error",
+      "result": "instruction budget exceeded",
+      "passed": true
+    }
+  ],
+  "boot_recovery_and_uninstall": [
+    {
+      "check": "installed-infinite-loop-boot",
+      "passed": true,
+      "before": {
+        "state": "error",
+        "peak_memory_bytes": 14760,
+        "instructions": 100000,
+        "result": "instruction budget exceeded",
+        "abi": 2,
+        "memory_bytes": 0,
+        "frames": 0,
+        "callbacks": 0,
+        "dropped_keys": 0,
+        "held_keys": 0,
+        "generation": 0
+      },
+      "ten_seconds_later": {
+        "state": "error",
+        "peak_memory_bytes": 14760,
+        "instructions": 100000,
+        "result": "instruction budget exceeded",
+        "abi": 2,
+        "memory_bytes": 0,
+        "frames": 0,
+        "callbacks": 0,
+        "dropped_keys": 0,
+        "held_keys": 0,
+        "generation": 0
+      }
+    },
+    {
+      "check": "uninstall-survives-reboot-preserves-settings",
+      "passed": true,
+      "status": {
+        "state": "idle",
+        "peak_memory_bytes": 0,
+        "instructions": 0,
+        "result": "",
+        "abi": 2,
+        "memory_bytes": 0,
+        "frames": 0,
+        "callbacks": 0,
+        "dropped_keys": 0,
+        "held_keys": 0,
+        "generation": 0
+      }
+    },
+    {
+      "check": "restored-final-app",
+      "passed": true,
+      "status": {
+        "state": "active",
+        "peak_memory_bytes": 42112,
+        "instructions": 193,
+        "result": "WAIT: SETTING UP",
+        "abi": 2,
+        "memory_bytes": 42112,
+        "frames": 1,
+        "callbacks": 2,
+        "dropped_keys": 0,
+        "held_keys": 0,
+        "generation": 1
+      }
+    }
+  ],
+  "earlier_candidate_tests": "Menu, input-release and installed-loop/uninstall tests ran on candidate 2dc65b3d9f5bcbb77c581fda192d84549adeb1d1499389eeb44bceb8a78bf366. Final firmware additionally rejects malformed/full native journal layouts; final hardware checks cover autostart, saved source/settings, bond reuse and all 43 runtime guards.",
+  "runtime_guards": {
+    "passed": 43,
+    "failed": 0,
+    "stock_version_afterwards": true,
+    "checks": [
+      "integer",
+      "float",
+      "libraries",
+      "loop",
+      "pcall",
+      "coroutine",
+      "nested-coroutine",
+      "finalizer",
+      "close",
+      "tostring",
+      "sort",
+      "gsub",
+      "pattern",
+      "oom",
+      "caught-oom",
+      "recursion",
+      "native-call-limit",
+      "syntax",
+      "binary",
+      "capabilities",
+      "stock-heap-headroom",
+      "led-frame",
+      "one-shot-present",
+      "resident-start",
+      "incoming-message",
+      "outgoing-message",
+      "outgoing-acknowledged",
+      "paused",
+      "resumed",
+      "stopped",
+      "update-loop",
+      "update-loop-recovery",
+      "timer-loop",
+      "timer-loop-recovery",
+      "message-loop",
+      "message-loop-recovery",
+      "full-8192-byte-upload",
+      "led-resident",
+      "led-paused",
+      "led-resumed",
+      "led-error-reclaimed",
+      "led-error-recovery",
+      "final-stop"
+    ]
+  },
+  "host_tests": {
+    "native_32bit_asan_ubsan": "Passed: persistent generations, torn-record fallback, no-op writes, foreign namespace and journal bounds, upload/install, unavailable-storage cancellation, boot escape, no crash restart, USB, HID and physical ADC callback dispatch; allocation-accounting reproduces device heap pressure.",
+    "rust": {
+      "library": 51,
+      "binary": 5,
+      "integration": 2,
+      "failed": 0
+    },
+    "python_unittest": {
+      "passed": 9,
+      "failed": 0
+    },
+    "clippy": "--locked --lib --bins --no-default-features -- -D warnings passed",
+    "git_diff_check": true
+  },
+  "screen_review": "Inspected frames generated by the actual native renderer for all four button prompts, SAVE and LINK. The hardware app logs show the same screens; no camera capture of the physical display.",
+  "handoff": {
+    "app": "examples/lua/tv-keyboard.lua",
+    "persisted": true,
+    "settings": {
+      "laptop_bond_removed_on_both_sides": true,
+      "other_bonds_preserved": 7,
+      "tv_bond_preserved": true,
+      "buttons_reset_for_user": true,
+      "settings": "TV2|0C:CD:B4:D0:0C:26|"
+    },
+    "runtime": {
+      "state": "active",
+      "peak_memory_bytes": 42008,
+      "instructions": 219,
+      "result": "PLAY: PRESS KEY FOR PLAY",
+      "abi": 2,
+      "memory_bytes": 42008,
+      "frames": 1,
+      "callbacks": 2,
+      "dropped_keys": 0,
+      "held_keys": 0,
+      "generation": 3
+    },
+    "test_agent_stopped": true,
+    "bluetooth_pairable_restored": false,
+    "bluetooth_discoverable_restored": false,
+    "temporary_hidp_unloaded": true,
+    "host_volume_preserved": "1.25 muted",
+    "installed_cli_updated": true
+  },
+  "limits": {
+    "tv_and_smarttube_verified": false,
+    "reason": "TV and owner unavailable; laptop is the real Bluetooth HID host. No TV ADB used.",
+    "physical_boot_key_test": "Native ADC/boot path tested under sanitizers; no physical held-key power-on test performed.",
+    "journal_power_loss": "CRC and previous-generation recovery tested with torn records in the native harness. Stock journal garbage-collection power-loss behavior has not been physically tested."
+  },
+  "raw_evidence": "Private backups, JSONL and Bluetooth captures remain ignored in firmware/runs/306022-standalone and firmware/runs/306022-guards-final. Bluetooth keys and raw configuration contents are not committed."
+}

@@ -12,15 +12,16 @@ unsigned char __data_start[1], __data_end[1], __data_load[1], __bss_start[1], __
 static unsigned clock_ms, allocations, frames;
 static unsigned free_heap = 100000, led_writes;
 static unsigned char led_context[0x50], last_leds[36];
-static int fail_alloc;
+static int fail_alloc, track_heap;
+static unsigned allocated_bytes;
 void *stock_alloc(unsigned n) {
     if (fail_alloc) return NULL;
     unsigned char *p = malloc(n+4);
-    if (p) ++allocations;
+    if (p) { ++allocations; *(unsigned *)p=n;allocated_bytes+=n; }
     return p ? p+4 : NULL;
 }
-void stock_free(void *p) { if (p) { --allocations; free((char *)p-4); } }
-unsigned stock_free_heap(void) { return free_heap; }
+void stock_free(void *p) { if (p) { --allocations;allocated_bytes-=*(unsigned *)((char *)p-4);free((char *)p-4); } }
+unsigned stock_free_heap(void) { return free_heap-(track_heap ? allocated_bytes : 0); }
 unsigned char *runtime_led_context(void) { return led_context; }
 void stock_led_write(const void *p, unsigned n) {
     assert(n==sizeof last_leds);memcpy(last_leds,p,n);++led_writes;
@@ -43,8 +44,24 @@ static unsigned char reply[1200];
 static unsigned reply_size;
 static uint32_t fs_context[8] = {0,0x9200,0x9000,0,0x9100,0,0,1760};
 static unsigned page_reads;
+static unsigned char config_context[20];
+unsigned char *volatile stock_config_context;
+static unsigned char persisted[4][SOURCE_LIMIT+24];
+static unsigned persisted_size[4],persist_writes,persist_torn;
+unsigned stock_partition(unsigned kind,unsigned *p) { assert(kind==5);*p=0x6000;return 0; }
+unsigned stock_config_find(unsigned model,unsigned id,void *e,void *scratch) {
+    assert(model==PERSIST_MODEL && id<4);(void)scratch;
+    if (!persisted_size[id]) return 0xffff;
+    unsigned char *p=e;memset(p,0,8);p[0]=model;p[1]=id;
+    p[2]=(persisted_size[id]+4+255)/256;uint16_t page=id*40;memcpy(p+4,&page,2);return id;
+}
 unsigned char *runtime_fs_context(void) { return (unsigned char *)fs_context; }
 unsigned stock_page_read(unsigned page, void *data, unsigned n) {
+    if (page>=0x6100 && page<0x6500) {
+        assert(n==1);unsigned slot=(page-0x6100)/40;assert(slot<4);
+        unsigned char *p=data;memset(p,255,256);p[0]=persisted_size[slot];p[1]=persisted_size[slot]>>8;
+        memcpy(p+2,persisted[slot],persisted_size[slot]<254 ? persisted_size[slot] : 254);return 0;
+    }
     assert(page>=0x9000 && page+n<=0x9200 && n>0 && n<=4);
     ++page_reads; memset(data,0xff,n*256);return 0;
 }
@@ -76,8 +93,10 @@ static void check(const char *source, unsigned state, const char *value) {
 static void tick(void) { clock_ms += FRAME_MS; service(); }
 
 #include "test-peripherals.c"
+#include "test-persistence.c"
 
 int main(void) {
+    test_persistence();
     check("return 6*7",DONE,"42");
     check("return 7/2",DONE,"3.5");
     check("return math.floor(math.sqrt(81))",DONE,"9");
@@ -194,6 +213,15 @@ int main(void) {
     request[7]=0;request[8]=0;request[9]=0;
     runtime_command(0,request,12);assert(reply[5]==0 && reply_size==48 && page_reads==1);
     fs_context[2]=0;runtime_command(0,request,12);assert(reply[5]==4 && page_reads==1);
+    request[6]=12;request[7]=0;request[8]=0;request[9]=0;
+    stock_config_context=NULL;runtime_command(0,request,12);
+    assert(!memcmp(reply,"DCFG",4) && reply[5]==3 && reply_size==48);
+    stock_config_context=config_context;runtime_command(0,request,12);
+    assert(reply[5]==0 && reply_size==48 && !memcmp(reply+16,config_context,20));
+    request[8]=10;runtime_command(0,request,12);assert(reply[5]==1);
+    request[8]=0;runtime_command(0,request,11);assert(reply[5]==1);
+    config_context[12]=1;runtime_command(0,request,12);assert(reply[5]==4);config_context[12]=0;
+    stock_config_context=NULL;
     test_peripherals();
     test_keyboard_bonds();
     test_tv_keyboard();

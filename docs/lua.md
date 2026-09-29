@@ -1,6 +1,6 @@
 # Resident Lua apps
 
-Firmware **306021** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
+Firmware **306022** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
 over Bluetooth, disconnect, and it keeps running. Changing scripts does not flash
 firmware. 306014 adds independent RGB control of 12 keyboard LED positions;
 306013 remains supported for the original resident app API. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
@@ -10,14 +10,20 @@ Firmware **306016** adds [native battery, alarms, power schedules, speaker and
 microphone APIs](lua-peripherals.md).
 
 Firmware **306015** introduced a host-only, read-only
-[filesystem metadata diagnostic](lua-storage.md). It does not yet provide
-persistent Lua files or autostart.
+[filesystem metadata diagnostic](lua-storage.md). Firmware **306022** adds one
+saved startup app and a shared 128-byte settings value in the native configuration
+journal. `lua install FILE` saves and starts an app; `lua uninstall` removes its
+autostart record and stops it, preserving settings. `lua start` remains temporary
+and does not replace the saved app. See [persistence and recovery](lua-storage.md).
 
 ```sh
 # Install the runtime once; see docs/usb.md for USB permissions.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306021-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306022-lua.MVA
 
-# Subsequent changes only upload source into RAM.
+# Save the standalone remote once; it runs after subsequent power-ons.
+divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
+
+# Temporary apps upload source into RAM.
 divoom-ditoo-pro-controller --transport ble lua start examples/lua/clock.lua
 divoom-ditoo-pro-controller --transport ble lua start examples/lua/snake.lua
 divoom-ditoo-pro-controller --transport ble lua send right
@@ -40,6 +46,9 @@ The clock cycles colors on each key-down. Use `examples/lua/key-monitor.lua`
 to see physical key IDs and event numbers. **Hold a keyboard key for five seconds
 to stop the app.** The native worker handles this escape, including while paused;
 Lua cannot disable it. The separate native power-key scanner remains untouched.
+Hold any keyboard key during power-on to skip the saved app for that boot.
+Autostart waits three seconds for that escape and tries only once; a failing app
+returns control to stock firmware without a restart loop.
 
 ## App contract
 
@@ -85,6 +94,7 @@ The next stock redraw restores the native screen; immediate redraw is not forced
 | 11 | `lights.count`, `fill(rgb)`, `pixel(index,rgb)`, `frame([rgb888])` | 306014: 12 LED positions indexed 0–11; 36-byte packed RGB buffer, independent of display pixels. Physical key/LED correspondence is not assumed. |
 | 12 | `lights.present()`, `enabled([bool])`, `claim(bool)` | 306014: publish lights at the next tick; disable to publish black; release ownership to restore native lighting. |
 | 13 | `device.stats()` | Free stock heap, Lua used/peak memory, frames, callbacks and dropped keys. 306016 also reports `lua_reserved`, the native heap currently backing Lua pages. |
+| 14 | `storage.get()`, `storage.set(string)` | 306022: shared persistent settings, at most 128 bytes. Reads return a string or nil; writes return a job ticket for `device.result`. |
 
 `examples/lua/keyboard-lights.lua` chases the LED positions; any keyboard press
 changes color. LED intensities are raw 8-bit values, without the stock gamma
@@ -127,8 +137,8 @@ is no `io`, `os`, `package`, `debug`, `load`, `loadfile`, `dofile`,
 
 Scripts are isolated by bounded native APIs and their allocator, **not an MPU or
 process boundary**. Native firmware bugs remain possible. The elapsed-time guard
-is not a preemptive interrupt over arbitrary C code. No app automatically starts
-at boot in this image: power cycling returns to the native firmware.
+is not a preemptive interrupt over arbitrary C code. A saved app starts once at
+boot unless a keyboard key is held; USB stop/uninstall remains available.
 
 ## Coverage and remaining work
 
@@ -145,7 +155,7 @@ messages; its physical direction labels still need mapping on this device.
 | 3 | Clocks, timers, stopwatch, scoreboards | RTC, timers and drawing implemented. 306016 binds native alarms and power schedules, with native alarm priority. |
 | 4 | Keyboard lighting | 12 independently controlled RGB LED positions, custom effects and ownership restoration implemented in 306014. |
 | 5 | Audio | 306016 binds native playback, sound previews, voice memos and noise readings; see the peripheral API and its hardware evidence. |
-| 6 | Installed apps, assets and settings | RAM only. Filesystem isolation, atomic writes, app installation, modules and safe boot selection remain to implement. |
+| 6 | Installed apps, assets and settings | One saved startup app, bounded shared settings, CRC-checked generations and boot escape in 306022. General asset files and modules remain unimplemented. |
 | 7 | Communications | BLE and USB upload, bidirectional app messages and status implemented. USB requires 306019; see [USB control](usb-control.md). |
 | 8 | Stock modes/settings | Brightness/volume implemented; other mode APIs and precedence still need integration. |
 
@@ -161,10 +171,14 @@ python3 scripts/build-lua-app-runtime.py
 python3 scripts/test-lua-app-runtime.py
 cargo test --locked --no-default-features
 cargo build --locked --release --no-default-features
-# Requires an already-installed 306021; stops the current app, performs no flash writes.
+# Requires an already-installed 306022; stops the current app, performs no flash writes.
 python3 scripts/check-lua-app-device.py B1:21:81:DD:B8:9B \
   --output firmware/runs/lua-app-check
 ```
+
+The host sanitizer test requires a 32-bit C toolchain and 32-bit ASan/UBSan
+libraries (on this Arch host, `lib32-glibc` and `lib32-gcc-libs`). It uses the
+device pointer size and accounts for the native heap consumed by allocations.
 
 Build prerequisites and the earlier one-shot checks are in
 [306012 documentation](lua-306012.md#reproduce). The builder pins stock firmware,
@@ -179,22 +193,23 @@ are separate. Raw runs stay in ignored `firmware/runs/`.
 To reproduce the previous 306013 image exactly, build the source at commit
 `9a9d89c`; use `59b5e28` for 306014 and `842115b` for 306015.
 Use `ae62a69` for 306016, `95d7f6e` for 306017 and `ac82bb9` for 306018.
-Use `606eb91` to reproduce 306019 and `b703bc0` for 306020. The current builder produces 306021 with
+Use `606eb91` to reproduce 306019, `b703bc0` for 306020 and `c79d982` for 306021.
+The current builder produces 306022 with saved apps, settings,
 [Bluetooth HID keyboard support](lua-keyboard.md) and full USB control, retaining the queued AVRCP mute toggle and
 [native Bluetooth media connection APIs](lua-bluetooth.md). Previous images
 remain pinned.
 
 The image reserves 8 KiB of native globals below `0x2004c000`; text starts at
-`0x1ca000`, initialized data loads at `0x1ee000`, and neither crosses `0x1f0000`.
+`0x1ca000`, initialized data loads at `0x1ef800`, and neither crosses `0x1f0000`.
 Hooks wrap heap initialization, command 0x37, screen output and the ADC scanner's
 return at `0x2d490`. 306014 also wraps the LED flush at `0x7580c`;
 when ownership is released it executes the original native path. Intercepting after native key-action mapping loses key-down
 records whose stock action is zero; the ADC hook precedes that filtering.
 
 The command prefix is `7f DLUA`, followed by operation: 0=status, 1=one-shot,
-2=stop, 3=begin upload (u16 length, u8 resident), 4=chunk (u16 offset, bytes),
-5=commit upload, 6=pause, 7=resume, 8=incoming message, 9=read/ack outgoing.
+2=stop, 3=begin upload (u16 length, u8 mode: 0 one-shot, 1 resident, 2 install), 4=chunk (u16 offset, bytes),
+5=commit upload, 6=pause, 7=resume, 8=incoming message, 9=read/ack outgoing, 10=filesystem diagnostic, 11=uninstall, 12=config diagnostic.
 ABI 2 replies start with `DLUA`, ABI, state, request error, result length, then
 little-endian u32 peak memory, work units, current memory, frames, callbacks,
 dropped keys, held bits and generation, followed by result bytes. States are
-0=idle, 1=running, 2=done, 3=error, 4=active, 5=paused, 6=uploading.
+0=idle, 1=running, 2=done, 3=error, 4=active, 5=paused, 6=uploading, 7=saving.
