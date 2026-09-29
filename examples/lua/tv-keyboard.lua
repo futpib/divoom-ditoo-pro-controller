@@ -1,8 +1,8 @@
 local ui = require('../../lua/ui')
 local view = ui.screen()
 local screen, age = view.set, ui.elapsed
--- Stock ADC IDs: lever, lighting, source, M, +, -, left, right.
-local keys = { [4] = 1, [7] = 2, [10] = 3, [0] = 4, [1] = 5, [9] = 6, [2] = 7, [3] = 8 }
+-- Stock ADC IDs: lever, source, sun, M, +, -, left, right.
+local keys = { [4] = 1, [10] = 2, [7] = 3, [0] = 4, [1] = 5, [9] = 6, [2] = 7, [3] = 8 }
 local target, pending
 local b = {}
 local job, flow

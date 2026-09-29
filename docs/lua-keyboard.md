@@ -35,8 +35,8 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
 | 4 | ← | Left arrow (seek or navigate) | 2 |
 | 5 | → | Right arrow (seek or navigate) | 3 |
 | 6 | M | Open/close local menu | 0 |
-| 7 | Lighting | Mute/unmute | 7 |
-| 8 | Source | Space | 10 |
+| 7 | ☀ Sun key (top-right) | Space | 7 |
+| 8 | Audio-source button (beside lever base) | Mute/unmute | 10 |
 
 The fixed IDs come from the [stock firmware key tables](stock-ux.md#physical-key-ids).
 Left/Right send ordinary keyboard arrows (HID usages 80/79), so the TV app
@@ -56,9 +56,9 @@ the saved bond; PAIR deliberately resets the selected bond after confirmation.
 ## Menu and recovery
 
 Press **M** to open or close the menu. **←/→** browse with wraparound and the
-**lever** selects. Lighting also backs out. Volume and Source do nothing in
+**lever** selects. Source also backs out. Volume and the sun key do nothing in
 menus; menu/confirmation presses never send TV reports. Pairing reset needs a
-separate lever confirmation; M or Lighting cancels it. Items are:
+separate lever confirmation; M or Source cancels it. Items are:
 
 | # | Screen | Action |
 | --- | --- | --- |

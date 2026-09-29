@@ -125,7 +125,7 @@ fd = os.open(nodes[0], os.O_RDONLY|os.O_NONBLOCK)
 fmt = struct.Struct('@llHHi')
 try:
     fcntl.ioctl(fd, 0x40044590, 1)
-    for key, code in ((4,164),(7,113),(10,57),(1,115),(9,114),(2,105),(3,106)):
+    for key, code in ((4,164),(10,113),(7,57),(1,115),(9,114),(2,105),(3,106)):
         send('K'+str(key));events=[];end=time.monotonic()+3
         while time.monotonic() < end:
             if select.select([fd], [], [], .1)[0]:

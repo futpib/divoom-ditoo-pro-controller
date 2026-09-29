@@ -247,7 +247,7 @@ static void test_tv_keyboard(void) {
     for(unsigned i=0;i<3;++i) tick();tv_frame(0);
     for(unsigned i=0;i<100;++i) { tick();runtime_native_service(); }
     assert(strstr(app.result,"TV: READY") && !bt_queued.op);
-    const unsigned keys[]={4,7,10,1,9,2,3};
+    const unsigned keys[]={4,10,7,1,9,2,3};
     const unsigned usages[]={0xcd,0xe2,44,0xe9,0xea,80,79};
     for (unsigned i=0;i<sizeof keys/sizeof keys[0];++i) {
         unsigned key=keys[i];
@@ -255,7 +255,7 @@ static void test_tv_keyboard(void) {
         for (unsigned j=0;j<8;++j) { tick();runtime_native_service(); }
         unsigned values[4];memcpy(values,bt_payload,sizeof values);
         assert(bt_queued.op==BT_HID_COMMAND && bt_queued.length==32);
-        assert(values[2]==(key==10 || key==2 || key==3 ? HID_KEY : HID_CONSUMER));
+        assert(values[2]==(key==7 || key==2 || key==3 ? HID_KEY : HID_CONSUMER));
         assert(values[3]==usages[i]);
         bt_queued.op=0;
         runtime_adc_result(3U<<16 | key);tick();runtime_adc_result(4U<<16 | key);tick();

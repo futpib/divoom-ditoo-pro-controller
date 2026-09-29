@@ -349,7 +349,7 @@ Firmware 306020 also provides [Bluetooth keyboard and media keys from Lua](docs/
 Install `examples/lua/tv-keyboard.lua` with `lua install` for a standalone remote.
 It starts after power-on and remembers the TV. Fixed controls follow the printed
 keys: lever for Play/Pause, +/− for TV volume, arrows for seeking/navigation,
-M for menus, lighting for Mute, and source for Space. There is no button setup
+M for menus, source for Mute, and the ☀ sun key for Space. There is no button setup
 or on-screen keybinding guide. Pairing and connection states appear on the
 screen; only the Ditoo and TV are needed after installation.
 See [the button guide](docs/lua-keyboard.md).
