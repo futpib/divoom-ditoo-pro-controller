@@ -20,13 +20,22 @@ void *volatile stock_bt_context=context;
 unsigned stock_ticks(void) { return clock_ms; }
 unsigned stock_free_heap(void) { return 100000; }
 unsigned stock_l2_register(struct psm *p) { assert(p->mtu==672);memcpy(core+0x28fc+(p->id==0x13)*sizeof p,&p,sizeof p);return 0; }
-unsigned stock_bt_class(unsigned cod) { assert(cod==0x2c0540);return 0; }
+unsigned stock_bt_class(unsigned cod) { assert(cod==0x2c0540 || cod==0x540);memcpy(core+0x9a8,&cod,4);return 0; }
 unsigned stock_sec_register(struct security *s) {
     assert(s->callback==stock_l2_security && (s->psm==0x11 || s->psm==0x13));
     assert(s->level==0x22 && !s->min_key);return 0;
 }
 void stock_l2_security(void *p) { (void)p; }
-unsigned stock_sdp_add(struct record *p) { assert(p->count==19);return 0; }
+static struct record *sdp_head(void) { return (struct record *)(core+0x3068); }
+unsigned stock_sdp_add(struct record *p) {
+    struct record *head=sdp_head();if (!head->next) head->next=head->previous=head;
+    struct record *tail=head->previous;
+    p->next=head;p->previous=tail;tail->next=p;head->previous=p;return 0;
+}
+unsigned stock_sdp_remove(struct record *p) {
+    struct record *next=p->next,*previous=p->previous;
+    previous->next=next;next->previous=previous;p->next=p->previous=NULL;return 0;
+}
 unsigned stock_cmgr_register(void *p,void (*f)(void *,unsigned,unsigned)) { (void)p;(void)f;return 0; }
 unsigned stock_cmgr_connect(void *p,const unsigned char *a) {
     void *r=remote;memcpy((unsigned char *)p+0x14,&r,sizeof r);memcpy(remote+0x54,a,6);return connect_rc;
@@ -36,7 +45,7 @@ unsigned stock_l2_connect(struct psm *p,unsigned id,void *r,unsigned v,uint16_t 
     assert(id==p->id && r==remote && !v);*cid=id==0x11 ? 64 : 65;return 2;
 }
 unsigned stock_l2_accept(unsigned cid,unsigned status,unsigned n) { (void)cid;(void)status;(void)n;return 2; }
-unsigned stock_l2_disconnect(unsigned cid) { assert(cid==64 || cid==65);++disconnects;return 2; }
+unsigned stock_l2_disconnect(unsigned cid) { assert(cid>=64 && cid<72);++disconnects;return 2; }
 unsigned stock_l2_send(unsigned cid,struct packet *p) {
     assert(cid==64 || cid==65);assert(p->length<=12);sent_size=p->length;
     memcpy(sent,p->data,p->length);++sends;return rc;
@@ -47,7 +56,7 @@ static void event(unsigned i,unsigned ev,void *data) {
 }
 static void connected(void) {
     unsigned char addr[16]={1,2,3,4,5,6};
-    memset(&hid,0,sizeof hid);rc=2;
+    memset(&hid,0,sizeof hid);memset(core,0,sizeof core);rc=2;
     remote[0xb1]=8;remote[0xb3]=2;
     runtime_hid_command(HID_CONNECT,0,addr,1,0);
     assert(hid.status.enabled==1 && hid.status.state==1);
@@ -55,6 +64,46 @@ static void connected(void) {
 }
 static void key(unsigned op,unsigned key) {
     unsigned char data[16]={0};runtime_hid_command(op,key,data,1,hid.status.generation);
+}
+static void modes(void) {
+    connected();unsigned generation=hid.status.generation;
+    static const unsigned char sink[]={0x35,3,0x19,0x11,0x0b};
+    static const unsigned char hfp[]={0x35,6,0x19,0x11,0x1e,0x19,0x12,3};
+    static const unsigned char pnp[]={0x35,3,0x19,0x12,0};
+    struct attribute attr[]={A(1,sink),A(1,hfp),A(1,pnp)};
+    struct record records[3]={0};
+    for (unsigned i=0;i<3;++i) { records[i].count=1;records[i].attributes=&attr[i];stock_sdp_add(&records[i]); }
+    struct psm profiles[4]={{.id=0x19},{.id=0x17},{.id=3},{.id=1}};
+    for (unsigned i=0;i<4;++i) registered_psms()[i+2]=&profiles[i];
+    unsigned char *channel=core+0x291c+2*0x7c;
+    uint16_t cid=66;struct psm *p=&profiles[0];
+    memcpy(channel+0x2c,&cid,2);memcpy(channel+0x28,&p,sizeof p);channel[2]=5;
+    unsigned before=disconnects;
+    runtime_hid_command(HID_MODE,1,NULL,1,0);
+    assert(hid.status.keyboard_only && hid.status.hidden_services==2 && hid.status.blocked_psms==3);
+    assert(hid.status.audio_channels==1 && disconnects==before+1);
+    assert(hid.status.state==2 && hid.status.generation==generation);
+    assert(sdp_head()->next==&hid.record && hid.record.next==&records[2] && records[2].next==sdp_head());
+    assert(!registered_psms()[2] && !registered_psms()[3] && !registered_psms()[4] && registered_psms()[5]==&profiles[3]);
+    assert(*(unsigned *)(core+0x9a8)==0x540);
+    channel[2]=6;runtime_hid_service(1);assert(disconnects==before+1);
+    memset(channel,0,0x7c);runtime_hid_service(2);assert(!hid.status.audio_channels && hid.status.keyboard_only);
+    key(HID_CONSUMER,0xcd);assert(sent[2]==0xcd); /* Existing HID connection survives. */
+    runtime_hid_command(HID_MODE,1,NULL,2,0);assert(hid.status.hidden_services==2);
+    registered_psms()[2]=&profiles[3];runtime_hid_command(HID_MODE,0,NULL,2,0);
+    assert(hid.status.error==19 && hid.status.keyboard_only); /* Never overwrite a new registration. */
+    registered_psms()[2]=NULL;runtime_hid_command(HID_MODE,0,NULL,2,0);
+    assert(!hid.status.keyboard_only && !hid.status.hidden_services && !hid.status.blocked_psms);
+    assert(*(unsigned *)(core+0x9a8)==0x2c0540);
+    for (unsigned i=0;i<4;++i) assert(registered_psms()[i+2]==&profiles[i]);
+    assert(records[2].next==&records[0] && records[0].next==&records[1] && records[1].next==sdp_head());
+    runtime_hid_command(HID_MODE,1,NULL,2,0);memset(core,0,sizeof core);runtime_hid_service(2);
+    assert(!hid.status.enabled && !hid.status.keyboard_only); /* No stale pointers after stack recreation. */
+    connected();hid.record.next=&hid.record;
+    runtime_hid_command(HID_MODE,1,NULL,2,0);
+    assert(hid.status.error==18 && !hid.status.keyboard_only); /* Corrupt list stays bounded and unchanged. */
+    connected();
+    puts("Keyboard-only mode hides audio SDP/PSMs, drains audio, preserves HID, restores and resets safely");
 }
 int main(void) {
     connect_rc=2;
@@ -151,5 +200,6 @@ int main(void) {
     clock_ms+=1000;event(0,1,NULL);assert(!hid.cid[0]); /* Deadline applies even before the service tick. */
     connected();memset(core,0,sizeof core);runtime_hid_service(1);
     assert(!hid.status.enabled && !hid.active); /* Reused stack address. */
+    modes();
     puts("HID report, ownership, stale command, timeout and control tests passed");
 }

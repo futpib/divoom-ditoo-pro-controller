@@ -1,6 +1,6 @@
 # Ditoo-side Bluetooth diagnostics
 
-Firmware 306024 records selected Bluetooth events independently of the Lua app.
+Firmware 306024 and 306025 record selected Bluetooth events independently of the Lua app.
 Read the retained history or watch while the Ditoo connects to a TV:
 
 ```sh
@@ -68,10 +68,10 @@ Laptop captures can contain link keys and unrelated devices' traffic.
 
 ```sh
 python3 scripts/build-lua-app-runtime.py
-python3 scripts/firmware-manifest.py firmware/306024-lua.MVA --check
+python3 scripts/firmware-manifest.py firmware/306025-lua.MVA --check
 python3 scripts/test-lua-app-runtime.py
 cargo test --locked --no-default-features
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306024-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306025-lua.MVA
 ```
 
 The pinned HCI handler begins at decoded address `0x121c6c`; its packet has a

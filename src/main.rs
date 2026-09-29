@@ -49,7 +49,7 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-  /// Inspect Bluetooth events recorded by the device (requires firmware 306024)
+  /// Inspect Bluetooth events recorded by the device (requires firmware 306024+)
   Bluetooth { #[command(subcommand)] action: BluetoothCommand },
   /// Run uploaded Lua programs on the device (requires Lua runtime firmware)
   Lua { #[command(subcommand)] action: LuaCommand },

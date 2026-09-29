@@ -37,6 +37,7 @@ extern unsigned stock_l2_accept(unsigned,unsigned,unsigned);
 extern unsigned stock_l2_disconnect(unsigned);
 extern unsigned stock_l2_send(unsigned,struct packet *);
 extern unsigned stock_sdp_add(struct record *);
+extern unsigned stock_sdp_remove(struct record *);
 extern unsigned stock_bt_class(unsigned);
 extern unsigned stock_cmgr_register(void *,void (*)(void *,unsigned,unsigned));
 extern unsigned stock_cmgr_connect(void *,const unsigned char *);
@@ -93,6 +94,9 @@ static struct {
     uint16_t cid[2];
     unsigned up[2], pending[2], active, epoch, started, phase, down, listening, outgoing;
     unsigned access_owned, access_previous, pair_started, pair_duration, pair_epoch;
+    struct record *hidden[8];
+    struct psm *blocked[8];
+    unsigned previous_class;
     unsigned char report[10];
     struct { struct packet packet; unsigned char bytes[12]; unsigned busy,started; } tx[2];
 } hid;
@@ -102,6 +106,76 @@ static void error(unsigned code) {
     runtime_bt_trace(5,0,&code,sizeof code);
 }
 static unsigned elapsed(unsigned t,unsigned delay) { return (unsigned)(stock_ticks()-t)>=delay; }
+static unsigned audio_psm(unsigned id) {
+    /* RFCOMM includes HFP/HSP and serial control. SDP, HID and BLE stay up. */
+    return id==3 || id==0x17 || id==0x19 || id==0x1b;
+}
+static struct psm **registered_psms(void) { return (struct psm **)(stock_bt_core+0x28fc); }
+static unsigned audio_record(const struct record *r) {
+    if (r->count>32 || !r->attributes) return 0;
+    for (unsigned i=0;i<r->count;++i) {
+        const struct attribute *a=&r->attributes[i];
+        if (a->id!=1 || a->length<5 || a->length>64 || !a->value) continue;
+        const unsigned char *v=a->value;
+        /* The pinned stock profiles use a short sequence of 16-bit UUIDs. */
+        if (v[0]!=0x35 || v[1]+2U!=a->length) continue;
+        for (unsigned j=2;j+3<=a->length;j+=3) {
+            if (v[j]!=0x19) break;
+            unsigned uuid=v[j+1]*256U+v[j+2];
+            if (uuid==0x1101 || uuid==0x1108 || (uuid>=0x110a && uuid<=0x110f) ||
+                    uuid==0x1112 || uuid==0x111e || uuid==0x111f || uuid==0x1131) return 1;
+        }
+    }
+    return 0;
+}
+static void audio_channels(void) {
+    hid.status.audio_channels=0;
+    for (unsigned i=0;i<8;++i) {
+        const unsigned char *channel=stock_bt_core+0x291c+i*0x7c;
+        uint16_t cid;struct psm *p;
+        memcpy(&cid,channel+0x2c,2);memcpy(&p,channel+0x28,sizeof p);
+        if (!cid || !p || !audio_psm(p->id)) continue;
+        ++hid.status.audio_channels;
+        /* Leave profile objects/callbacks alive to return packets and clean up.
+         * Retry a pending connection once it has a remote CID; 6+ is closing. */
+        if (channel[2]<6) stock_l2_disconnect(cid);
+    }
+}
+static void mode(unsigned keyboard_only) {
+    if (keyboard_only==hid.status.keyboard_only) return;
+    struct psm **psms=registered_psms();
+    if (keyboard_only) {
+        struct record *head=(struct record *)(stock_bt_core+0x3068),*r=head->next;
+        unsigned count=0,visited=0;
+        /* Collect before mutating: corrupt/oversized lists cannot partially
+         * disable the stack or make this Bluetooth-task operation unbounded. */
+        while (r && r!=head && visited++<24) {
+            if (audio_record(r)) {
+                if (count==8) { error(18);return; }
+                hid.hidden[count++]=r;
+            }
+            r=r->next;
+        }
+        if (r!=head) { error(18);return; }
+        memcpy(&hid.previous_class,stock_bt_core+0x9a8,4);
+        for (unsigned i=0;i<8;++i) if (psms[i] && audio_psm(psms[i]->id)) {
+            hid.blocked[i]=psms[i];psms[i]=NULL;++hid.status.blocked_psms;
+        }
+        /* RemoveRecord unlinks synchronously and updates SDP continuation and
+         * database state; its return is the database-update result, not unlink. */
+        for (unsigned i=0;i<count;++i) stock_sdp_remove(hid.hidden[i]);
+        hid.status.hidden_services=count;hid.status.keyboard_only=1;
+        stock_bt_class(0x540);
+        audio_channels();
+    } else {
+        for (unsigned i=0;i<8;++i) if (hid.blocked[i] && psms[i]) { error(19);return; }
+        for (unsigned i=0;i<hid.status.hidden_services;++i) stock_sdp_add(hid.hidden[i]);
+        for (unsigned i=0;i<8;++i) if (hid.blocked[i]) { psms[i]=hid.blocked[i];hid.blocked[i]=NULL; }
+        stock_bt_class(hid.previous_class);
+        hid.status.keyboard_only=hid.status.hidden_services=hid.status.blocked_psms=hid.status.audio_channels=0;
+    }
+    hid.status.error=0;
+}
 static void access_restore(void) {
     if (!hid.access_owned) return;
     unsigned rc=stock_bt_access(hid.access_previous,NULL);
@@ -256,6 +330,7 @@ void runtime_hid_service(unsigned epoch) {
             (hid.status.enabled==1 && registered!=2)) {
         memset(&hid,0,sizeof hid);return;
     }
+    if (hid.status.keyboard_only) audio_channels();
     if (hid.active && hid.status.state==1 && elapsed(hid.started,120000)) { error(9);disconnect(); }
     hid.status.access_mode=stock_bt_core[0x792];
     if (hid.status.pairing) {
@@ -282,6 +357,7 @@ void runtime_hid_service(unsigned epoch) {
 }
 void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,
                          unsigned epoch,unsigned generation) {
+    if (op==HID_MODE) { if (value<=1 && enable()) mode(value);return; }
     if (op==HID_FORGET) {
         if (hid.status.state) { error(17);return; }
         unsigned char *entry=stock_bt_find_device(data),*remote=NULL;

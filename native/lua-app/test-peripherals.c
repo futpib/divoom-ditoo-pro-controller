@@ -237,6 +237,10 @@ static void test_tv_keyboard(void) {
     track_heap=1;free_heap=76000;load(source,1);
     if(app.state!=ACTIVE) { fprintf(stderr,"Standalone app: %s peak %u\n",app.result,app.peak);abort(); }
     printf("Standalone startup: peak %u, reserved %u, stock heap %u\n",app.peak,app.reserved,stock_free_heap());
+    for(unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
+    unsigned policy[4];memcpy(policy,bt_payload,sizeof policy);
+    assert(bt_queued.op==BT_HID_COMMAND && policy[2]==HID_MODE && policy[3]==1);
+    fake_hid_status.keyboard_only=1;bt_queued.op=0;
     for(unsigned i=0;i<3;++i) tick();tv_frame(0);
     for (unsigned key=2;key<=5;++key) {
         runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);tick();
@@ -266,6 +270,14 @@ static void test_tv_keyboard(void) {
 static void test_keyboard_lifecycle(void) {
     memset((void *)(stock_bt_manager+7),0,8*26);
     fake_hid_status=(struct hid_status){0};
+    check("return pcall(keyboard.mode,'speaker')",DONE,"false");
+    request_test("local t;return {init=function() t=assert(keyboard.mode('keyboard')) end,"
+        "update=function() assert(device.result(t));print('ok') end}");
+    unsigned mode_values[4];memcpy(mode_values,bt_payload,sizeof mode_values);
+    assert(mode_values[2]==HID_MODE && mode_values[3]==1);
+    request_test("local t;return {init=function() t=assert(keyboard.mode('combined')) end,"
+        "update=function() assert(device.result(t));print('ok') end}");
+    memcpy(mode_values,bt_payload,sizeof mode_values);assert(mode_values[2]==HID_MODE && !mode_values[3]);
     check("local t={peer='stale'};assert(keyboard.status(t)==t and not t.peer);return t.state",DONE,"0");
     for (unsigned i=0;i<8;++i) {
         for (unsigned j=0;j<6;++j) stock_bt_manager[7+i*26+j]=i+1;

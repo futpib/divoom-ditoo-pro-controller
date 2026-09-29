@@ -1,0 +1,82 @@
+{
+  "firmware": 306025,
+  "sha256": "7da2e7738f9dc6f3b16e0452dcf4dc241dc702c660243a38c9c236ba8ce9122f",
+  "flash": {
+    "transport": "usb",
+    "blocks_verified": 480,
+    "version_read_back": 306025
+  },
+  "keyboard_only": {
+    "hidden_sdp_records": 5,
+    "disabled_psms": 4,
+    "remaining_audio_channels": 0,
+    "a2dp_state": 0,
+    "avrcp_state": 0,
+    "hid_state": 2,
+    "hid_encrypted": true,
+    "hid_errors": 0,
+    "owner_confirmed_tv_sound": true,
+    "owner_confirmed_physical_smarttube_play_pause": true
+  },
+  "restart": {
+    "method": "USB bootloader entry followed by upinfo/ok; existing application booted without erase/data commands",
+    "saved_app_autostarted": true,
+    "hid_ready_at_ms": 7402,
+    "bond_reused_without_pairing": true,
+    "local_bonds_retained": 7,
+    "keyboard_only_reapplied": true,
+    "a2dp_state": 0,
+    "avrcp_state": 0,
+    "settings_preserved": true,
+    "bindings": [
+      4,
+      10,
+      9,
+      0
+    ],
+    "note": "A stock connection terminated locally before the subsequent encrypted HID connection opened; physical key delivery after restart was not independently observed"
+  },
+  "guard": {
+    "test": "infinite Lua loop",
+    "termination": "instruction budget exceeded",
+    "instructions": 100000,
+    "usb_responsive": true,
+    "hid_still_connected": true,
+    "keyboard_only_retained": true,
+    "original_app_restored": true
+  },
+  "validation": {
+    "rust_tests_passed": 62,
+    "production_clippy_passed": true,
+    "native_32bit_asan_ubsan_passed": true,
+    "manifest_tests_passed": 5,
+    "manifest_check_no_drift": true,
+    "isolated_rebuild_identical": true,
+    "build_base": "e0e32a2",
+    "laptop_bluetooth_used": false,
+    "combined_mode_restore": "native sanitizer tests only",
+    "format_check": "Repository-wide cargo fmt check has pre-existing drift; no bulk formatting applied"
+  },
+  "resources": {
+    "extra_static_bytes": 84,
+    "globals_used_bytes": 7752,
+    "globals_reserved_bytes": 8192,
+    "source_bytes": 7860,
+    "source_sha256": "83fa4a1b7b212d2cf20d9e1ae240f20bba12b58d2a0453b98dc56c34e5a7a644",
+    "added_native_heap_allocation": false
+  },
+  "initial_install_limitation": "Old saved app connected and streamed A2DP after the upgrade. Installing the larger remote then hit the unchanged 50 ms startup guard; enabling keyboard-only mode in a small temporary app allowed installation. Saved updated app passed the subsequent restart.",
+  "final_app": {
+    "state": "active",
+    "peak_memory_bytes": 41624,
+    "instructions": 194,
+    "result": "TV: READY",
+    "abi": 2,
+    "memory_bytes": 41624,
+    "frames": 398,
+    "callbacks": 1193,
+    "dropped_keys": 0,
+    "held_keys": 0,
+    "generation": 3
+  }
+}

@@ -1,5 +1,6 @@
 ENTRY(runtime_command)
 INCLUDE native/patches/stock-306007.ld
+stock_sdp_remove = 0x12eb7a;
 SECTIONS {
     INCLUDE target/lua-app/runtime/patch-layout.ld
     .data 0x2004a000 : AT(0x1ef800) {

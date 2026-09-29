@@ -14,7 +14,7 @@ version = 306012
 patches = ["command_dispatch", "runtime_init", "heap_reservation", "firmware_version", "allow_reflash"]
 
 [profiles.app]
-version = 306024
+version = 306025
 patches = ["command_dispatch", "runtime_init", "screen_ownership", "physical_keys", "keyboard_lights", "native_jobs", "usb_receive", "usb_send", "usb_response", "usb_connected", "bluetooth_commands", "bluetooth_stack_trace", "bluetooth_hci_trace", "battery_indicator", "microphone_level", "wake_selection", "heap_reservation", "alarm_cleanup", "wake_cleanup", "wake_slot", "firmware_version", "allow_reflash"]
 
 [[patches]]

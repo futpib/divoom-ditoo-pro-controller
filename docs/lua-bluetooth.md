@@ -26,6 +26,8 @@ not the computer using BLE.
 The native stack can connect related profiles automatically. An AVRCP connection
 is therefore not a promise that TV sound will stay on the TV. For a keyboard
 connection, use the separate [HID API](lua-keyboard.md) added in 306020.
+On 306025, `keyboard.mode('keyboard')` disables native audio and AVRCP profiles;
+restore `keyboard.mode('combined')` before using this AVRCP API again.
 
 ## Example
 

@@ -109,6 +109,13 @@ firmware readback and hostile-Lua recovery. TV behavior remains unverified.
 and first-host HID pairing windows. The standalone TV example guides button
 setup, pairing and reconnection on the display. Compile-time scratch is reclaimed
 before creating device APIs so the complete app fits alongside the native heap
-reserve. The current builder produces this image from pinned stock 306007.
+reserve. Build this image from source at commit `d529369`.
 See [storage](../docs/lua-storage.md), [the remote guide](../docs/lua-keyboard.md)
 and `standalone-evidence/verification.json` for verification and limitations.
+
+`306025-lua.MVA` adds reversible keyboard-only Bluetooth mode, retaining the
+memory improvements and device-side tracing from 306023/306024. The current
+builder produces this image from pinned stock 306007. The saved TV example hides
+native audio/serial services and blocks their connections while preserving HID,
+BLE and USB. See [the remote guide](../docs/lua-keyboard.md) and
+`keyboard-only-evidence/verification.json` for direct TV and restart checks.

@@ -2,14 +2,15 @@
 
 For pairing failures, firmware 306024 adds [device-side Bluetooth tracing](bluetooth-trace.md) over USB without stopping this app.
 
-Firmware **306022** runs the remote directly on the Ditoo. After one installation,
+Firmware **306025** runs the remote directly on the Ditoo with its speaker
+profiles disabled. After one installation,
 setup, pairing, reconnection and ordinary use need only the Ditoo and TV.
 Bluetooth HID sends standard Play/Pause, Mute and Space reports. AVRCP and the
 older `tv-remote.lua` remain available separately.
 
 ```sh
 # One-time setup from a computer.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306022-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306025-lua.MVA
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
 ```
 
@@ -50,10 +51,11 @@ Mute goes back. Items are:
 | 4 | OFF | Disconnect the keyboard and stop listening; the Ditoo stays powered on. |
 | 5 | BACK | Return to the remote. |
 
-If the screen asks to disconnect other audio, disconnect Ditoo on the phone,
-computer or TV that currently has its audio connection, then try Pair again.
-The remote can close its HID and AVRCP connections; it does not forcibly remove
-another device's A2DP audio connection. A native link can take a moment to close.
+The app selects keyboard-only mode automatically, including when reusing an
+existing connection. This closes native audio connections and prevents new ones.
+If a link is still closing, wait briefly before retrying Pair. A TV may retain
+the old speaker services in its accessory cache; forgetting the accessory and
+pairing again refreshes that cache. The advertised name remains DitooPro-Audio.
 
 Hold any keyboard key for five seconds to stop the app and return to stock
 controls. Hold a key during power-on to skip the app for that boot. Power cycling
@@ -74,6 +76,17 @@ approval on the TV is still performed on the TV itself.
 
 ## Lua API
 
+- `keyboard.mode('keyboard'|'combined')` (306025) queues a reversible profile
+  change. Keyboard-only mode hides native A2DP, AVRCP, HFP/HSP and serial SDP
+  records, disables their L2CAP registrations, closes existing audio/serial
+  channels, and advertises keyboard class `0x000540`. HID, SDP, BLE and USB stay
+  available. This applies to all classic peers; it is not a per-TV audio switch.
+  `combined` restores the native records, registrations and previous class.
+  Mode changes preserve HID connections and bonds. Like those connections, the
+  mode survives Lua stop/failure; restore it explicitly or restart the Bluetooth
+  stack/device. The TV app reapplies keyboard-only mode after stack recreation.
+  Ticket success means queue acceptance: check `keyboard.status().keyboard_only`
+  and `keyboard.status(true).audio_channels` for the asynchronous result.
 - `keyboard.connect(address)` queues a connection to one explicit Bluetooth
   address. Reconnecting to the already connected peer succeeds without pairing.
 - `keyboard.disconnect()` queues a HID disconnection and stops listening.
@@ -104,6 +117,8 @@ approval on the TV is still performed on the TV itself.
   4 listening. 306021 adds `paired`, `encrypted`, `pairing`, `pair_remaining_ms`,
   `access_mode` and `forgotten`. `paired` means a local native bond exists;
   only `connected` establishes an active HID link.
+  306025 adds `keyboard_only`; diagnostics also include `hidden_services`,
+  `blocked_psms` and the remaining `audio_channels` (zero once drained).
   `keyboard.status(table)` reuses a table for frequent polling.
   `keyboard.status(true)` or `keyboard.status(table, true)` additionally fills
   `incoming`, `opened`, `closed`, `close_status`, `close_channel`, `control`,
@@ -113,11 +128,22 @@ approval on the TV is still performed on the TV itself.
 Mutations return a ticket or `nil,error`. Poll `device.result(ticket)` for
 native queue acceptance, then status for connection/report outcome. A sent
 report does not establish that a particular TV application acted on it.
-Numeric `error` categories are setup/guard errors 4–17, send status `0x100+n`,
+Numeric `error` categories are setup/guard errors 4–19, send status `0x100+n`,
 channel status `0x200+n`, link status `0x300+n`, transmit status `0x400+n`, and
 connection-manager status `0x500+n`, and radio-access status `0x600+n`.
 `errors` counts failures; a successful
 connection clears the last error code.
+Error 18 refuses an oversized or malformed SDP list before changing profiles;
+19 refuses restoration if another registration has occupied a saved PSM slot.
+
+Keyboard-only mode uses the pinned stock SDP remove/add routines at `0x12eb7a`
+and `0x12eafa`. It retains native profile objects and callbacks: packet ownership
+and disconnection cleanup remain with the stock stack. Removing the audio PSMs
+from the eight-slot registration array blocks both new incoming requests and
+native outgoing attempts, including peers with cached SDP. Up to eight existing
+channels are drained through stock `L2CAP_DisconnectReq`; HID channels are skipped.
+The mode adds 84 bytes inside the existing 8 KiB global reservation and allocates
+no heap. Stack recreation invalidates all saved pointers before further use.
 
 ## Limits and recovery
 
@@ -206,6 +232,24 @@ The owner confirmed that the physical Play/Pause button pauses/resumes SmartTube
 The TV also connected the stock speaker profile, which the owner disabled on
 the TV. Mute, Space and reconnection after a TV/Ditoo reboot were not checked
 in that follow-up.
+
+The [306025 TV results](../firmware/keyboard-only-evidence/verification.json)
+verify five hidden native service records, four disabled audio/serial PSMs,
+zero audio channels, A2DP/AVRCP state zero and a retained encrypted HID connection.
+The owner confirmed sound returned to the TV and physical SmartTube Play/Pause
+still worked. A USB-triggered firmware restart then autostarted the saved app
+and reconnected to the TV using its existing bond, with keyboard-only mode
+enabled and the same saved buttons. An infinite Lua loop hit the instruction
+guard; USB and HID remained usable and audio stayed disabled. The original
+remote was restored afterward. No laptop Bluetooth pairing was used for these
+306025 checks. The native sanitizer suite covers reversible profile restoration;
+combined-mode restoration was not exercised against the TV.
+
+During the initial upgrade, the old saved app reconnected A2DP before it was
+replaced. Installing the larger app while audio was streaming hit the unchanged
+50 ms startup guard. A small temporary app enabled keyboard-only mode first,
+then installation succeeded. The saved updated app started successfully on the
+subsequent restart. The guard and heap limits have not been relaxed.
 
 The profile follows the [Bluetooth HID 1.1.1 specification](https://www.bluetooth.com/specifications/specs/hid-1-1-1/).
 The related [vendor SDK](https://github.com/leadercxn/bp1048_sdk_v0.1.12/tree/8105bd864b04995d81c9f9ae77cb158259f39015/MVsB1_Base_SDK/middleware/bluetooth)

@@ -223,7 +223,7 @@ static const char *perform_job(void) {
             if (peripheral.writes>=64) return "64 saved changes per boot exceeded";
             if (peripheral.writes && (unsigned)(stock_ticks()-peripheral.last_write)<1000)
                 return "saved settings rate limited";
-        } else if (peripheral.slot!=HID_DISCONNECT && (status.state!=2 || status.busy))
+        } else if (peripheral.slot!=HID_DISCONNECT && peripheral.slot!=HID_MODE && (status.state!=2 || status.busy))
             return "keyboard disconnected or busy";
         unsigned char data[32];
         unsigned values[4]={peripheral.epoch,status.generation,peripheral.slot,n};
@@ -591,6 +591,10 @@ static int keyboard_bonds(lua_State *L) {
     return 1;
 }
 static int keyboard_disconnect(lua_State *L) { return submit(L,BT_HID,HID_DISCONNECT,0,NULL,0); }
+static int keyboard_mode(lua_State *L) {
+    const char *names[]={"combined","keyboard",NULL};
+    return submit(L,BT_HID,HID_MODE,luaL_checkoption(L,1,NULL,names),NULL,0);
+}
 static int settings_get(lua_State *L) {
     if (!saved.initialized || !saved.settings_size) { lua_pushnil(L);return 1; }
     lua_pushlstring(L,(const char *)saved.settings,saved.settings_size);return 1;
@@ -620,12 +624,15 @@ static int keyboard_status(lua_State *L) {
     if (reuse) lua_pushvalue(L,1);else lua_createtable(L,0,16);
     field(L,"state",s.state);flag(L,"connected",s.state==2);
     flag(L,"enabled",s.enabled==1);flag(L,"busy",s.busy);field(L,"sent",s.sent);
+    flag(L,"keyboard_only",s.keyboard_only);
     field(L,"released",s.released);field(L,"errors",s.errors);field(L,"error",s.error);
     field(L,"bonds_saved",peripheral.bt_bonds_saved);
     flag(L,"paired",s.enabled && keyboard_bonded(s.peer));flag(L,"encrypted",s.state==2 && s.encryption_state==2);
     flag(L,"pairing",s.pairing);field(L,"pair_remaining_ms",s.pair_remaining_ms);
     field(L,"access_mode",s.access_mode);field(L,"forgotten",s.forgotten);
     if (diagnostics) {
+        field(L,"hidden_services",s.hidden_services);field(L,"blocked_psms",s.blocked_psms);
+        field(L,"audio_channels",s.audio_channels);
         field(L,"incoming",s.incoming);field(L,"opened",s.opened);field(L,"closed",s.closed);
         field(L,"close_status",s.close_status);field(L,"close_channel",s.close_channel);field(L,"control",s.control);
         field(L,"authentication_state",s.authentication_state);field(L,"encryption_state",s.encryption_state);
@@ -666,7 +673,7 @@ static void peripherals_modules(lua_State *L) {
     static const luaL_Reg storage[]={{"get",settings_get},{"set",settings_set},{NULL,NULL}};
     luaL_newlib(L,storage);lua_setglobal(L,"storage");
     static const luaL_Reg keyboard[]={{"connect",keyboard_connect},{"listen",keyboard_listen},{"disconnect",keyboard_disconnect},
-        {"pair",keyboard_pair},{"forget",keyboard_forget},{"bonds",keyboard_bonds},
+        {"pair",keyboard_pair},{"forget",keyboard_forget},{"bonds",keyboard_bonds},{"mode",keyboard_mode},
         {"tap",keyboard_tap},{"media",keyboard_media},{"status",keyboard_status},{NULL,NULL}};
     luaL_newlib(L,keyboard);lua_setglobal(L,"keyboard");
     static const luaL_Reg bluetooth[] = {{"status",bt_status},{"connect_media",bt_connect},

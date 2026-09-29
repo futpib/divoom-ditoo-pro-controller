@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the pinned NDS32 Lua runtime and its installable 306024 firmware."""
+"""Build the pinned NDS32 Lua runtime and its installable 306025 firmware."""
 import binascii
 import hashlib
 import importlib.util
@@ -93,6 +93,16 @@ def build():
         assert not any(line.split()[-1] == symbol for line in symbols.splitlines()), symbol
 
     stock = (ROOT/'firmware/306007.MVA').read_bytes()
+    # Check the stock SDP and L2CAP layouts used by keyboard-only mode.
+    stock_code = stock[base.CODE:-4]
+    for offset, expected in [
+        (0x12eb7a,'c016fc01f0813c0ddd79'),
+        (0x123faa,'3c1ddd795050a8fc5010a91ca2a9'),
+        (0x12409e,'3c2ddd798060505128fc5021291c'),
+        (0x123e34,'fc403c2ddd7984e04410007c'),
+    ]:
+        expected = bytes.fromhex(expected)
+        assert stock_code[offset:offset+len(expected)] == expected
     code = patches.apply(stock, out/'runtime.elf')
     sections = {name: patches.extract('.'+name) for name in ('text','data')}
     for address, section in [(0x1ca000,'text'),(0x1ef800,'data')]:

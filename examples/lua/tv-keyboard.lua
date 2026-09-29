@@ -1,7 +1,7 @@
 local ui = require('../../lua/ui')
 local view = ui.screen()
 local screen, age = view.set, ui.elapsed
--- Firmware 306022. Install once with `lua install`; setup then uses only keys.
+-- Firmware 306025. Install once with `lua install`; setup then uses only keys.
 local target, keys, pending = nil, {}, nil
 local b, job, flow, stage, stage_at = {}, nil, nil, 0, 0
 local dirty, save_at, retries, retry_at, saving = false, 0, 0, 0, nil
@@ -97,6 +97,10 @@ local function paint()
   view.draw(b.connected, value, total)
 end
 local function connect_step()
+  if not b.keyboard_only and not job and (b.enabled or not flow or stage > 1) then
+    queue('mode', keyboard.mode, 'keyboard')
+    return
+  end
   if flow and not job then
     if stage == 1 then
       if flow == 'connect' and b.connected and b.peer == target then
@@ -118,12 +122,7 @@ local function connect_step()
           flow = nil
           inform('OFFLINE TAP MENU')
         else
-          local m = bluetooth.status()
-          if m.media_connected then
-            queue('step', bluetooth.disconnect_media)
-          else
-            stage = 4
-          end
+          stage = 4
         end
       end
     elseif stage == 4 and age(stage_at) > 2000 then
@@ -173,7 +172,7 @@ end
 
 return {
   init = function()
-    assert(storage, 'firmware 306022 required')
+    assert(keyboard.mode, 'firmware 306025 required')
     brightness(20)
     lights.fill(0)
     lights.present()
@@ -203,9 +202,8 @@ return {
     if b.connected then
       target = b.peer
       changed()
-    elseif target then
-      begin('connect')
     end
+    begin(target and 'connect' or 'listen')
     screen('TV', 'FOLLOW THE SCREEN')
   end,
   key = function(k, event)

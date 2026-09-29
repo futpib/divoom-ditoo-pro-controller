@@ -256,10 +256,14 @@ async fn session(
       payload: vec![0],
     })
     .await?;
-  if !reply.ack || reply.data.len() != 5 || reply.data[0] != 1 || number(&reply.data[1..]) != 306024
+  if !reply.ack
+    || reply.data.len() != 5
+    || reply.data[0] != 1
+    || !matches!(number(&reply.data[1..]), 306024 | 306025)
   {
-    return Err("Bluetooth trace requires firmware 306024; no diagnostic sent".into());
+    return Err("Bluetooth trace requires firmware 306024 or 306025; no diagnostic sent".into());
   }
+  let firmware = number(&reply.data[1..]);
   let deadline = Instant::now() + duration;
   let mut after = 0;
   let mut first = true;
@@ -281,7 +285,7 @@ async fn session(
     }
     if first {
       emit(
-        json!({"notice":"trace","firmware":306024,"capacity":32,"oldest":page.oldest,"latest":page.latest}),
+        json!({"notice":"trace","firmware":firmware,"capacity":32,"oldest":page.oldest,"latest":page.latest}),
       )?;
       first = false;
     }
