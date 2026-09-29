@@ -237,48 +237,54 @@ static void test_tv_keyboard(void) {
     track_heap=1;free_heap=76000;load(source,1);
     if(app.state!=ACTIVE) { fprintf(stderr,"Standalone app: %s peak %u\n",app.result,app.peak);abort(); }
     printf("Standalone startup: peak %u, reserved %u, stock heap %u\n",app.peak,app.reserved,stock_free_heap());
-    for(unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
+    for(unsigned i=0;i<8;++i) {
+        tick();runtime_native_service();
+        if(bt_queued.op) fake_hid_status.keyboard_only=1;
+    }
     unsigned policy[4];memcpy(policy,bt_payload,sizeof policy);
     assert(bt_queued.op==BT_HID_COMMAND && policy[2]==HID_MODE && policy[3]==1);
     fake_hid_status.keyboard_only=1;bt_queued.op=0;
     for(unsigned i=0;i<3;++i) tick();tv_frame(0);
-    for (unsigned key=2;key<=9;++key) {
-        runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);tick();
-        assert(!bt_queued.op); /* Binding is silent. */
-        for(unsigned i=0;i<3;++i) tick();tv_frame(key-1);
-    }
-    for (unsigned key=2;key<=9;++key) {
-        if(key==5) continue;
+    for(unsigned i=0;i<100;++i) { tick();runtime_native_service(); }
+    assert(strstr(app.result,"TV: READY") && !bt_queued.op);
+    const unsigned keys[]={4,7,10,1,9,2,3};
+    const unsigned usages[]={0xcd,0xe2,44,0xe9,0xea,80,79};
+    for (unsigned i=0;i<sizeof keys/sizeof keys[0];++i) {
+        unsigned key=keys[i];
         clock_ms+=600;runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);
-        for (unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
+        for (unsigned j=0;j<8;++j) { tick();runtime_native_service(); }
         unsigned values[4];memcpy(values,bt_payload,sizeof values);
         assert(bt_queued.op==BT_HID_COMMAND && bt_queued.length==32);
-        const unsigned usages[]={0xcd,0xe2,44,0,0xe9,0xea,80,79};
-        assert(values[2]==(key==4 || key>=8 ? HID_KEY : HID_CONSUMER));
-        assert(values[3]==usages[key-2]);
+        assert(values[2]==(key==10 || key==2 || key==3 ? HID_KEY : HID_CONSUMER));
+        assert(values[3]==usages[i]);
         bt_queued.op=0;
-        runtime_adc_result(4U<<16 | key);tick();runtime_adc_result(5U<<16 | key);tick();
-        assert(!bt_queued.op);
+        runtime_adc_result(3U<<16 | key);tick();runtime_adc_result(4U<<16 | key);tick();
+        runtime_adc_result(5U<<16 | key);tick();assert(!bt_queued.op);
     }
-    runtime_adc_result(1U<<16 | 5);tick();runtime_adc_result(2U<<16 | 5);tick();assert(!bt_queued.op);
+    for(unsigned key=5;key<=8;++key) {
+        if(key==7) continue;
+        runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);tick();
+        assert(!bt_queued.op); /* Unused stock ADC slots do not become controls. */
+    }
+    runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();assert(!bt_queued.op);
     for(unsigned i=0;i<3;++i) tick();tv_frame(9);
     assert(strstr(app.result,"LINK:"));
-    runtime_adc_result(1U<<16 | 9);tick();runtime_adc_result(2U<<16 | 9);tick();
+    runtime_adc_result(1U<<16 | 3);tick();runtime_adc_result(2U<<16 | 3);tick();
     assert(strstr(app.result,"PAIR:") && !bt_queued.op);
-    runtime_adc_result(1U<<16 | 6);tick();runtime_adc_result(2U<<16 | 6);tick();
+    runtime_adc_result(1U<<16 | 1);tick();runtime_adc_result(2U<<16 | 1);tick();
     assert(strstr(app.result,"PAIR:") && !bt_queued.op); /* Volume stays local in menus. */
-    runtime_adc_result(1U<<16 | 2);tick();runtime_adc_result(2U<<16 | 2);tick();
-    assert(strstr(app.result,"LEVER YES") && !bt_queued.op);
-    runtime_adc_result(1U<<16 | 5);tick();runtime_adc_result(2U<<16 | 5);tick();
-    runtime_adc_result(1U<<16 | 5);tick();runtime_adc_result(2U<<16 | 5);tick();
+    runtime_adc_result(1U<<16 | 4);tick();runtime_adc_result(2U<<16 | 4);tick();
+    assert(strstr(app.result,"RESET SAVED TV?") && !bt_queued.op);
+    runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();
+    runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();
     assert(strstr(app.result,"LINK:"));
-    runtime_adc_result(1U<<16 | 8);tick();runtime_adc_result(2U<<16 | 8);tick();
+    runtime_adc_result(1U<<16 | 2);tick();runtime_adc_result(2U<<16 | 2);tick();
     assert(strstr(app.result,"BACK:") && !bt_queued.op); /* Left wraps backwards. */
     for(unsigned i=0;i<1000;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
     printf("Standalone sustained: used %u, peak %u, reserved %u, stock heap %u\n",app.used,app.peak,app.reserved,stock_free_heap());
     /* Close the menu, then model loss of an outgoing connection. Native HID
        disables incoming acceptance until the app explicitly listens again. */
-    runtime_adc_result(1U<<16 | 5);tick();runtime_adc_result(2U<<16 | 5);tick();
+    runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();
     fake_hid_status.state=0;bt_queued.op=0;
     for(unsigned i=0;i<80;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
     unsigned reconnect[4];memcpy(reconnect,bt_payload,sizeof reconnect);
@@ -306,26 +312,34 @@ static void test_tv_keyboard(void) {
     app.cancel=1;service();runtime_native_service();assert(!allocations);fake_hid_status.state=0;
     fake_hid_status=(struct hid_status){.state=2,.enabled=1,.keyboard_only=1};
     memset(fake_hid_status.peer,8,6);bt_queued.op=0;
-    const char *legacy="TV2|08:08:08:08:08:08|2,3,4,5";
-    memcpy(saved.settings,legacy,strlen(legacy)+1);saved.settings_size=strlen(legacy);
-    load(source,1);tick();assert(app.state==ACTIVE && strstr(app.result,"VOL+:"));
-    runtime_adc_result(1U<<16 | 2);tick();runtime_adc_result(2U<<16 | 2);tick();
-    assert(strstr(app.result,"DIFFERENT KEY") && !bt_queued.op);
-    for(unsigned key=6;key<=9;++key) {
-        runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);tick();
-        assert(!bt_queued.op);
+    const char *legacy[]={"TV2|08:08:08:08:08:08|2,3,4,5",
+                          "TV3|08:08:08:08:08:08|4,10,9,0",
+                          "TV3|08:08:08:08:08:08|9,9,bad",
+                          "TV4|08:08:08:08:08:08|"};
+    for(unsigned i=0;i<sizeof legacy/sizeof legacy[0];++i) {
+        memcpy(saved.settings,legacy[i],strlen(legacy[i])+1);saved.settings_size=strlen(legacy[i]);
+        load(source,1);
+        for(unsigned j=0;j<100;++j) { tick();runtime_native_service(); }
+        const char *current="TV4|08:08:08:08:08:08|";
+        assert(saved.settings_size==strlen(current) && !memcmp(saved.settings,current,strlen(current)));
+        assert(app.state==ACTIVE && !strcmp(app.result,"TV: READY") && !bt_queued.op);
+        runtime_adc_result(1U<<16 | 1);tick();runtime_adc_result(2U<<16 | 1);
+        for(unsigned j=0;j<8;++j) { tick();runtime_native_service(); }
+        unsigned values[4];memcpy(values,bt_payload,sizeof values);
+        assert(bt_queued.op==BT_HID_COMMAND && values[2]==HID_CONSUMER && values[3]==0xe9);
+        bt_queued.op=0;
+        app.cancel=1;service();runtime_native_service();assert(!allocations);
     }
-    for(unsigned i=0;i<100;++i) { tick();runtime_native_service(); }
-    assert(!strcmp(saved.settings,"TV3|08:08:08:08:08:08|2,3,4,5,6,7,8,9"));
-    assert(app.state==ACTIVE && strstr(app.result,"TV: READY"));
-    app.cancel=1;service();runtime_native_service();assert(!allocations);
+    saved.settings_size=0;fake_hid_status.state=0;
     load(source,1);
-    for(unsigned i=0;i<100;++i) { tick();runtime_native_service(); }
-    assert(app.state==ACTIVE && strstr(app.result,"TV: READY") && !bt_queued.op);
+    for(unsigned i=0;i<200;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
+    assert(strstr(app.result,"RESET SAVED TV?") && !strstr(app.result,"KEY"));
+    runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();
+    assert(!strcmp(app.result,"TV: NOT PAIRED"));
     app.cancel=1;service();runtime_native_service();assert(!allocations);
-    puts("TV2 migration preserves the TV and four bindings, learns four more silently and reloads TV3");
+    puts("TV2/TV3 migrate only the peer, TV4 reloads, and fresh startup has no binding prompts");
     stock_config_context=NULL;saved.settings_size=0;track_heap=0;free_heap=100000;
-    puts("TV keyboard binds eight silent keys, sends seven reports, and keeps M/arrows/lever navigation local");
+    puts("TV keyboard uses stock ADC IDs, sends seven reports, and keeps M/arrows/lever navigation local");
     puts("TV keyboard resumes listening after link loss, stays offline after OFF and can listen again");
 }
 

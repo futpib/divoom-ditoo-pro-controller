@@ -1,0 +1,180 @@
+{
+  "firmware": 306025,
+  "firmware_changed": false,
+  "control_transport": "ble",
+  "source": {
+    "path": "examples/lua/tv-keyboard.lua",
+    "bytes": 7206,
+    "sha256": "4a6c5c40c45dba5cfba5c839818f92f35650e615baecb986c43217a9e8732e64"
+  },
+  "physical_controls": {
+    "M": 0,
+    "plus": 1,
+    "left": 2,
+    "right": 3,
+    "lever": 4,
+    "lighting": 7,
+    "minus": 9,
+    "source": 10
+  },
+  "mapping_evidence": {
+    "stock_version": 306007,
+    "adc_mapper": "0x75074",
+    "adc_ui_table": "0x1812fc",
+    "generic_action_table": "0x15ba0c",
+    "main_key_callback": "0x4792c",
+    "menu_handler": "0x47c66",
+    "display_mode_handler": "0x47a74",
+    "all_physical_keys_retested": false
+  },
+  "host_validation": {
+    "native_32bit_asan_ubsan": true,
+    "fixed_adc_to_all_seven_reports": true,
+    "unused_adc_and_hold_repeat_release_ignored": true,
+    "menu_and_confirmation_do_not_send": true,
+    "bidirectional_menu_wrap_select_and_cancel": true,
+    "tv2_tv3_migration_preserves_peer_and_ignores_bindings": true,
+    "tv4_reload_and_empty_settings_without_binding_prompts": true,
+    "reconnect_and_explicit_off_regressions": true,
+    "lua_format_and_lint": true,
+    "bundle_headroom_test": true,
+    "linux_e2e_harness_syntax_checked": true,
+    "linux_input_e2e_run": false,
+    "sustained_peak_memory_bytes": 42648
+  },
+  "live_validation": {
+    "peer_retained": true,
+    "connected_throughout": true,
+    "keyboard_only": true,
+    "audio_channels": 0,
+    "native_errors": 0,
+    "dropped_keys": 0,
+    "sent_and_released_before": [
+      6,
+      6
+    ],
+    "sent_and_released_after": [
+      16,
+      16
+    ],
+    "checks": [
+      {
+        "action": "baseline",
+        "new_sent_reports": 0,
+        "new_releases": 0
+      },
+      {
+        "action": "menu",
+        "new_sent_reports": 0,
+        "new_releases": 0
+      },
+      {
+        "action": "browse-right",
+        "new_sent_reports": 0,
+        "new_releases": 0
+      },
+      {
+        "action": "menu-volume-ignored",
+        "new_sent_reports": 0,
+        "new_releases": 0
+      },
+      {
+        "action": "menu-space-ignored",
+        "new_sent_reports": 0,
+        "new_releases": 0
+      },
+      {
+        "action": "confirm",
+        "new_sent_reports": 0,
+        "new_releases": 0
+      },
+      {
+        "action": "cancel",
+        "new_sent_reports": 0,
+        "new_releases": 0
+      },
+      {
+        "action": "menu-again",
+        "new_sent_reports": 0,
+        "new_releases": 0
+      },
+      {
+        "action": "browse-left-wrap",
+        "new_sent_reports": 0,
+        "new_releases": 0
+      },
+      {
+        "action": "select-back",
+        "new_sent_reports": 0,
+        "new_releases": 0
+      },
+      {
+        "action": "play-pause",
+        "new_sent_reports": 1,
+        "new_releases": 1
+      },
+      {
+        "action": "play-pause-restore",
+        "new_sent_reports": 1,
+        "new_releases": 1
+      },
+      {
+        "action": "mute",
+        "new_sent_reports": 1,
+        "new_releases": 1
+      },
+      {
+        "action": "mute-restore",
+        "new_sent_reports": 1,
+        "new_releases": 1
+      },
+      {
+        "action": "space",
+        "new_sent_reports": 1,
+        "new_releases": 1
+      },
+      {
+        "action": "space-restore",
+        "new_sent_reports": 1,
+        "new_releases": 1
+      },
+      {
+        "action": "volume-up",
+        "new_sent_reports": 1,
+        "new_releases": 1
+      },
+      {
+        "action": "volume-down",
+        "new_sent_reports": 1,
+        "new_releases": 1
+      },
+      {
+        "action": "left",
+        "new_sent_reports": 1,
+        "new_releases": 1
+      },
+      {
+        "action": "right",
+        "new_sent_reports": 1,
+        "new_releases": 1
+      }
+    ],
+    "owner_confirmation": {
+      "text": "it worked",
+      "scope": "Owner confirmed the updated remote during final installation; no individual-key or power-cycle claim."
+    }
+  },
+  "installation": {
+    "startup_app_saved_with_readback": true,
+    "generation": 10,
+    "runtime_state": "active",
+    "screen": "TV: READY",
+    "peak_memory_bytes": 40264,
+    "dropped_keys": 0,
+    "power_cycle_tested": false
+  },
+  "limitations": [
+    "Callback injection tests native HID submission/release counters, not physical switch operation or TV app response.",
+    "No power-cycle test in this revision."
+  ]
+}

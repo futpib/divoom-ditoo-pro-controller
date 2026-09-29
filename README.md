@@ -347,10 +347,12 @@ removed; `lua bundle FILE` previews the generated source without a device.
 
 Firmware 306020 also provides [Bluetooth keyboard and media keys from Lua](docs/lua-keyboard.md).
 Install `examples/lua/tv-keyboard.lua` with `lua install` for a standalone remote.
-It starts after power-on, remembers the TV and eight chosen buttons (Play/Pause,
-Mute, Space, Menu, Volume +/−, Left/Right), and guides setup and pairing on its
-screen. M opens/closes menus, arrows browse, and the lever selects. After that,
-only the Ditoo and TV are needed. See [the button guide](docs/lua-keyboard.md).
+It starts after power-on and remembers the TV. Fixed controls follow the printed
+keys: lever for Play/Pause, +/− for TV volume, arrows for seeking/navigation,
+M for menus, lighting for Mute, and source for Space. There is no button setup
+or on-screen keybinding guide. Pairing and connection states appear on the
+screen; only the Ditoo and TV are needed after installation.
+See [the button guide](docs/lua-keyboard.md).
 Each press is released by native code even if the Lua app fails.
 306021 lets the app pair, listen, reconnect, reuse an existing connection,
 inspect saved peers and forget one selected bond. Pairing windows expire in

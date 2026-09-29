@@ -1,8 +1,8 @@
 local ui = require('../../lua/ui')
 local view = ui.screen()
 local screen, age = view.set, ui.elapsed
--- Firmware 306025. Install once with `lua install`; setup then uses only keys.
-local keys = {}
+-- Stock ADC IDs: lever, lighting, source, M, +, -, left, right.
+local keys = { [4] = 1, [7] = 2, [10] = 3, [0] = 4, [1] = 5, [9] = 6, [2] = 7, [3] = 8 }
 local target, pending
 local b = {}
 local job, flow
@@ -13,7 +13,7 @@ local shown = 0
 local menu, confirm, notice
 local key_at, errors, linked = 0, 0
 local online = true
-local choices = { 'LINK', 'PAIR', 'KEYS', 'OFF', 'BACK' }
+local choices = { 'LINK', 'PAIR', 'OFF', 'BACK' }
 local labels = { 'PLAY', 'MUTE', 'SPC', 'MENU', 'VOL+', 'VOL-', 'LEFT', 'RGHT' }
 local actions =
   { 'play_pause', 'mute', 'space', false, 'volume_up', 'volume_down', 'left', 'right' }
@@ -25,7 +25,7 @@ local function changed()
   save_at = now()
 end
 local function config()
-  return 'TV3|' .. (target or '-') .. '|' .. table.concat(keys, ',')
+  return 'TV4|' .. (target or '-') .. '|'
 end
 local function hint(s)
   notice = s
@@ -59,7 +59,7 @@ end
 local function press(role)
   keyboard.status(b)
   if not b.connected then
-    hint('OFFLINE TAP MENU')
+    hint('OFFLINE')
     return
   end
   if job or b.busy or age(key_at) < 200 then
@@ -77,10 +77,6 @@ local function select()
   if s == 'PAIR' then
     confirm = true
     menu = nil
-  elseif s == 'KEYS' then
-    keys = {}
-    menu = nil
-    changed()
   elseif s == 'BACK' then
     menu = nil
   else
@@ -103,7 +99,7 @@ local function connect()
       if b.state == 0 or (flow == 'connect' and b.state == 4 and b.peer == target) then
         if flow == 'off' then
           flow = nil
-          hint('OFFLINE TAP MENU')
+          hint('OFFLINE')
         else
           stage = 4
           stage_at = now()
@@ -164,22 +160,11 @@ return {
     lights.present()
     local s = storage.get()
     if s then
-      local peer, list = s:match('^TV[23]|([^|]+)|(.*)$')
-      if peer then
-        if peer ~= '-' and peer:match('^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$') then
-          target = peer
-        end
-        local valid, used = true, {}
-        for k in list:gmatch('%d+') do
-          k = tonumber(k)
-          if k > 10 or used[k] then
-            valid = false
-          end
-          used[k] = true
-          keys[#keys + 1] = k
-        end
-        if not valid or #keys > #labels or table.concat(keys, ',') ~= list then
-          keys = {}
+      local peer = s:match('^TV[234]|([^|]+)|')
+      if peer and peer:match('^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$') then
+        target = peer
+        if s ~= config() then
+          changed()
         end
       end
     end
@@ -190,32 +175,14 @@ return {
       changed()
     end
     begin(target and 'connect' or 'listen')
-    screen('TV', 'FOLLOW THE SCREEN')
+    screen('TV', 'CONNECTING')
   end,
   key = function(k, event)
     if event ~= 1 then
       return
     end
-    if #keys < #labels then
-      for _, v in ipairs(keys) do
-        if v == k then
-          hint('PICK A DIFFERENT KEY')
-          return
-        end
-      end
-      keys[#keys + 1] = k
-      notice = nil
-      changed()
-      return
-    end
-    local role
-    for i, v in ipairs(keys) do
-      if v == k then
-        role = i
-      end
-    end
+    local role = keys[k]
     if not role then
-      hint('USE YOUR MENU KEY')
       return
     end
     if confirm then
@@ -226,6 +193,7 @@ return {
       end
     elseif role == 4 then
       menu = not menu and 1 or nil
+      pending = nil
       notice = nil
     elseif menu then
       if role == 7 or role == 8 then
@@ -245,10 +213,7 @@ return {
     if s == 'toggle' then
       s = 'play_pause'
     end
-    if s == 'bind' then
-      keys = {}
-      changed()
-    elseif s == 'pair' or s == 'connect' or s == 'listen' then
+    if s == 'pair' or s == 'connect' or s == 'listen' then
       begin(s)
     elseif s == 'disconnect' then
       begin('off')
@@ -256,6 +221,8 @@ return {
       app.log(b.state .. ' ' .. (b.peer or '-'))
     elseif s == 'menu' then
       menu = not menu and 1 or nil
+      pending = nil
+      notice = nil
     else
       local peer = s:match('^target (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x)$')
       if peer then
@@ -310,25 +277,23 @@ return {
     end
     if b.errors ~= errors then
       errors = b.errors
-      hint('LINK FAILED TAP MENU')
+      hint('LINK FAILED')
     end
     if notice and age(shown) > 3500 then
       notice = nil
     end
     if confirm then
-      screen('PAIR', 'RESET PAIRING LEVER YES M BACK', 0xffa030)
+      screen('PAIR', 'RESET SAVED TV?', 0xffa030)
     elseif menu then
-      screen(choices[menu], 'ARROWS BROWSE LEVER OK M BACK')
+      screen(choices[menu], 'TV REMOTE')
     elseif notice then
       screen(icons[notice] or 'INFO', labels[notice] and labels[notice] .. ' SENT' or notice)
-    elseif #keys < #labels then
-      screen(labels[#keys + 1], 'PRESS KEY FOR ' .. labels[#keys + 1])
     elseif flow then
       screen('WAIT', 'SETTING UP')
     elseif dirty then
       screen('SAVE', 'KEEP POWER ON')
     elseif b.connected then
-      screen('TV', 'READY  M MENU', 0x20ff40)
+      screen('TV', 'READY', 0x20ff40)
     elseif b.pairing then
       screen(
         'PAIR',
@@ -338,17 +303,15 @@ return {
     elseif b.state == 1 then
       screen('LINK', 'ACCEPT ON TV')
     elseif not target then
-      screen('TV', 'TAP PLAY TO PAIR YOUR TV')
+      screen('TV', 'NOT PAIRED')
     else
-      screen('WAIT', 'CONNECT ON TV OR TAP MENU')
+      screen('WAIT', 'CONNECT ON TV')
     end
     local value, total
     if b.pairing then
       value, total = b.pair_remaining_ms, 120000
-    elseif #keys < #labels then
-      value, total = #keys + 1, #labels + 1
     elseif menu then
-      value, total = menu, 5
+      value, total = menu, #choices
     end
     view.draw(b.connected, value, total)
   end,

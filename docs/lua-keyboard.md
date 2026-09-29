@@ -17,63 +17,63 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
 ## On the Ditoo and TV
 
 1. Power on the Ditoo. It starts the saved remote automatically.
-2. Follow the eight screen prompts: **PLAY**, **MUTE**, **SPC**, **MENU**,
-   **VOL+**, **VOL−**, **LEFT**, **RGHT**. Press a different key for each role.
-   For the [stock control conventions](stock-ux.md), use the lever for Play,
-   lighting key for Mute, source button for Space, M for Menu, and the printed
-   +/− and arrow keys for the remaining four roles. Setup presses are silent.
-   The existing four-button configuration is preserved on upgrade: only the
-   four new keys need binding. Progress and completed bindings are saved.
-3. On the TV, forget the old **DitooPro-Audio** accessory if it exists, then open
-   **Pair accessory**. This removes the cached audio-only profile and stale bond.
-4. On the Ditoo, press your Play key and confirm pairing with Play again.
-   If a target is already saved, use Menu → Pair → Play to confirm instead.
+2. Controls already match the printed keys; there is no button setup.
+3. For a **new pairing**, forget the old **DitooPro-Audio** accessory on the TV
+   if it exists, then open **Pair accessory**. Keep an existing working bond
+   when upgrading this app.
+4. On the Ditoo, press the lever to confirm **PAIR / RESET SAVED TV?**.
+   If a target is already saved, use M → Pair → lever, then lever to confirm.
    Choose **DitooPro-Audio** on the TV and accept the request. No MAC address is
    needed. A blue bar shows the two-minute pairing window.
 5. **TV / READY** with a green dot means the keyboard connection is established.
-   The controls now send their corresponding keys. Left/Right are ordinary
-   keyboard arrows (HID usages 80/79), so the TV app decides whether they seek
-   or navigate. Volume uses Consumer Volume Increment/Decrement (233/234),
-   not the Ditoo speaker volume. A sent report does not prove that every TV app
-   handles it. SmartTube Play/Pause is owner-confirmed; see the verification
-   notes below for coverage of the other buttons.
 
-The top line shows the current step; the lower line scrolls its instructions.
-The remote remembers both the key assignments and the connected TV. Later boots
-try the saved TV up to three times, then listen for it. If necessary use Connect
-in the menu or the TV's Connect action. After a connected TV disconnects, the
-remote automatically resumes listening for that saved TV. This also works when
-the Ditoo initiated the previous connection. Listening does not consume outgoing
-connection attempts. OFF stays offline until Connect or Pair is selected.
-Reconnection reuses the saved bond;
-Pair deliberately resets the selected bond after confirmation.
+| # | Physical control | Remote action | Stock ADC ID |
+| --- | --- | --- | --- |
+| 1 | Lever | Play/Pause | 4 |
+| 2 | + | TV volume up | 1 |
+| 3 | − | TV volume down | 9 |
+| 4 | ← | Left arrow (seek or navigate) | 2 |
+| 5 | → | Right arrow (seek or navigate) | 3 |
+| 6 | M | Open/close local menu | 0 |
+| 7 | Lighting | Mute/unmute | 7 |
+| 8 | Source | Space | 10 |
+
+The fixed IDs come from the [stock firmware key tables](stock-ux.md#physical-key-ids).
+Left/Right send ordinary keyboard arrows (HID usages 80/79), so the TV app
+and focus determine whether they seek or navigate. Volume sends Consumer
+Volume Increment/Decrement (233/234), not Ditoo speaker volume. A sent report
+does not prove that every TV app handles it. SmartTube Play/Pause is
+owner-confirmed; see the verification notes below for other coverage.
+
+The remote remembers the connected TV. Later boots try the saved TV up to
+three times, then listen for it. If necessary use LINK in the menu or the
+TV's Connect action. After a connected TV disconnects, the remote automatically
+resumes listening for that saved TV. This also works when the Ditoo initiated
+the previous connection. Listening does not consume outgoing connection
+attempts. OFF stays offline until LINK or PAIR is selected. Reconnection reuses
+the saved bond; PAIR deliberately resets the selected bond after confirmation.
 
 ## Menu and recovery
 
-Press **M** to open or close the menu. **←/→** browse in either direction with
-wraparound, and the **lever** selects. Mute also backs out. These are the roles
-learned during setup; custom bindings retain the same behavior. Volume and
-Space do nothing in menus, and menu/confirmation presses never send TV reports.
-Pairing reset requires a separate lever confirmation; M or Mute cancels it.
-Items are:
+Press **M** to open or close the menu. **←/→** browse with wraparound and the
+**lever** selects. Lighting also backs out. Volume and Source do nothing in
+menus; menu/confirmation presses never send TV reports. Pairing reset needs a
+separate lever confirmation; M or Lighting cancels it. Items are:
 
 | # | Screen | Action |
 | --- | --- | --- |
 | 1 | LINK | Connect to the saved TV, or start pairing if none is saved. |
 | 2 | PAIR | Confirm, then open a pairing window for the first incoming keyboard host. Forget the old accessory on the TV first. |
-| 3 | KEYS | Choose the eight button assignments again. |
-| 4 | OFF | Disconnect the keyboard and stop listening; the Ditoo stays powered on. |
-| 5 | BACK | Return to the remote. |
+| 3 | OFF | Disconnect the keyboard and stop listening; the Ditoo stays powered on. |
+| 4 | BACK | Return to the remote. |
 
-Outside menus, the lever toggles playback, +/− adjusts TV volume, and ←/→ seeks
-or navigates in the TV app. Mute and Space remain direct shortcuts. Each short
-press sends one automatically released report; long-down/repeat/release events
-do not repeat actions. The five-second recovery hold is unchanged.
-Brief action symbols (`>II`, `X`, `_`, `+`, `-`, `<`, `>`) identify the requested
-action, with a scrolling label and **SENT**.
-They indicate a submitted key, not a measured TV playback/volume state.
-The ready screen reminds you that M opens the menu; setup, pairing, saving and
-connection states show their own instructions and progress bars.
+Each short press sends one automatically released report; long-down, repeat
+and release events do not repeat actions. The five-second recovery hold is
+unchanged. Brief action symbols (`>II`, `X`, `_`, `+`, `-`, `<`, `>`) and a
+scrolling action label with **SENT** identify a submitted report, not measured
+TV playback or volume state. The screen shows menu items, connection state,
+pairing instructions for the TV, and save progress. It has no keybinding
+prompts or persistent button guide.
 
 The app selects keyboard-only mode automatically, including when reusing an
 existing connection. This closes native audio connections and prevents new ones.
@@ -88,7 +88,7 @@ is only temporary and does not replace the saved app. See [storage and boot
 recovery](lua-storage.md).
 
 The developer messages `toggle`/`play_pause`, `mute`, `space`, `volume_up`,
-`volume_down`, `left`, `right`, `bind`, `menu`,
+`volume_down`, `left`, `right`, `menu`,
 `pair`, `connect`, `listen`, `disconnect`, `status`, and
 `target XX:XX:XX:XX:XX:XX` remain available.
 `status` reports HID state and peer; `target` saves a peer without connecting.
@@ -96,9 +96,10 @@ The developer messages `toggle`/`play_pause`, `mute`, `space`, `volume_up`,
 connect. These reuse its bond. Control commands also work with
 `--transport ble --device DEVICE_MAC`; the TV remains the classic HID peer.
 `menu` opens/closes the local menu. Ordinary use does not require these messages.
-Settings use `TV3|peer|play,mute,space,menu,volume_up,volume_down,left,right`.
-Both TV2 and TV3 are accepted on load; duplicates, out-of-range IDs and malformed
-lists restart binding without discarding a valid saved TV address.
+Settings use `TV4|peer|`. Loading TV2 or TV3 preserves the saved TV address
+and discards the old chosen bindings. Controls are immediately usable even
+when the old binding list was incomplete or malformed. Upgrading the app does
+not reset the Bluetooth bond.
 
 There is one resident Lua app. Replacing it preserves the Bluetooth profile
 and connection; native code releases any outstanding key independently of Lua.
@@ -298,12 +299,13 @@ The TV did not automatically reconnect within 30 seconds of the forced
 disconnect; listening allows incoming connections but does not initiate them.
 
 The [expanded controls evidence](../firmware/tv-controls-evidence/verification.json)
-records native sanitizer checks of all seven report usages, silent eight-key
-setup, local menu navigation and confirmation, TV2 migration, TV3 reload, and
-the reconnect/OFF regressions. The 7,901-byte app was saved over BLE on 306025
-and resumed setup at VOL+, preserving the original four roles. Physical binding
-of the four added keys and their effects in SmartTube still need owner
-confirmation; the updated Linux input harness was not run against the laptop.
+records the previous revision's seven report usages, menu and reconnect checks,
+and BLE installation. That revision asked for eight button assignments. The
+[current fixed-controls evidence](../firmware/tv-fixed-controls-evidence/verification.json)
+covers removal of that setup, the stock ADC map, migration to peer-only settings,
+and live callback dispatch over BLE. The owner confirmed that the updated remote
+worked. Individual-key behavior was not separately reported, and the Linux input
+harness was not run against the laptop.
 
 The profile follows the [Bluetooth HID 1.1.1 specification](https://www.bluetooth.com/specifications/specs/hid-1-1-1/).
 The related [vendor SDK](https://github.com/leadercxn/bp1048_sdk_v0.1.12/tree/8105bd864b04995d81c9f9ae77cb158259f39015/MVsB1_Base_SDK/middleware/bluetooth)
@@ -312,7 +314,7 @@ that profile in C, using function and structure layouts checked against the
 pinned stock binary; it does not link SDK binary objects.
 
 The standalone test additionally drives the actual app's key callbacks through
-a temporary message wrapper, learns eight buttons, uses the on-screen menu to
+a temporary message wrapper, uses the fixed physical key IDs and local menu to
 pair a fresh Linux host, checks real input press/release events, and disconnects
 and reconnects. This replaces shared app settings and forgets only the laptop
 bond. It requires an active scoped pairing agent and permission to grab the
