@@ -225,6 +225,14 @@ int main(void) {
     test_peripherals();
     test_keyboard_bonds();
     test_tv_keyboard();
+    const char *bundles[]={"ui-test","bundle-test","tree-test"};
+    const char *results[]={"UI helpers passed","Bundle execution passed","Tree shaking passed"};
+    for(unsigned i=0;i<3;++i) {
+        char path[128],source[8193];snprintf(path,sizeof path,"target/lua-app/runtime/%s.bundle.lua",bundles[i]);
+        FILE *f=fopen(path,"rb");assert(f);size_t n=fread(source,1,sizeof source-1,f);
+        assert(!ferror(f) && feof(f));fclose(f);source[n]=0;check(source,DONE,results[i]);
+    }
+    puts("Bundled modules: deduplication, lazy evaluation, cached values, lexical boundaries and UI rendering passed");
     test_keyboard_lifecycle();
     load("return {}",1);free_heap=STOCK_HEAP_RESERVE;
     assert(!allocate(NULL,NULL,0,2048));free_heap=100000;

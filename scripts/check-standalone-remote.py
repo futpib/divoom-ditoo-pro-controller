@@ -78,7 +78,8 @@ except dbus.DBusException as e:
 start("local t;return {init=function() t=assert(storage.set('TV2|"+host+"|')) end,"
       "update=function() local ok,e=device.result(t);if ok~=nil then assert(ok,e);app.log('saved') end end}")
 wait(lambda s: s['result'] == 'saved')
-source = (ROOT/'examples/lua/tv-keyboard.lua').read_text()
+source = subprocess.check_output([base[0], 'lua', 'bundle',
+    str(ROOT/'examples/lua/tv-keyboard.lua')], text=True)
 wrapper = "local a=(function()\n"+source+"\nend)();local m=a.message;a.message=function(s) local k=s:match('^K(%d+)$');if k then a.key(tonumber(k),1) elseif s=='probe' then local b=keyboard.status();app.log((storage.get() or '-')..' '..b.state..' '..tostring(b.pairing)..' '..b.error) else m(s) end end;return a"
 assert len(wrapper.encode()) <= 8192
 start(wrapper)

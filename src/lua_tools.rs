@@ -180,8 +180,8 @@ impl Sequence {
     let mut prepared = Vec::new();
     for (i, step) in steps.into_iter().enumerate() {
       let source = match &step {
-        Step::Start { file } | Step::Run { file } => Some(std::fs::read(
-          path.parent().unwrap_or(Path::new(".")).join(file),
+        Step::Start { file } | Step::Run { file } => Some(crate::lua_bundle::bundle(
+          &path.parent().unwrap_or(Path::new(".")).join(file),
         )?),
         Step::Eval { source } => Some(source.as_bytes().to_vec()),
         Step::Send { message } if message.is_empty() || message.len() > 128 => {

@@ -230,7 +230,7 @@ static void tv_frame(unsigned stage) {
 }
 static void test_tv_keyboard(void) {
     char source[8193];
-    FILE *file=fopen("examples/lua/tv-keyboard.lua","rb");assert(file);
+    FILE *file=fopen("target/lua-app/runtime/tv-keyboard.bundle.lua","rb");assert(file);
     size_t n=fread(source,1,sizeof source-1,file);assert(!ferror(file));fclose(file);source[n]=0;
     fake_hid_status=(struct hid_status){.state=2,.enabled=1};memset(fake_hid_status.peer,8,6);bt_queued.op=0;
     saved.initialized=saved.boot_done=1;stock_config_context=config_context;saved.settings_size=0;

@@ -1,0 +1,65 @@
+{
+  "checked_at": "2026-09-29T11:28:18.080574+00:00",
+  "transport": "usb",
+  "firmware_version": 306022,
+  "firmware_changed": false,
+  "rust_tests_passed": 70,
+  "clippy_passed": true,
+  "lua_lint_passed": true,
+  "native_32bit_asan_ubsan_passed": true,
+  "device_assertions": [
+    {
+      "source": "tests/lua/tree.lua",
+      "bundle_bytes": 486,
+      "result": "Tree shaking passed",
+      "peak_memory_bytes": 17520
+    },
+    {
+      "source": "tests/lua/bundle.lua",
+      "bundle_bytes": 1089,
+      "result": "Bundle execution passed",
+      "peak_memory_bytes": 21168
+    },
+    {
+      "source": "tests/lua/ui.lua",
+      "bundle_bytes": 2556,
+      "result": "UI helpers passed",
+      "peak_memory_bytes": 33328
+    }
+  ],
+  "center_only_bundle_bytes": 203,
+  "demo_frames": [
+    1,
+    18
+  ],
+  "tv_keyboard": {
+    "bundle_bytes": 7828,
+    "bundle_sha256": "777a29a28e9695031d26e17d7bd5959397cca7f19bb672460d12531547e757e6",
+    "installed": true,
+    "settings_preserved": true,
+    "state": "active",
+    "frames": [
+      1,
+      822
+    ],
+    "peak_memory_bytes": 47680,
+    "menu_on_device_passed": true
+  },
+  "scope": "Module semantics and framebuffer assertions ran on hardware; TV key dispatch ran in the native sanitizer harness. TV pairing and power-cycle autostart were not repeated.",
+  "startup_recheck": {
+    "observed_failure": "One bundled-app reload returned callback time budget exceeded; the VM was discarded safely.",
+    "recovery": "The next start succeeded without firmware changes.",
+    "comparison_reloads": {
+      "original": {
+        "passed": 3,
+        "attempted": 3
+      },
+      "bundled": {
+        "passed": 3,
+        "attempted": 3
+      }
+    },
+    "final_state": "active",
+    "cause": "Not isolated; startup shares the existing 50 ms wall-clock guard with parsing, API setup and init."
+  }
+}

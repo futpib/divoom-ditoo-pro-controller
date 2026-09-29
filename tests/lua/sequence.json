@@ -1,0 +1,8 @@
+[
+  {"op":"run","file":"tree.lua"},
+  {"op":"wait","state":"done","result":"Tree shaking passed"},
+  {"op":"run","file":"bundle.lua"},
+  {"op":"wait","state":"done","result":"Bundle execution passed"},
+  {"op":"run","file":"ui.lua"},
+  {"op":"wait","state":"done","result":"UI helpers passed"}
+]

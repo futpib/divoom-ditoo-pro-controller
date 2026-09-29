@@ -337,6 +337,10 @@ levels](docs/lua-peripherals.md), plus [native Bluetooth media connections](docs
 `lua receive`, or `lua status`. One-shot `lua run FILE` and `lua eval SOURCE` remain
 available. See [installation, APIs, limits and verification](docs/lua.md).
 
+File uploads automatically bundle [local Lua modules](docs/lua-modules.md),
+including shared scrolling text and screen helpers. Unused helper exports are
+removed; `lua bundle FILE` previews the generated source without a device.
+
 Firmware 306020 also provides [Bluetooth keyboard and media keys from Lua](docs/lua-keyboard.md).
 Install `examples/lua/tv-keyboard.lua` with `lua install` for a standalone remote.
 It starts after power-on, remembers the TV and four chosen buttons (Play/Pause,

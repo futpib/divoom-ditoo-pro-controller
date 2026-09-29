@@ -7,6 +7,13 @@ ROOT = Path(__file__).resolve().parents[1]
 source = ROOT/'target/lua-app/runtime/lua-5.4.9/src'
 if not source.exists():
     raise SystemExit('Run scripts/build-lua-app-runtime.py first')
+# Use the same host bundler as uploads; the firmware still accepts one text chunk.
+for name, entry in [('tv-keyboard','examples/lua/tv-keyboard.lua'),
+                    ('ui-test','tests/lua/ui.lua'), ('bundle-test','tests/lua/bundle.lua'),
+                    ('tree-test','tests/lua/tree.lua')]:
+    subprocess.run(['cargo','run','--locked','--quiet','--no-default-features','--',
+        'lua','bundle',entry,'--output',str(ROOT/'target/lua-app/runtime'/(name+'.bundle.lua'))],
+        cwd=ROOT,check=True)
 skip = {'lua.c','luac.c','linit.c','liolib.c','loslib.c','loadlib.c','ldblib.c'}
 output = ROOT/'target/lua-app/runtime/test-runtime'
 subprocess.run(['cc','-m32','-O1','-g','-fsanitize=address,undefined','-DLUAI_MAXCCALLS=20',

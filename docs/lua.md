@@ -42,6 +42,11 @@ belong to that same app and share its limits. Native Bluetooth connections can
 remain connected after the app stops. The CLI checks the installed firmware
 before sending any extension command.
 
+File-based uploads automatically bundle local `require('...')` imports.
+Reusable scrolling text, progress bars, and screen helpers live in
+[plain Lua modules](lua-modules.md); firmware does not need to contain them.
+`lua bundle FILE [-o OUTPUT]` previews the compacted, tree-shaken text offline.
+
 The clock cycles colors on each key-down. Use `examples/lua/key-monitor.lua`
 to see physical key IDs and event numbers. **Hold a keyboard key for five seconds
 to stop the app.** The native worker handles this escape, including while paused;

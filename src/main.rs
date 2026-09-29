@@ -307,6 +307,8 @@ enum ConvertCommand {
 
 #[derive(Subcommand, Debug)]
 enum LuaCommand {
+  /// Bundle local Lua modules into one script, without connecting to a device
+  Bundle { file: PathBuf, #[arg(short, long)] output: Option<PathBuf> },
   /// Watch runtime status on one connection (JSONL; Ctrl-C disconnects)
   Watch {
     #[arg(long, default_value_t=500, value_parser=clap::value_parser!(u64).range(20..=60000))]
@@ -449,6 +451,12 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
       use std::time::Duration;
       // Offline inspection and validation must not resolve a Bluetooth device.
       let action = match action {
+        LuaCommand::Bundle { file, output } => {
+          let source = divoom_ditoo_pro_controller::lua_bundle::bundle(&file)?;
+          if let Some(output) = output { std::fs::write(output, source)?; }
+          else { std::io::Write::write_all(&mut std::io::stdout().lock(), &source)?; }
+          return Ok(());
+        }
         LuaCommand::Decode { file } => {
           if file.as_os_str() == "-" {
             lua_tools::decode_lines(std::io::stdin().lock(), std::io::stdout().lock())?;
@@ -471,11 +479,16 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
         }
         action => action,
       };
+      let source = match &action {
+        LuaCommand::Run { file } | LuaCommand::Start { file } | LuaCommand::Install { file } =>
+          divoom_ditoo_pro_controller::lua_bundle::bundle(file)?,
+        _ => Vec::new(),
+      };
       let address = resolve_device(args.device).await?;
       let status = match action {
-        LuaCommand::Run { file } => lua::control(address, Action::Run(&std::fs::read(file)?)).await?,
-        LuaCommand::Start { file } => lua::control(address, Action::Start(&std::fs::read(file)?)).await?,
-        LuaCommand::Install { file } => lua::control(address, Action::Install(&std::fs::read(file)?)).await?,
+        LuaCommand::Run { .. } => lua::control(address, Action::Run(&source)).await?,
+        LuaCommand::Start { .. } => lua::control(address, Action::Start(&source)).await?,
+        LuaCommand::Install { .. } => lua::control(address, Action::Install(&source)).await?,
         LuaCommand::Uninstall => lua::control(address, Action::Uninstall).await?,
         LuaCommand::Eval { source } => lua::control(address, Action::Run(source.as_bytes())).await?,
         LuaCommand::Status => lua::control(address, Action::Status).await?,
@@ -484,7 +497,7 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
         LuaCommand::Resume => lua::control(address, Action::Resume).await?,
         LuaCommand::Send { message } => lua::control(address, Action::Send(message.as_bytes())).await?,
         LuaCommand::Receive => lua::control(address, Action::Receive).await?,
-        LuaCommand::Decode { .. } | LuaCommand::Sequence { .. } | LuaCommand::Watch { .. } => unreachable!(),
+        LuaCommand::Bundle { .. } | LuaCommand::Decode { .. } | LuaCommand::Sequence { .. } | LuaCommand::Watch { .. } => unreachable!(),
       };
       println!("{}", serde_json::to_string(&status)?);
       if status.state == "error" { return Err(format!("Lua: {}", status.result).into()); }
