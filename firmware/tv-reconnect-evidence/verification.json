@@ -53,7 +53,7 @@
     "lua_lint_and_format_passed": true,
     "bundle_headroom_test_passed": true,
     "standalone_test_wrapper_bytes": 8190,
-    "physical_smarttube_play_pause": "awaiting owner confirmation"
+    "physical_smarttube_play_pause": "owner confirmed pause and resume after installing the fixed startup app"
   },
   "limitations": [
     "BLE dropped during some classic connection attempts; later BLE queries and persistent installation succeeded.",

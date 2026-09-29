@@ -268,6 +268,8 @@ old bundle and passes with the fix, including explicit OFF and subsequent Listen
 A live forced disconnect returned to listening, and the TV's Connect action
 reused the existing pairing. Installation saved the corrected startup app with
 native readback verification; a power cycle was not repeated in this test.
+The owner confirmed the physical Play/Pause key pauses and resumes SmartTube
+after installation and reconnection.
 The TV did not automatically reconnect within 30 seconds of the forced
 disconnect; listening allows incoming connections but does not initiate them.
 
