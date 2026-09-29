@@ -1,3 +1,6 @@
+-- Keep this raw-upload app within the firmware's 8192-byte source limit.
+-- stylua: ignore start
+-- luacheck: no max line length
 -- Firmware 306022. Install once with `lua install`; setup then uses only keys.
 local target,keys,pending=nil,{},nil
 local b,job,flow,stage,stage_at={},nil,nil,0,0
@@ -151,7 +154,7 @@ return {
  update=function()
   keyboard.status(b)
   if job then
-   local ok,err=device.result(job.id)
+   local ok=device.result(job.id)
    if ok~=nil then
     local kind=job.name;job=nil
     if not ok then flow=nil;inform(kind=='save' and 'SAVE FAILED RETRY' or 'DISCONNECT OTHER AUDIO')
@@ -187,3 +190,5 @@ return {
   paint()
  end,
 }
+
+-- stylua: ignore end

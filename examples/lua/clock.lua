@@ -1,9 +1,13 @@
 local last = -1
-local colors = {0x20a0ff, 0xffa040, 0xff60a0, 0x40ff60}
+local colors = { 0x20a0ff, 0xffa040, 0xff60a0, 0x40ff60 }
 local selected = 1
-local function two(n) return n < 10 and '0' .. n or tostring(n) end
+local function two(n)
+  return n < 10 and '0' .. n or tostring(n)
+end
 return {
-  init = function() brightness(20) end,
+  init = function()
+    brightness(20)
+  end,
   key = function(key, event)
     if event == 1 then
       selected = selected % #colors + 1
@@ -13,7 +17,9 @@ return {
   end,
   update = function()
     local t = time.calendar()
-    if t.sec == last then return end
+    if t.sec == last then
+      return
+    end
     last = t.sec
     display.clear(0)
     display.text(0, 1, two(t.hour), colors[selected])
@@ -21,5 +27,7 @@ return {
     display.text(4, 9, two(t.sec), 0x40ff60)
     display.present()
   end,
-  message = function(s) app.log(s) end,
+  message = function(s)
+    app.log(s)
+  end,
 }

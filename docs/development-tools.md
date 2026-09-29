@@ -120,6 +120,13 @@ and verify the device separately; registration is not hardware verification.
 
 ## Check the tools
 
+For Lua formatting and API-aware linting, see [Lua tooling](lua-tooling.md):
+
+```sh
+scripts/check-lua.sh
+scripts/check-lua.sh --fix
+```
+
 ```sh
 python3 -m unittest discover -s scripts -p 'test_f*.py'
 cargo test --locked --no-default-features lua_tools

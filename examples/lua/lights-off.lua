@@ -1,2 +1,2 @@
 brightness(0)
-return "screen off"
+return 'screen off'
