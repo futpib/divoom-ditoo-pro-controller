@@ -11,7 +11,8 @@
 
 #define SOURCE_LIMIT 8192
 #define RESULT_LIMIT 192
-#define MEMORY_LIMIT 40960
+#define MEMORY_LIMIT 49152
+#define STARTUP_HEAP_BUDGET 40960
 #define STEP_LIMIT 100000
 #define TIME_LIMIT 50
 #define FRAME_MS 40
@@ -21,7 +22,7 @@
 #define MESSAGE_LIMIT 128
 #define LED_COUNT 12
 #define STOCK_HEAP_RESERVE 24576
-#define ARENA_PAGES 40
+#define ARENA_PAGES 48
 #define ARENA_PAGE_SIZE 1024
 
 extern void *stock_alloc(unsigned);
@@ -103,7 +104,7 @@ void runtime_poll(void) {
         abort_script("callback time budget exceeded");
 }
 
-/* Nonmoving pages grow in KiB units, under one 40 KiB quota including headers.
+/* Nonmoving pages grow in KiB units, under one 48 KiB quota including headers.
  * Empty pages return immediately to native audio. Scans have a fixed bound. */
 static void arena_free(void *ptr) {
     struct block *b = (struct block *)ptr - 1;
@@ -146,7 +147,7 @@ static void *allocate(void *ud, void *ptr, size_t old, size_t size) {
     }
     if (!chosen && empty<ARENA_PAGES) {
         unsigned capacity=(needed+ARENA_PAGE_SIZE-1)&~(ARENA_PAGE_SIZE-1);
-        if (capacity>MEMORY_LIMIT-app.reserved || stock_free_heap()<capacity+8+8192) return NULL;
+        if (capacity>MEMORY_LIMIT-app.reserved || stock_free_heap()<capacity+8+STOCK_HEAP_RESERVE) return NULL;
         void *base=stock_alloc(capacity+8);
         if (!base) return NULL;
         app.arena_base[empty]=base;
@@ -520,7 +521,7 @@ static void launch(void) {
     app.used = app.peak = app.frames = app.callbacks = app.dropped = app.steps = 0;
     app.outbox_size = 0; app.app_ref = 0; app.last_tick = stock_ticks();
     app.led_enabled = 1; app.led_dirty = 0; memset(app.leds,0,sizeof app.leds);
-    if (stock_free_heap() < MEMORY_LIMIT + 8 + STOCK_HEAP_RESERVE) {
+    if (stock_free_heap() < STARTUP_HEAP_BUDGET + 8 + STOCK_HEAP_RESERVE) {
         result("insufficient stock heap headroom"); discard(ERROR); return;
     }
     if (setjmp(app.escape)) { discard(ERROR); return; }

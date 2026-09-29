@@ -197,5 +197,9 @@ int main(void) {
     test_peripherals();
     test_keyboard_bonds();
     test_tv_keyboard();
+    test_keyboard_lifecycle();
+    load("return {}",1);free_heap=STOCK_HEAP_RESERVE;
+    assert(!allocate(NULL,NULL,0,2048));free_heap=100000;
+    app.cancel=1;service();runtime_native_service();assert(!allocations);
     puts("Resident lifecycle, upload, keys, arena reclamation, and adversarial guard checks passed");
 }

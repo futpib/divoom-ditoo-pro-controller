@@ -6,6 +6,7 @@
 #include "bluetooth-hid.h"
 extern void *volatile stock_bt_context;
 extern unsigned char *volatile stock_bt_core;
+extern volatile unsigned char stock_bt_manager[];
 extern unsigned stock_ticks(void), stock_free_heap(void);
 struct l2_event {
     uint8_t event, reserved; uint16_t status;
@@ -18,11 +19,14 @@ struct psm { void (*callback)(unsigned,struct l2_event *); uint16_t id,mtu,minim
 struct attribute { uint16_t id,length; const unsigned char *value; uint16_t flags; };
 struct record { void *next,*previous; uint8_t count,pad[3]; struct attribute *attributes;
                 uint32_t cod,handle,time; uint16_t internal[4]; };
+struct security { void *next,*previous; void (*callback)(void *); uint32_t psm;
+                  uint8_t level,min_key,pad[2]; };
 #if __SIZEOF_POINTER__ == 4
 _Static_assert(sizeof(struct record)==36, "stock SDP record ABI");
 _Static_assert(sizeof(struct attribute)==12, "stock SDP attribute ABI");
 _Static_assert(sizeof(struct psm)==12, "stock L2CAP PSM ABI");
 _Static_assert(offsetof(struct l2_event,data)==16, "stock L2CAP callback ABI");
+_Static_assert(sizeof(struct security)==20, "stock security record ABI");
 #endif
 struct packet { void *next,*previous; unsigned char *data; uint16_t length,flags;
                 unsigned char internal[48]; };
@@ -36,6 +40,10 @@ extern unsigned stock_bt_class(unsigned);
 extern unsigned stock_cmgr_register(void *,void (*)(void *,unsigned,unsigned));
 extern unsigned stock_cmgr_connect(void *,const unsigned char *);
 extern unsigned stock_cmgr_remove(void *);
+extern unsigned stock_sec_register(struct security *);
+extern void stock_l2_security(void *);
+extern unsigned stock_bt_access(unsigned, const void *);
+extern void *stock_bt_find_device(const unsigned char *);
 
 /* Report 1: modifier byte, reserved byte, six keyboard usages. Report 2: one
  * 16-bit Consumer usage (Play/Pause 0xcd, Mute 0xe2). */
@@ -80,20 +88,35 @@ static struct {
     struct record record;
     uint32_t manager[25];
     struct psm psm[2];
+    struct security security[2];
     uint16_t cid[2];
-    unsigned up[2], pending[2], active, epoch, started, phase, down, protocol;
+    unsigned up[2], pending[2], active, epoch, started, phase, down, listening, outgoing;
+    unsigned access_owned, access_previous, pair_started, pair_duration, pair_epoch;
     unsigned char report[10];
     struct { struct packet packet; unsigned char bytes[12]; unsigned busy,started; } tx[2];
 } hid;
 
 static void error(unsigned code) { hid.status.error=code; ++hid.status.errors; }
 static unsigned elapsed(unsigned t,unsigned delay) { return (unsigned)(stock_ticks()-t)>=delay; }
+static void access_restore(void) {
+    if (!hid.access_owned) return;
+    unsigned rc=stock_bt_access(hid.access_previous,NULL);
+    if (rc && rc!=2) return; /* Retry on the Bluetooth task if the stack is busy. */
+    hid.access_owned=0;hid.status.pairing=hid.status.pair_remaining_ms=0;
+}
+static unsigned access_set(unsigned mode) {
+    if (!hid.access_owned) hid.access_previous=stock_bt_core[0x792];
+    unsigned rc=stock_bt_access(mode,NULL);
+    if (rc && rc!=2) { error(0x600+rc);return 0; }
+    hid.access_owned=1;return 1;
+}
 static void disconnect(void) {
-    hid.active=0; hid.phase=0; hid.down=0;
+    hid.active=hid.listening; hid.phase=0; hid.down=0;
     ++hid.status.generation;
     for (unsigned i=0;i<2;++i) if (hid.cid[i]) stock_l2_disconnect(hid.cid[i]);
     if (hid.status.enabled) stock_cmgr_remove(hid.manager);
-    hid.status.state=(hid.cid[0] || hid.cid[1]) ? 3 : 0;
+    hid.status.state=(hid.cid[0] || hid.cid[1]) ? 3 : hid.listening ? 4 : 0;
+    if (!hid.listening) access_restore();
 }
 static unsigned send(unsigned channel,const unsigned char *data,unsigned size) {
     if (!hid.up[channel] || hid.tx[channel].busy || size>12) return 0;
@@ -122,9 +145,10 @@ static void link_event(void *manager,unsigned event,unsigned status) {
 static void control(const unsigned char *p,unsigned n) {
     unsigned char reply[12]={0}; unsigned size=1;
     if (!n || n>12) return;
+    hid.status.control=p[0];
     switch (p[0]&0xf0) {
     case 0x10:
-        if ((p[0]&15)==5) disconnect();
+        if ((p[0]&15)==5) { hid.listening=0;disconnect(); }
         else if ((p[0]&15)==3) { hid.down=0;hid.phase=2; }
         return;
     case 0x40: /* GET_REPORT: current keyboard or consumer state. */
@@ -143,24 +167,36 @@ static void control(const unsigned char *p,unsigned n) {
 }
 static void l2_event(unsigned cid,struct l2_event *p) {
     if (!p || !p->psm) return;
+    if (p->remote) {
+        hid.status.authentication_state=p->remote[0xb1];
+        hid.status.encryption_state=p->remote[0xb3];
+        hid.status.key_type=p->remote[0xbe];
+        hid.status.ssp=p->remote[0xa6]&1;
+        hid.status.security_mode=stock_bt_core[0x96a];
+    }
     const struct psm *psm=p->psm;
     unsigned i=psm->id==0x13;
     if (psm->id!=0x11 && psm->id!=0x13) return;
     if (p->event==1) {
-        if (!hid.active || !p->remote || memcmp(p->remote+0x54,hid.status.peer,6) ||
+        ++hid.status.incoming;
+        if (!hid.active || hid.status.state==3 || !p->remote || memcmp(p->remote+0x54,hid.status.peer,6) ||
                 (hid.cid[i] && hid.cid[i]!=cid)) { stock_l2_accept(cid,3,0);return; }
         hid.cid[i]=cid;hid.pending[i]=1;
+        if (!i) hid.outgoing=0;
+        hid.status.state=1;hid.started=stock_ticks();
         if (stock_l2_accept(cid,0,0)!=2) { error(5);disconnect(); }
     } else if (p->event==2) {
-        if (!hid.active || p->status || !p->remote ||
+        ++hid.status.opened;
+        if (!hid.active || p->status || !p->remote || p->remote[0xb1]!=8 || p->remote[0xb3]!=2 ||
                 memcmp(p->remote+0x54,hid.status.peer,6)) {
             stock_l2_disconnect(cid);error(6);return;
         }
         hid.cid[i]=cid;hid.up[i]=1;hid.pending[i]=0;
-        if (!i) connect_channel(1);
-        if (hid.up[0] && hid.up[1]) { hid.status.state=2;hid.status.error=0; }
+        if (!i && hid.outgoing) connect_channel(1);
+        if (hid.up[0] && hid.up[1]) { hid.status.state=2;hid.status.error=0;access_restore(); }
     } else if (p->event==4) {
         if (hid.cid[i]!=cid) return;
+        ++hid.status.closed;hid.status.close_status=p->status;hid.status.close_channel=psm->id;
         hid.cid[i]=0;hid.up[i]=hid.pending[i]=0;
         /* The stack returns pending packets before the channel-closed event. */
         hid.tx[i].busy=0;
@@ -181,6 +217,12 @@ static unsigned enable(void) {
     hid.record.attributes=attributes;
     /* Partial setup stays allocated and cannot be registered a second time. */
     hid.status.enabled=2;
+    /* SSP level 2 permits the stock NoInputNoOutput pairing method. Level 3
+     * requests a MITM-authenticated key which that method cannot produce. */
+    for (unsigned i=0;i<2;++i) {
+        hid.security[i]=(struct security){.callback=stock_l2_security,.psm=hid.psm[i].id,.level=0x22};
+        if (stock_sec_register(&hid.security[i])) { error(16);return 0; }
+    }
     if (stock_cmgr_register(hid.manager,link_event) || stock_l2_register(&hid.psm[0]) ||
             stock_l2_register(&hid.psm[1]) || stock_sdp_add(&hid.record)) { error(8);return 0; }
     stock_bt_class(0x2c0540); /* Preserve audio services, advertise a keyboard. */
@@ -199,7 +241,19 @@ void runtime_hid_service(unsigned epoch) {
             (hid.status.enabled==1 && registered!=2)) {
         memset(&hid,0,sizeof hid);return;
     }
-    if (hid.active && hid.status.state==1 && elapsed(hid.started,20000)) { error(9);disconnect(); }
+    if (hid.active && hid.status.state==1 && elapsed(hid.started,120000)) { error(9);disconnect(); }
+    hid.status.access_mode=stock_bt_core[0x792];
+    if (hid.status.pairing) {
+        unsigned age=stock_ticks()-hid.pair_started;
+        if (age>=hid.pair_duration || epoch!=hid.pair_epoch) access_restore();
+        else hid.status.pair_remaining_ms=hid.pair_duration-age;
+    } else if (hid.access_owned && !hid.active) access_restore();
+    unsigned char *remote;memcpy(&remote,(unsigned char *)hid.manager+0x14,sizeof remote);
+    if (remote && hid.active) {
+        hid.status.authentication_state=remote[0xb1];hid.status.encryption_state=remote[0xb3];
+        hid.status.key_type=remote[0xbe];hid.status.ssp=remote[0xa6]&1;
+        hid.status.security_mode=stock_bt_core[0x96a];
+    }
     for (unsigned i=0;i<2;++i)
         if (hid.tx[i].busy && elapsed(hid.tx[i].started,1000)) { error(10);disconnect();return; }
     if (hid.phase && (epoch!=hid.epoch || elapsed(hid.started,80))) hid.phase=2;
@@ -213,18 +267,45 @@ void runtime_hid_service(unsigned epoch) {
 }
 void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,
                          unsigned epoch,unsigned generation) {
-    if (op==HID_CONNECT) {
+    if (op==HID_FORGET) {
+        if (hid.status.state) { error(17);return; }
+        unsigned char *entry=stock_bt_find_device(data),*remote=NULL;
+        if (entry) memcpy(&remote,entry+0x28,sizeof remote);
+        if (remote && remote[0x96]) { error(17);return; }
+        for (unsigned i=0;i<8;++i) {
+            volatile unsigned char *r=stock_bt_manager+7+i*26;
+            unsigned match=r[25]!=0;
+            for (unsigned j=0;j<6;++j) if (r[j]!=data[j]) match=0;
+            if (!match) continue;
+            /* Stock DdbDeleteRecord mishandles slot 7; compact the exact same
+             * native array without clearing another peer's record. */
+            for (unsigned j=i*26;j<7*26;++j) stock_bt_manager[7+j]=stock_bt_manager[7+j+26];
+            for (unsigned j=0;j<26;++j) stock_bt_manager[7+7*26+j]=0;
+            if (entry) { uint16_t flags;memcpy(&flags,entry+8,2);flags&=~6U;memcpy(entry+8,&flags,2); }
+            stock_bt_manager[0]=1;++hid.status.forgotten;hid.status.error=0;return;
+        }
+        return;
+    }
+    if (op==HID_CONNECT || op==HID_LISTEN || op==HID_PAIR) {
         if (!enable()) return;
         if (hid.status.state==2 && !memcmp(hid.status.peer,data,6)) return;
-        if (hid.status.state || hid.tx[0].busy || hid.tx[1].busy) { error(12);return; }
+        if (hid.status.state==1 && !memcmp(hid.status.peer,data,6)) return;
+        if ((hid.status.state && hid.status.state!=4) || hid.tx[0].busy || hid.tx[1].busy) { error(12);return; }
         memcpy(hid.status.peer,data,6);++hid.status.generation;
-        hid.active=1;hid.status.state=1;hid.started=stock_ticks();
+        hid.listening=op==HID_LISTEN || op==HID_PAIR;
+        if (hid.listening) {
+            if (!access_set(op==HID_PAIR ? 3 : 2)) return;
+            hid.status.pairing=op==HID_PAIR;hid.pair_started=stock_ticks();
+            hid.pair_duration=value;hid.pair_epoch=epoch;
+            hid.active=1;hid.status.state=4;hid.status.error=0;return;
+        }
+        hid.active=hid.outgoing=1;hid.status.state=1;hid.started=stock_ticks();
         unsigned rc=stock_cmgr_connect(hid.manager,hid.status.peer);
         if (rc!=0 && rc!=2) { error(0x500+rc);disconnect(); }
         else if (!rc) connect_channel(0);
         return;
     }
-    if (op==HID_DISCONNECT) { if (hid.status.enabled==1) disconnect();return; }
+    if (op==HID_DISCONNECT) { hid.listening=0;if (hid.status.enabled==1) disconnect();return; }
     if (generation!=hid.status.generation || hid.status.state!=2 || hid.phase || hid.tx[1].busy) {
         error(13);return;
     }

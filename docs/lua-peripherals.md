@@ -145,10 +145,12 @@ table read as disabled instead of being passed to the RTC helper.
 
 Uploaded source uses a bounded heap allocation, freed after compilation or
 cancellation. Globals reserve 8 KiB; the reclaimed 8 KiB remains available to
-native audio while apps run. The allocator keeps the 40 KiB total quota, with nonmoving allocations in KiB
+native audio while apps run. In 306016 the allocator keeps the 40 KiB total quota, with nonmoving allocations in KiB
 units and immediate release of empty pages. Stop/error still frees all pages
 without invoking Lua finalizers. Instruction/time/native-call limits and the
-five-second physical escape remain enabled.
+five-second physical escape remain enabled. Firmware 306021 raises the ceiling
+to 48 KiB while preserving 24 KiB of native heap on every arena growth;
+see [current execution limits](lua.md#execution-limits-and-recovery).
 
 ```sh
 python3 scripts/build-lua-app-runtime.py

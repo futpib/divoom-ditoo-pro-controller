@@ -87,6 +87,10 @@ stock_cmgr_remove = 0x11df44;
 stock_bt_class = 0x128914;
 stock_bt_record_count = 0x7cc84;
 stock_bt_save_records = 0x7d570;
+stock_sec_register = 0x12854c;
+stock_bt_access = 0x128032;
+stock_bt_find_device = 0x1276c8;
+stock_l2_security = 0x1233c8;
 _SDA_BASE_ = 0x2000d2f8;
 SECTIONS {
     .hook 0x3ab9c : { KEEP(*(.hook)) }

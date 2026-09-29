@@ -247,3 +247,41 @@ static void test_tv_keyboard(void) {
     app.cancel=1;service();runtime_native_service();assert(!allocations);fake_hid_status.state=0;
     puts("TV keyboard binds three silent keys and sends play/pause, mute and Space once per press");
 }
+
+static void test_keyboard_lifecycle(void) {
+    memset((void *)(stock_bt_manager+7),0,8*26);
+    fake_hid_status=(struct hid_status){0};
+    check("local t={peer='stale'};assert(keyboard.status(t)==t and not t.peer);return t.state",DONE,"0");
+    for (unsigned i=0;i<8;++i) {
+        for (unsigned j=0;j<6;++j) stock_bt_manager[7+i*26+j]=i+1;
+        stock_bt_manager[7+i*26+25]=1;
+    }
+    check("local b=keyboard.bonds();assert(#b==8);return b[8]",DONE,"08:08:08:08:08:08");
+    fake_hid_status.enabled=1;memset(fake_hid_status.peer,8,6);
+    check("return keyboard.status().paired",DONE,"true");
+    fake_hid_status.state=2;fake_hid_status.encryption_state=2;
+    check("return keyboard.status().encrypted",DONE,"true");
+    peripheral.bt_attempts=32;bt_queue_ok=1;bt_media_state=bt_audio_state=0;
+    request_test("local t;return {init=function() t=assert(keyboard.connect('08:08:08:08:08:08')) end,"
+        "update=function() assert(device.result(t));print('ok') end}");
+    fake_hid_status.state=0;
+    check("return pcall(keyboard.pair,'08:08:08:08:08:08',121)",DONE,"false");
+    request_test("local t;return {init=function() t=assert(keyboard.pair('08:08:08:08:08:08',5)) end,"
+        "update=function() assert(device.result(t));print('ok') end}");
+    unsigned values[4];memcpy(values,bt_payload,sizeof values);
+    assert(values[2]==HID_PAIR && values[3]==5000);
+    peripheral.writes=0;
+    request_test("local t;return {init=function() t=assert(keyboard.forget('08:08:08:08:08:08')) end,"
+        "update=function() assert(device.result(t));print('ok') end}");
+    memcpy(values,bt_payload,sizeof values);assert(values[2]==HID_FORGET);
+    fake_hid_status.state=2;
+    request_test("local t;return {init=function() t=assert(keyboard.forget('08:08:08:08:08:08')) end,"
+        "update=function() local ok,e=device.result(t);assert(ok==false);print('ok') end}");
+    fake_hid_status.state=0;fake_hid_status.forgotten=1;stock_bt_manager[0]=1;
+    bond_count=0;unsigned before=saved_bonds;save_keyboard_bond();clock_ms+=1000;save_keyboard_bond();
+    assert(saved_bonds==before+1 && !stock_bt_manager[0]);
+    save_keyboard_bond();assert(saved_bonds==before+1);
+    fake_hid_status=(struct hid_status){0};memset((void *)(stock_bt_manager+7),0,8*26);
+    peripheral.bt_attempts=0;bt_queued.op=0;
+    puts("Keyboard pairing tickets, bond listing, connection reuse, table reuse and zero-bond persistence passed");
+}

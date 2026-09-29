@@ -93,7 +93,14 @@ Build it from `606eb91` with `scripts/build-lua-app-runtime.py`. See
 
 `306020-lua.MVA` adds the native Bluetooth HID keyboard and consumer-key profile,
 automatic key release, and dirty-bond saving for HID-only connections. The
-current `scripts/build-lua-app-runtime.py` builds it from pinned stock 306007.
+`scripts/build-lua-app-runtime.py` at `b703bc0` builds it from pinned stock 306007.
 See [API and verification](../docs/lua-keyboard.md) and
 `keyboard-evidence/verification.json` for Linux input, loop recovery and bond
 persistence results. TV behavior remains unverified.
+
+`306021-lua.MVA` adds Lua-controlled pairing windows, incoming HID connections,
+bond listing/removal, encrypted-channel checks and connection diagnostics.
+The current `scripts/build-lua-app-runtime.py` builds it from pinned stock 306007.
+The Lua heap ceiling is 48 KiB, subject to a 24 KiB native reserve on every growth.
+See `keyboard-pairing-evidence/verification.json` for laptop lifecycle tests,
+firmware readback and hostile-Lua recovery. TV behavior remains unverified.

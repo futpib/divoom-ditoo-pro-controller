@@ -1,0 +1,286 @@
+{
+  "firmware": 306021,
+  "sha256": "652ba88287bd8d8c683a6d1212128717ad1d1dddda30a17839fbbab7f0f6622d",
+  "bytes": 2026739,
+  "rebuild_identical": true,
+  "flash": [
+    {
+      "application_reenumerated": true,
+      "ble_version_check_requested": false,
+      "blocks_verified": 479,
+      "erase_transfer_verify_seconds": 11.1131603,
+      "event": "usb_complete",
+      "total_usb_seconds": 18.7421737,
+      "usb_port": "1-6",
+      "version": 306021
+    },
+    {
+      "event": "verified",
+      "firmware_versions": [
+        306021
+      ],
+      "transport": "usb",
+      "verification_transport": "usb"
+    }
+  ],
+  "reboot_for_bond_test": [
+    {
+      "application_reenumerated": true,
+      "ble_version_check_requested": false,
+      "blocks_verified": 479,
+      "erase_transfer_verify_seconds": 11.0395953,
+      "event": "usb_complete",
+      "total_usb_seconds": 16.913205286,
+      "usb_port": "1-6",
+      "version": 306021
+    },
+    {
+      "event": "verified",
+      "firmware_versions": [
+        306021
+      ],
+      "transport": "usb",
+      "verification_transport": "usb"
+    }
+  ],
+  "reboot_entry_note": "Native USB audio mode required a USB reset; the first bootloader-entry wait timed out before transfer. Retried from the bootloader and read back all 479 application blocks.",
+  "host": {
+    "kernel": "6.12.96-1-MANJARO",
+    "bluez": "5.87",
+    "hid_backend": "hidp",
+    "device_control": "USB",
+    "lifecycle_audio_profiles_connected": false,
+    "lifecycle_ble_connected": false
+  },
+  "fresh_pairing_host_initiated": {
+    "passed_checks": [
+      "targeted-forget",
+      "fresh-incoming-pair",
+      "bonded-incoming-connect",
+      "reuse-existing-link",
+      "bonded-outgoing-connect",
+      "pair-window-expiry",
+      "pair-window-lua-crash"
+    ],
+    "other_bonds_preserved": 7,
+    "connection_attempts": 1,
+    "paired_connection": {
+      "state": 2,
+      "error": 0,
+      "paired": true,
+      "encrypted": true,
+      "audio": 0,
+      "media": 0,
+      "ble": false,
+      "bonds_saved": 5
+    },
+    "pair_window_expired_and_closed_after_lua_crash": true
+  },
+  "fresh_pairing_lua_initiated": {
+    "passed_checks": [
+      "targeted-forget",
+      "fresh-outgoing-pair",
+      "bonded-incoming-connect",
+      "reuse-existing-link",
+      "bonded-outgoing-connect",
+      "pair-window-expiry",
+      "pair-window-lua-crash"
+    ],
+    "other_bonds_preserved": 7,
+    "connection_attempts": 2,
+    "paired_connection": {
+      "state": 2,
+      "error": 0,
+      "paired": true,
+      "encrypted": true,
+      "audio": 0,
+      "media": 0,
+      "ble": false,
+      "bonds_saved": 3
+    },
+    "pair_window_expired_and_closed_after_lua_crash": true
+  },
+  "outgoing_first_connection": "BlueZ accepted pairing but rejected the first HID channels until SDP discovery completed (unknown input device). The bounded retry connected on attempt 2 with the newly paired key.",
+  "after_reboot": {
+    "hci_event_counts": {
+      "Link Key Request": 3,
+      "Link Key Notification": 0,
+      "User Confirmation Request": 0,
+      "IO Capability Request": 0,
+      "IO Capability Response": 0,
+      "Simple Pairing Complete": 0,
+      "Encryption Change": 3,
+      "Link Key Request Reply": 3,
+      "Link Key Request Negative Reply": 0
+    },
+    "fresh_pairing_required": false,
+    "unchanged_bond_rewritten": false,
+    "passed_checks": [
+      "bonded-incoming-connect",
+      "reuse-existing-link",
+      "bonded-outgoing-connect",
+      "pair-window-expiry",
+      "pair-window-lua-crash"
+    ],
+    "paired_connection": {
+      "state": 2,
+      "error": 0,
+      "paired": true,
+      "encrypted": true,
+      "audio": 0,
+      "media": 0,
+      "ble": false,
+      "bonds_saved": 0
+    }
+  },
+  "example_autonomous_start": {
+    "configured_target": "laptop",
+    "hid_state": 2,
+    "error": 0,
+    "peak_lua_bytes": 29584
+  },
+  "linux_input": {
+    "input_grabbed": true,
+    "checks": [
+      {
+        "check": "toggle",
+        "events": [
+          [
+            164,
+            1
+          ],
+          [
+            164,
+            0
+          ]
+        ],
+        "passed": true
+      },
+      {
+        "check": "mute",
+        "events": [
+          [
+            113,
+            1
+          ],
+          [
+            113,
+            0
+          ]
+        ],
+        "passed": true
+      },
+      {
+        "check": "space",
+        "events": [
+          [
+            57,
+            1
+          ],
+          [
+            57,
+            0
+          ]
+        ],
+        "passed": true
+      },
+      {
+        "check": "infinite-loop-release",
+        "events": [
+          [
+            57,
+            1
+          ],
+          [
+            57,
+            0
+          ]
+        ],
+        "state": "error",
+        "result": "instruction budget exceeded",
+        "passed": true
+      }
+    ]
+  },
+  "lua_guards": {
+    "stock_version_afterwards": true,
+    "exit_code": 0,
+    "passed": 43,
+    "failed": 0,
+    "passed_checks": [
+      "integer",
+      "float",
+      "libraries",
+      "loop",
+      "pcall",
+      "coroutine",
+      "nested-coroutine",
+      "finalizer",
+      "close",
+      "tostring",
+      "sort",
+      "gsub",
+      "pattern",
+      "oom",
+      "caught-oom",
+      "recursion",
+      "native-call-limit",
+      "syntax",
+      "binary",
+      "capabilities",
+      "stock-heap-headroom",
+      "led-frame",
+      "one-shot-present",
+      "resident-start",
+      "incoming-message",
+      "outgoing-message",
+      "outgoing-acknowledged",
+      "paused",
+      "resumed",
+      "stopped",
+      "update-loop",
+      "update-loop-recovery",
+      "timer-loop",
+      "timer-loop-recovery",
+      "message-loop",
+      "message-loop-recovery",
+      "full-8192-byte-upload",
+      "led-resident",
+      "led-paused",
+      "led-resumed",
+      "led-error-reclaimed",
+      "led-error-recovery",
+      "final-stop"
+    ]
+  },
+  "host_tests": {
+    "native_asan_ubsan": "Passed: resident lifecycle, adversarial Lua, heap reserve, USB, HID security and incoming channels, pairing expiry/epoch cleanup, targeted bond removal and persistence, three physical key bindings.",
+    "rust": {
+      "library": 51,
+      "binary": 5,
+      "cli": 2,
+      "failed": 0
+    },
+    "python_unittest": {
+      "passed": 9,
+      "failed": 0
+    },
+    "clippy": "passed: --locked --lib --bins --no-default-features -- -D warnings",
+    "format": "cargo +nightly fmt --all --check still fails on repository-wide pre-existing formatting; HEAD baseline also fails (4725 diff lines versus 4737). git diff --check passes."
+  },
+  "tv": {
+    "verified": false,
+    "reason": "TV and owner unavailable; no ADB used. Laptop results do not establish TV pairing or SmartTube compatibility."
+  },
+  "raw_evidence": "Ignored firmware/runs/306020-tv and firmware/runs/306021-keyboard-guards-final. Raw JSONL and Bluetooth captures are not committed; captures can contain link keys.",
+  "handoff": {
+    "lua_app": "examples/lua/tv-keyboard.lua",
+    "selected_peer": "TV",
+    "hid_state": 4,
+    "error": 0,
+    "mode": "Listening; no outgoing TV attempts while it is off.",
+    "laptop_test_agent_stopped": true,
+    "adapter_flags_restored": true,
+    "temporary_hidp_module_unloaded": true
+  }
+}

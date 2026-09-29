@@ -24,8 +24,8 @@ streaming. `peer` identifies the native manager's shared classic media peer,
 not the computer using BLE.
 
 The native stack can connect related profiles automatically. An AVRCP connection
-is therefore not a promise that TV sound will stay on the TV. This implementation
-does not yet provide a remote-only HID connection.
+is therefore not a promise that TV sound will stay on the TV. For a keyboard
+connection, use the separate [HID API](lua-keyboard.md) added in 306020.
 
 ## Example
 
@@ -64,9 +64,10 @@ The Android AVRCP target implementation gates most passthrough key events on
 a special path that tries to select that audio device. This is a likely cause of
 the AVRCP-only TV failure; the TV's own implementation/logs were not inspected.
 See [Android's device handler](https://android.googlesource.com/platform/packages/modules/Bluetooth/+/refs/heads/main/system/profile/avrcp/device.cc).
-HID consumer-control reports use the keyboard/input path, but this firmware does
-not yet implement a HID profile. A literal Space key requires a keyboard HID
-profile and cannot be sent over this AVRCP API; the example has two bindings.
+HID consumer-control reports use the keyboard/input path. Firmware 306020 and
+later provide a separate [keyboard HID API](lua-keyboard.md) and a three-button
+example with Play/Pause, Mute and Space. A literal Space key cannot be sent over
+this AVRCP API; the AVRCP example has two bindings.
 
 ## Computer BLE selection
 

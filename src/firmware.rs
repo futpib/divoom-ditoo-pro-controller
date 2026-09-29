@@ -46,6 +46,9 @@ const USB_SIZE: usize = 2026511;
 const KEYBOARD_VERSION: u32 = 306020;
 const KEYBOARD_SHA256: &str = "3bc22855f5480f529c5bb4aafa04ac918e0eb4774fd4eeca8f7f9a76fa00132f";
 const KEYBOARD_SIZE: usize = 2026739;
+const KEYBOARD_PAIRING_VERSION: u32 = 306021;
+const KEYBOARD_PAIRING_SHA256: &str = "652ba88287bd8d8c683a6d1212128717ad1d1dddda30a17839fbbab7f0f6622d";
+const KEYBOARD_PAIRING_SIZE: usize = 2026739;
 const CHUNK_SIZE: usize = 256;
 const EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -86,7 +89,8 @@ impl Image {
       MUTE_SHA256 => MUTE_VERSION,
       USB_SHA256 => USB_VERSION,
       KEYBOARD_SHA256 => KEYBOARD_VERSION,
-      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013/306014/306015/306016/306017/306018/306019/306020 are supported".into()),
+      KEYBOARD_PAIRING_SHA256 => KEYBOARD_PAIRING_VERSION,
+      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013/306014/306015/306016/306017/306018/306019/306020/306021 are supported".into()),
     };
     let expected_size = match version {
       LUA_VERSION => LUA_SIZE,
@@ -99,6 +103,7 @@ impl Image {
       USB_VERSION => USB_SIZE,
       KEYBOARD_VERSION => KEYBOARD_SIZE,
       LUA_PROBE_VERSION => LUA_PROBE_SIZE,
+      KEYBOARD_PAIRING_VERSION => KEYBOARD_PAIRING_SIZE,
       _ => IMAGE_SIZE,
     };
     if bytes.len() != expected_size {
@@ -260,10 +265,10 @@ fn validate_target(
         | DEVICE_VERSION
         | BLUETOOTH_VERSION
         | MUTE_VERSION
-        | USB_VERSION | KEYBOARD_VERSION
+        | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION
     ) && version == VERSION)
   {
-    return Err("--restore-stock requires a supported probe device (306008 through 306020) and pinned stock 306007".into());
+    return Err("--restore-stock requires a supported probe device (306008 through 306021) and pinned stock 306007".into());
   }
   if installed / 1000 != version / 1000 {
     return Err(format!("Hardware mismatch: device {installed}, image {version}").into());
@@ -524,7 +529,8 @@ mod tests {
     assert!(validate_target(306018, VERSION, false, true).is_ok());
     assert!(validate_target(306019, VERSION, false, true).is_ok());
     assert!(validate_target(306020, VERSION, false, true).is_ok());
-    assert!(validate_target(306021, VERSION, false, true).is_err());
+    assert!(validate_target(306021, VERSION, false, true).is_ok());
+    assert!(validate_target(306022, VERSION, false, true).is_err());
     assert!(validate_target(306007, VERSION, false, true).is_err());
     assert!(validate_target(306008, PROBE_VERSION, false, true).is_err());
     assert!(validate_target(306006, VERSION, false, false).is_ok());
