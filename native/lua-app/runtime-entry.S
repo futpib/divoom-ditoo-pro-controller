@@ -191,3 +191,46 @@ wake_selected:
     cmovz $r0, $r7, $r1
     sbi.gp $r0, [+ -34020]
     ret
+
+.section .bt_app_disconnect_hook,"ax"
+    j bt_app_disconnect_trace
+.section .text.bt_app_disconnect_trace,"ax"
+bt_app_disconnect_trace:
+    smw.adm $r0, [$sp], $r3, 2
+    move $r0, $lp
+    jal runtime_bt_trace_app_disconnect
+    bnez $r0, bt_app_disconnect_skip
+    lmw.bim $r0, [$sp], $r3, 2
+    smw.adm $sp, [$sp], $sp, 2
+    j stock_bt_app_disconnect_resume
+bt_app_disconnect_skip:
+    lmw.bim $r0, [$sp], $r3, 2
+    ret
+
+.section .bt_force_disconnect_hook,"ax"
+    j bt_force_disconnect_trace
+.section .text.bt_force_disconnect_trace,"ax"
+bt_force_disconnect_trace:
+    smw.adm $r0, [$sp], $r3, 2
+    move $r0, $r1
+    move $r1, $r2
+    move $r2, $r3
+    move $r3, $lp
+    jal runtime_bt_trace_force_disconnect
+    lmw.bim $r0, [$sp], $r3, 2
+    push25 $r10, 0
+    slti45 $r2, 0x16
+    j stock_bt_force_disconnect_resume
+
+.section .bt_link_disconnect_hook,"ax"
+    j bt_link_disconnect_trace
+    nop16
+.section .text.bt_link_disconnect_trace,"ax"
+bt_link_disconnect_trace:
+    smw.adm $r0, [$sp], $r3, 2
+    move $r1, $lp
+    jal runtime_bt_trace_link_disconnect
+    lmw.bim $r0, [$sp], $r3, 2
+    push25 $r6, 0
+    addi.gp $fp, -35356
+    j stock_bt_link_disconnect_resume

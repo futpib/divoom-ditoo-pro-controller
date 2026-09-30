@@ -142,3 +142,11 @@ stock_avrcp_panel_branch_1 = 0x11c61a;
 stock_avrcp_play_branch_3 = 0x1139e6;
 stock_avrcp_pause_branch_3 = 0x113a00;
 stock_sdp_remove_branch_1 = 0x12eba6;
+
+/* Disconnect entry points preserve the requesting caller in diagnostics. */
+stock_patch_bt_app_disconnect = 0x7e734;
+stock_bt_app_disconnect_resume = 0x7e738;
+stock_patch_bt_force_disconnect = 0x128308;
+stock_bt_force_disconnect_resume = 0x12830c;
+stock_patch_bt_link_disconnect = 0x126b8a;
+stock_bt_link_disconnect_resume = 0x126b90;

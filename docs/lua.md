@@ -1,6 +1,6 @@
 # Resident Lua apps
 
-Firmware **306026** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
+Firmware **306027** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
 over Bluetooth, disconnect, and it keeps running. Changing scripts does not flash
 firmware. 306014 adds independent RGB control of 12 keyboard LED positions;
 306013 remains supported for the original resident app API. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
@@ -22,7 +22,7 @@ and does not replace the saved app. See [persistence and recovery](lua-storage.m
 
 ```sh
 # Install the runtime once; see docs/usb.md for USB permissions.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306026-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306027-lua.MVA
 
 # Save the standalone remote once; it runs after subsequent power-ons.
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
@@ -208,14 +208,19 @@ To reproduce the previous 306013 image exactly, build the source at commit
 Use `ae62a69` for 306016, `95d7f6e` for 306017 and `ac82bb9` for 306018.
 Use `606eb91` to reproduce 306019, `b703bc0` for 306020 and `c79d982` for 306021.
 Use `a586981` to reproduce 306022.
-The current builder produces 306026 with [stock assets](lua-assets.md), [lower Lua memory use](lua-memory.md),
+The current builder produces 306027 with [persistent keyboard connections](lua-keyboard.md#idle-links-and-reconnecting),
+[disconnect-request tracing](bluetooth-trace.md),
+[stock assets](lua-assets.md), [lower Lua memory use](lua-memory.md),
 saved apps, settings,
 [Bluetooth HID keyboard support](lua-keyboard.md) and full USB control, retaining the queued AVRCP mute toggle and
 [native Bluetooth media connection APIs](lua-bluetooth.md). Previous images
 remain pinned.
 
 The image reserves 8 KiB of native globals below `0x2004c000`; text starts at
-`0x1ca000`, initialized data loads at `0x1ef800`, and neither crosses `0x1f0000`.
+`0x1ca000`. From 306027, initialized data loads immediately after the aligned
+text end. The builder checks that the whole MVA, including its header and CRC,
+fits the stock Bluetooth staging capacity of `0x1f0000` bytes. Earlier images
+placed data at `0x1ef800`, which made the larger packages exceed that limit.
 Hooks wrap heap initialization, command 0x37, screen output and the ADC scanner's
 return at `0x2d490`. 306014 also wraps the LED flush at `0x7580c`;
 when ownership is released it executes the original native path. Intercepting after native key-action mapping loses key-down

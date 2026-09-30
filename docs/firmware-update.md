@@ -138,6 +138,13 @@ the hardcoded current version determine the failing gate. A later capacity check
 uses status 1. No image-content hash or digital signature can explain this
 particular pre-transfer refusal.
 
+Status 1 at `0x4b640` means the complete announced MVA exceeds partition 2's
+capacity. On the pinned firmware that staging area is `0x1f0000` bytes
+(2,031,616); the container header and final CRC count toward the limit.
+The 2,032,883-byte resident images from 306022 through 306026 require USB. The 306027
+builder packs initialized data after code, compresses the immutable image-address
+index, and enforces the whole-package limit before producing an image.
+
 See [the retained disassembly](firmware-analysis/306007-update-gates.nds32.S).
 No advertised version was falsified and no gate was bypassed during the retry.
 Changing only the advertised version might pass the first gates, but does not

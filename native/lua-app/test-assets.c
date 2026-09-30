@@ -10,7 +10,7 @@ static void test_assets(void) {
     uint32_t expected_hash=0x811c9dc5;
     for (unsigned i=0;i<ASSET_IMAGE_COUNT;++i) {
         assert(fread(expected,1,sizeof expected,file)==sizeof expected);
-        assert(!asset_decode(stock_asset_rom+asset_images[i],actual));
+        assert(!asset_decode(stock_asset_rom+asset_image_offset(i),actual));
         assert(!memcmp(actual,expected,sizeof actual));
         for (unsigned j=0;j<sizeof expected;++j) expected_hash=(expected_hash^expected[j])*0x01000193;
     }

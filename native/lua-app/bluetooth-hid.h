@@ -14,4 +14,5 @@ void runtime_hid_service(unsigned epoch);
 void runtime_hid_command(unsigned op, unsigned value, const unsigned char *data,
                          unsigned epoch, unsigned generation);
 void runtime_hid_status(struct hid_status *);
+unsigned runtime_hid_preserve_link(unsigned caller);
 #endif

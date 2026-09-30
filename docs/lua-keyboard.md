@@ -2,15 +2,16 @@
 
 For pairing failures, firmware 306024 adds [device-side Bluetooth tracing](bluetooth-trace.md) over USB without stopping this app.
 
-Firmware **306025** runs the remote directly on the Ditoo with its speaker
-profiles disabled. After one installation,
+Firmware **306027** runs the remote directly on the Ditoo with its speaker
+profiles disabled and prevents stock audio policy from disconnecting the keyboard.
+After one installation,
 setup, pairing, reconnection and ordinary use need only the Ditoo and TV.
 Bluetooth HID sends Play/Pause, Mute, Volume Up/Down, Space and Left/Right reports. AVRCP and the
 older `tv-remote.lua` remain available separately.
 
 ```sh
 # One-time setup from a computer.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306025-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306027-lua.MVA
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
 ```
 
@@ -114,6 +115,19 @@ approval on the TV is still performed on the TV itself.
 
 ## Idle links and reconnecting
 
+Firmware 306027 preserves the keyboard link against two stock application
+disconnect paths. A device trace caught `BtDisconnectCtrl` callers `0x1759c`
+and `0x170a8` immediately before local HCI disconnects; the second closed both
+open TV HID channels. The first belongs to the stock `uac divoom disconnect a2dp`
+path. Both act on the whole Bluetooth link even with speaker profiles disabled.
+This was an explicit native disconnect, not a missing HID keepalive.
+
+The fix skips only these callers while keyboard-only mode is enabled on the
+current Bluetooth stack. It also protects connection setup. Combined mode,
+explicit keyboard OFF, stock power-off, link loss and HID error cleanup keep
+their disconnect paths. Suppressed requests appear as `application_suppressed`
+in the device trace; ordinary requests remain visible as `application`.
+
 HID does not require periodic fake key reports. The Bluetooth HID 1.1.1
 specification deprecates idle-rate commands; input is normally reported when it
 changes. Its `HIDReconnectInitiate` behavior permits reconnecting when the owner
@@ -130,8 +144,19 @@ remains an exception: use LINK to re-enable it.
 records a forced disconnect from the real TV followed by reconnection from an
 injected control-key callback, with one submitted and released report and no
 new pairing. The previous app fails the corresponding native regression.
-The original local-host disconnect was not reproduced during the observation;
-its caller is still unknown.
+That earlier observation did not reproduce the original disconnect. The later
+306027 diagnostic build identified the stock application callers described above.
+
+The [306027 verification](../firmware/tv-persistent-link-evidence/verification.json)
+records a BLE firmware update and automatic reconnection using the saved TV bond.
+The same encrypted HID link survived a 12-minute interval with the laptop's BLE
+connection closed, no input reports, and zero channel closures. The trace caught
+the stock disconnect policy firing again at roughly eleven minutes and being
+suppressed. Injected Volume Up/Down callbacks then submitted and released reports
+without reconnecting. Explicit OFF still closed both channels, ignored control
+keys, and allowed a subsequent LINK to reuse the bond. These are device-side
+observations; no new TV-side input confirmation or physical power-off test was
+performed. The ordinary startup app was restored after the temporary probe.
 
 ## Lua API
 

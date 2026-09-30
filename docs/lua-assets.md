@@ -60,7 +60,10 @@ This API accepts numeric codepoints, not UTF-8 strings or text shaping.
 
 ## Memory and recovery
 
-The 2,392-byte image offset index is read-only firmware data. Compressed image
+The image offset index is read-only firmware data: 1,272 bytes from firmware
+306027, using 19 group bases and 598 relative 16-bit offsets (2,392 bytes in
+306026). The native regression checks all 598 decoded images against the
+independent stock decoder. Compressed image
 pixels are read from their existing memory-mapped stock locations. Font reads
 use one aligned 256-byte stack buffer from partition 3 (`0x1f3000`, size
 `0x119000`); only the selected 32-byte glyph is copied out. Images use a 768-byte

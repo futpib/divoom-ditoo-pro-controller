@@ -4,6 +4,8 @@
 static unsigned irq_disabled;
 static unsigned char response[160];
 static unsigned response_size;
+static unsigned preserve;
+unsigned runtime_hid_preserve_link(unsigned caller) { (void)caller;return preserve; }
 unsigned stock_ticks(void) { return 1234; }
 unsigned runtime_irq_save(void) { unsigned was=irq_disabled;irq_disabled=1;return !was; }
 void runtime_irq_restore(unsigned enabled) { if(enabled) irq_disabled=0; }
@@ -39,6 +41,20 @@ int main(void) {
     read_after(4);assert(response[6]==0);
     runtime_bt_trace_stack(16,params);assert(!history[4].length);
     runtime_bt_trace_stack(10,params);assert(history[5].length==1 && !history[5].data[0]);
+    unsigned char remote[0xd8];memset(remote,0xa5,sizeof remote);
+    runtime_bt_trace_app_disconnect(0x1759c);
+    assert(history[6].kind==6 && history[6].event==1 && history[6].length==4);
+    unsigned caller;memcpy(&caller,history[6].data,4);assert(caller==0x1759c);
+    runtime_bt_trace_force_disconnect(remote,0x13,1,0x11df7a);
+    assert(history[7].length==12 && history[7].data[10]==0x13 && history[7].data[11]==1);
+    assert(!memcmp(history[7].data+4,remote+0x54,6));
+    remote[0x99]=0x15;remote[0x96]=3;
+    runtime_bt_trace_link_disconnect(remote,0x1283a4);
+    assert(history[8].data[10]==0x15 && history[8].data[11]==3);
+    runtime_bt_trace_link_disconnect(NULL,1);
+    for(unsigned i=4;i<12;++i) assert(!history[9].data[i]);
+    preserve=1;assert(runtime_bt_trace_app_disconnect(0x170a8));
+    assert(history[10].event==4 && history[10].length==4);preserve=0;
     sequence=4;
     for(unsigned i=0;i<100;++i) runtime_bt_trace(5,0,&i,4);
     read_after(1);assert(response[6]==6);

@@ -92,5 +92,6 @@ void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,un
 static struct hid_status fake_hid_status;
 static unsigned saved_bonds,bond_count=1;
 void runtime_hid_status(struct hid_status *s) { *s=fake_hid_status; }
+unsigned runtime_hid_preserve_link(unsigned caller) { (void)caller;return 0; }
 unsigned stock_bt_record_count(void) { return bond_count; }
 void stock_bt_save_records(unsigned size,unsigned count) { assert(size==0x1f9 && count==bond_count);++saved_bonds; }

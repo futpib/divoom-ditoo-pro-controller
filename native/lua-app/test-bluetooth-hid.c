@@ -201,5 +201,21 @@ int main(void) {
     connected();memset(core,0,sizeof core);runtime_hid_service(1);
     assert(!hid.status.enabled && !hid.active); /* Reused stack address. */
     modes();
+    connected();
+    assert(!runtime_hid_preserve_link(0x170a8));
+    runtime_hid_command(HID_MODE,1,address,1,hid.status.generation);
+    assert(runtime_hid_preserve_link(0x170a8) && runtime_hid_preserve_link(0x1759c));
+    const unsigned allowed[]={0x16e40,0x18f88,0x1938c,0x77e3a,0};
+    for(unsigned i=0;i<sizeof allowed/sizeof *allowed;++i) assert(!runtime_hid_preserve_link(allowed[i]));
+    unsigned before_disconnects=disconnects;
+    runtime_hid_command(HID_DISCONNECT,0,address,1,hid.status.generation);
+    assert(disconnects>before_disconnects); /* OFF remains an actual disconnect. */
+    runtime_hid_command(HID_MODE,0,address,1,hid.status.generation);
+    assert(!runtime_hid_preserve_link(0x170a8));
+    runtime_hid_command(HID_MODE,1,address,1,hid.status.generation);
+    stock_bt_context=NULL;assert(!runtime_hid_preserve_link(0x170a8));stock_bt_context=context;
+    stock_bt_core=NULL;assert(!runtime_hid_preserve_link(0x170a8));stock_bt_core=core;
+    memset(core,0,sizeof core);runtime_hid_service(1);
+    assert(!runtime_hid_preserve_link(0x170a8));
     puts("HID report, ownership, stale command, timeout and control tests passed");
 }

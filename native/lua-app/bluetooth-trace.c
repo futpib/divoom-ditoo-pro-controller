@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "bluetooth-trace.h"
+#include "bluetooth-hid.h"
 extern unsigned stock_ticks(void), runtime_irq_save(void);
 extern void runtime_irq_restore(unsigned);
 extern void stock_reply(unsigned, unsigned, const void *, unsigned);
@@ -77,4 +78,21 @@ void runtime_bt_trace_read(unsigned context,const unsigned char *data,unsigned l
     runtime_irq_restore(irq);
     reply[6]=count;memcpy(reply+8,&oldest,4);memcpy(reply+12,&latest,4);
     stock_reply(context,0x37,reply,16+count*sizeof(struct trace_event));
+}
+
+unsigned runtime_bt_trace_app_disconnect(unsigned caller) {
+    unsigned blocked=runtime_hid_preserve_link(caller);
+    runtime_bt_trace(6,blocked ? 4 : 1,&caller,4);
+    return blocked;
+}
+void runtime_bt_trace_force_disconnect(const unsigned char *remote,unsigned reason,unsigned force,unsigned caller) {
+    unsigned char data[12]={0};memcpy(data,&caller,4);
+    if(remote) memcpy(data+4,remote+0x54,6);
+    data[10]=reason;data[11]=force;
+    runtime_bt_trace(6,2,data,sizeof data);
+}
+void runtime_bt_trace_link_disconnect(const unsigned char *remote,unsigned caller) {
+    unsigned char data[12]={0};memcpy(data,&caller,4);
+    if(remote) { memcpy(data+4,remote+0x54,6);data[10]=remote[0x99];data[11]=remote[0x96]; }
+    runtime_bt_trace(6,3,data,sizeof data);
 }

@@ -1,6 +1,6 @@
 # Ditoo-side Bluetooth diagnostics
 
-Firmware 306024 and 306025 record selected Bluetooth events independently of the Lua app.
+Firmware 306024 and later record selected Bluetooth events independently of the Lua app.
 Read the retained history or watch while the Ditoo connects to a TV:
 
 ```sh
@@ -23,6 +23,20 @@ Each event has a sequence number and device uptime in milliseconds.
 | 3 | `hid_l2cap` | Incoming, opened and closed HID channels: PSM, CID, peer and native status. These status values are not HCI error codes. |
 | 4 | `hid_link` | Native HID connection-manager callbacks and raw status. |
 | 5 | `hid_error` | Extension error codes matching `keyboard.status(true).error`. |
+| 6 | `disconnect_request` (306027+) | Stock application, forced-link and link-disconnect callers; link records include the peer and requested reason. |
+
+Disconnect callers are native return addresses; subtract four to locate the
+calling `jal` in stock disassembly. The three entry points are `BtDisconnectCtrl`
+at `0x7e734`, `ME_ForceDisconnectLinkWithReason` at `0x128308`, and
+`MeDisconnectLink` at `0x126b8a`. Allowed-request records precede native processing
+and do not establish that the link actually closed. Correlate them with HCI completion.
+Application requests carry only the caller; the other two include the peer,
+requested reason and force flag or native link state. No link key is recorded.
+
+Application event 4, `application_suppressed`, records a request skipped by the
+306027 keyboard-only policy. Only callers `0x170a8` and `0x1759c` are suppressed;
+event 1, `application`, still means the original routine ran. See the
+[persistent keyboard connection fix](lua-keyboard.md#idle-links-and-reconnecting).
 
 HCI status and disconnect reasons include numeric values and names. Correlate
 handle-only events with the preceding connection-complete peer. IO capability
@@ -68,10 +82,10 @@ Laptop captures can contain link keys and unrelated devices' traffic.
 
 ```sh
 python3 scripts/build-lua-app-runtime.py
-python3 scripts/firmware-manifest.py firmware/306025-lua.MVA --check
+python3 scripts/firmware-manifest.py firmware/306027-lua.MVA --check
 python3 scripts/test-lua-app-runtime.py
 cargo test --locked --no-default-features
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306025-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306027-lua.MVA
 ```
 
 The pinned HCI handler begins at decoded address `0x121c6c`; its packet has a
@@ -91,6 +105,12 @@ metadata bytes. Wrong request length returns error 1. There is no raw address,
 buffer resize, clear operation or Lua dependency.
 
 ## Hardware verification
+
+[306027 verification](../firmware/tv-persistent-link-evidence/verification.json):
+the disconnect-caller hooks identified native application requests immediately
+before the TV's local-host termination. The keyboard-only guard suppressed those
+requests on the real device, including during a twelve-minute idle interval with
+the laptop disconnected. Explicit HID OFF and reconnection remained functional.
 
 [Verification report](../firmware/bluetooth-trace-evidence/verification.json):
 USB flashed and read back 306024; real laptop pairing, encrypted HID, reconnection,

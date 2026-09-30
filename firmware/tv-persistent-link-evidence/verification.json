@@ -1,0 +1,184 @@
+{
+  "firmware": 306027,
+  "image": {
+    "sha256": "9c39f28fb60c685fd3390d73b552897995264508afcaebe5e7d1d3b6a3b7f1dd",
+    "bytes": 2031059,
+    "checksum": 176380378
+  },
+  "control_transport": "ble",
+  "tv_peer": "0C:CD:B4:D0:0C:26",
+  "laptop_classic_pairing_used": false,
+  "diagnosis": {
+    "diagnostic_image_sha256": "f13e51c631bf0dfe55c4718f967843dbebad7b76e0f0b9de7e7d6eb2f4aedadb",
+    "hid_channel_open_ms": [
+      7473,
+      7487
+    ],
+    "stock_disconnect_entry": "0x7e734",
+    "application_caller": "0x170a8",
+    "application_request_ms": 10553,
+    "requests_at_that_time": 2,
+    "hci_local_termination_ms": 10646,
+    "hci_reason": 22,
+    "both_hid_channels_closed": true,
+    "other_application_caller_before_disconnect": "0x1759c",
+    "policy": "Skip only callers 0x170a8 and 0x1759c while HID is enabled in keyboard-only mode on the current stack."
+  },
+  "installation": {
+    "flash_completion_and_postboot_version_verified": true,
+    "package_bytes": 2031059,
+    "ble_staging_capacity_bytes": 2031616,
+    "saved_tv_app_autostarted": true,
+    "saved_bond_reused": true,
+    "boot_events_ms": {
+      "tv_connection": 5348,
+      "saved_link_key_request": 5880,
+      "encryption": 5898,
+      "hid_control_open": 7474,
+      "hid_interrupt_open": 7488,
+      "first_suppressed_application_request": 10551
+    },
+    "saved_app_restored_after_probe": true,
+    "final_state": "active",
+    "final_screen": "TV: READY",
+    "final_hid_state": 2,
+    "final_generation": 3,
+    "final_peak_memory_bytes": 41104
+  },
+  "host_validation": {
+    "native_32bit_asan_ubsan": true,
+    "all_598_stock_images_match_independent_decoder": true,
+    "rust_all_features_tests": {
+      "library": 68,
+      "cli": 5,
+      "conversion": 2
+    },
+    "firmware_python_tests": 23,
+    "identical_rebuilds_in_two_directories": true,
+    "production_no_default_features_clippy": true,
+    "all_targets_all_features_clippy": "Fails with the same 42 diagnostics on unchanged HEAD f293992: existing unwrap/expect and argument-count lints.",
+    "trace_decoder_rustfmt": true
+  },
+  "limits": [
+    "No new TV-side logs or independent physical-button confirmation in this run.",
+    "Physical power-off was not exercised; its pinned caller is allowed by the native regression.",
+    "Observation duration does not establish indefinite connection reliability."
+  ],
+  "idle_observation": {
+    "before": {
+      "state": 2,
+      "sent": 0,
+      "released": 0,
+      "error": 0,
+      "closed": 0,
+      "opened": 2,
+      "encrypted": true,
+      "keyboard_only": true,
+      "audio_channels": 0,
+      "ms": 102186
+    },
+    "after": {
+      "state": 2,
+      "sent": 0,
+      "released": 0,
+      "error": 0,
+      "closed": 0,
+      "opened": 2,
+      "encrypted": true,
+      "keyboard_only": true,
+      "audio_channels": 0,
+      "ms": 854823
+    },
+    "measurement_interval_ms": 752637,
+    "laptop_ble_disconnected_for_at_least_ms": 720000,
+    "generated_key_reports": 0,
+    "hid_channels_closed": 0,
+    "same_connection_duration_ms_at_end": 847335,
+    "suppressed_application_caller": "0x170a8",
+    "suppressed_requests": 18,
+    "suppressed_request_times_ms": [
+      124296,
+      132600,
+      138783,
+      648257,
+      656179,
+      662362,
+      668315,
+      674269,
+      680222
+    ],
+    "lua_generation_before_and_after": 2
+  },
+  "live_input": {
+    "volume_up": {
+      "state": 2,
+      "sent": 1,
+      "released": 1,
+      "error": 0,
+      "closed": 0,
+      "opened": 2,
+      "encrypted": true,
+      "keyboard_only": true,
+      "audio_channels": 0,
+      "ms": 856232
+    },
+    "inverse_volume_down": {
+      "state": 2,
+      "sent": 2,
+      "released": 2,
+      "error": 0,
+      "closed": 0,
+      "opened": 2,
+      "encrypted": true,
+      "keyboard_only": true,
+      "audio_channels": 0,
+      "ms": 857639
+    },
+    "no_reconnect_required": true,
+    "method": "Injected stock ADC key callbacks 1 and 9; confirmed native sent and released counters, not TV volume state."
+  },
+  "explicit_off_and_reconnect": {
+    "off": {
+      "state": 0,
+      "sent": 2,
+      "released": 2,
+      "error": 0,
+      "closed": 2,
+      "opened": 2,
+      "encrypted": false,
+      "keyboard_only": true,
+      "audio_channels": 0,
+      "ms": 913146
+    },
+    "control_key_while_off": {
+      "state": 0,
+      "sent": 2,
+      "released": 2,
+      "error": 0,
+      "closed": 2,
+      "opened": 2,
+      "encrypted": false,
+      "keyboard_only": true,
+      "audio_channels": 0,
+      "ms": 915149
+    },
+    "reconnected": {
+      "state": 2,
+      "sent": 2,
+      "released": 2,
+      "error": 0,
+      "closed": 2,
+      "opened": 4,
+      "encrypted": true,
+      "keyboard_only": true,
+      "audio_channels": 0,
+      "ms": 928765
+    },
+    "bond_reset": false
+  },
+  "source": {
+    "path": "examples/lua/tv-keyboard.lua",
+    "bytes": 7629,
+    "sha256": "ad41563e4bc2b50283e8afc0822e54c8e5465e7c3aeada124c7e4c4e421c62ee"
+  }
+}

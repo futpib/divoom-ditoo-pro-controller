@@ -412,3 +412,10 @@ void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,
     } else { error(15);disconnect(); }
 }
 void runtime_hid_status(struct hid_status *s) { *s=hid.status; }
+unsigned runtime_hid_preserve_link(unsigned caller) {
+    /* These pinned speaker/UAC policy callers disconnect the entire ACL even
+     * when only HID uses it. Explicit HID OFF and stock power-off use other
+     * paths. Keyboard-only policy also applies while awaiting the saved TV. */
+    return (caller==0x170a8 || caller==0x1759c) && hid.status.enabled==1 &&
+        hid.status.keyboard_only && hid.context==stock_bt_context && hid.core==stock_bt_core;
+}

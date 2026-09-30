@@ -202,6 +202,25 @@ fn event(row: &[u8]) -> Result<Value> {
       v["layer"] = json!(if kind == 4 { "hid_link" } else { "hid_error" });
       v["status"] = json!(number(p));
     }
+    6 => {
+      if !matches!(code, 1..=4) || n != if code == 1 || code == 4 { 4 } else { 12 } {
+        return Err("Malformed disconnect request trace event".into());
+      }
+      v["layer"] = json!("disconnect_request");
+      v["name"] = json!(match code {
+        1 => "application",
+        2 => "force_link",
+        3 => "link",
+        _ => "application_suppressed",
+      });
+      v["caller"] = json!(format!("0x{:x}", number(p)));
+      if code == 2 || code == 3 {
+        v["peer"] = json!(address(&p[4..]));
+        v["reason"] = json!(p[10]);
+        v["reason_name"] = json!(hci_reason(p[10]));
+        v[if code == 2 { "force" } else { "state" }] = json!(p[11]);
+      }
+    }
     _ => return Err("Unknown Bluetooth trace layer".into()),
   }
   Ok(v)
@@ -259,9 +278,11 @@ async fn session(
   if !reply.ack
     || reply.data.len() != 5
     || reply.data[0] != 1
-    || !matches!(number(&reply.data[1..]), 306024..=306026)
+    || !matches!(number(&reply.data[1..]), 306024..=306027)
   {
-    return Err("Bluetooth trace requires firmware 306024, 306025 or 306026; no diagnostic sent".into());
+    return Err(
+      "Bluetooth trace requires firmware 306024 through 306027; no diagnostic sent".into(),
+    );
   }
   let firmware = number(&reply.data[1..]);
   let deadline = Instant::now() + duration;
@@ -353,6 +374,28 @@ mod tests {
     assert_eq!(v["key_type"], 6);
     row[10] = 23;
     assert!(event(&row).is_err());
+  }
+  #[test]
+  fn disconnect_callers_and_peers() -> Result<()> {
+    let mut row = [0; 24];
+    row[8] = 6;
+    row[9] = 2;
+    row[10] = 12;
+    row[12..16].copy_from_slice(&0x11df7au32.to_le_bytes());
+    row[16..24].copy_from_slice(&[1, 2, 3, 4, 5, 6, 0x13, 1]);
+    let v = event(&row)?;
+    assert_eq!(v["caller"], "0x11df7a");
+    assert_eq!(v["peer"], "06:05:04:03:02:01");
+    assert_eq!(v["force"], 1);
+    row[9] = 1;
+    assert!(event(&row).is_err());
+    row[10] = 4;
+    assert!(event(&row).is_ok());
+    row[9] = 4;
+    assert_eq!(event(&row)?["name"], "application_suppressed");
+    row[9] = 5;
+    assert!(event(&row).is_err());
+    Ok(())
   }
   #[test]
   fn framing_and_retention() {

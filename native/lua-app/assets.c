@@ -9,6 +9,8 @@ extern const unsigned char stock_asset_rom[];
 
 #define ASSET_IMAGE_COUNT (sizeof asset_images / sizeof asset_images[0])
 
+static unsigned asset_image_offset(unsigned i) { return asset_image_bases[i/32]+asset_images[i]; }
+
 static unsigned asset_u16(const unsigned char *p) { return p[0] | ((unsigned)p[1]<<8); }
 static unsigned asset_kind(lua_State *L) {
     const char *kinds[] = {"image","sound","font",NULL};
@@ -20,7 +22,7 @@ static int asset_count(lua_State *L) {
 }
 static const unsigned char *asset_image_ptr(lua_State *L,int arg) {
     unsigned id=integer(L,arg,1,ASSET_IMAGE_COUNT);
-    return stock_asset_rom+asset_images[id-1];
+    return stock_asset_rom+asset_image_offset(id-1);
 }
 static int asset_info(lua_State *L) {
     unsigned kind=asset_kind(L),id=integer(L,2,kind==1 ? 0 : 1,
@@ -31,7 +33,7 @@ static int asset_info(lua_State *L) {
     } else {
         field(L,"width",16);field(L,"height",16);
         if (!kind) {
-            const unsigned char *p=stock_asset_rom+asset_images[id-1];
+            const unsigned char *p=stock_asset_rom+asset_image_offset(id-1);
             field(L,"colors",p[6] ? p[6] : 256);field(L,"delay_ms",asset_u16(p+3));
         } else field(L,"glyph_bytes",32);
     }

@@ -28,7 +28,7 @@ patches = [
 ]
 
 [profiles.app]
-version = 306026
+version = 306027
 source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch"]
 patches = [
     "command_dispatch",
@@ -44,6 +44,9 @@ patches = [
     "bluetooth_commands",
     "bluetooth_stack_trace",
     "bluetooth_hci_trace",
+    "bluetooth_app_disconnect_trace",
+    "bluetooth_force_disconnect_trace",
+    "bluetooth_link_disconnect_trace",
     "battery_indicator",
     "microphone_level",
     "wake_selection",
@@ -205,6 +208,41 @@ original_size = 6
 purpose = "Observe selected HCI event metadata before native processing."
 original = '''
     push25 $r14, 24
+    addi.gp $fp, -35356
+'''
+
+[[patches]]
+name = "bluetooth_app_disconnect_trace"
+section = ".bt_app_disconnect_hook"
+site = "stock_patch_bt_app_disconnect"
+max_size = 4
+original_size = 4
+purpose = "Trace stock app disconnects; skip two audio policy callers in keyboard-only mode."
+original = '''
+    smw.adm $sp, [$sp], $sp, 2
+'''
+
+[[patches]]
+name = "bluetooth_force_disconnect_trace"
+section = ".bt_force_disconnect_hook"
+site = "stock_patch_bt_force_disconnect"
+max_size = 4
+original_size = 4
+purpose = "Record the stock force disconnect caller before native processing."
+original = '''
+    push25 $r10, 0
+    slti45 $r2, 0x16
+'''
+
+[[patches]]
+name = "bluetooth_link_disconnect_trace"
+section = ".bt_link_disconnect_hook"
+site = "stock_patch_bt_link_disconnect"
+max_size = 6
+original_size = 6
+purpose = "Record the stock link disconnect caller before native processing."
+original = '''
+    push25 $r6, 0
     addi.gp $fp, -35356
 '''
 

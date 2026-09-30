@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the pinned NDS32 Lua runtime and its installable 306026 firmware."""
+"""Build the pinned NDS32 Lua runtime and the firmware selected by its patch profile."""
 import binascii
 import hashlib
 import importlib.util
@@ -54,7 +54,8 @@ def build():
     stock = (ROOT/'firmware/306007.MVA').read_bytes()
     code = patches.apply(stock, out/'runtime.elf')
     sections = {name: patches.extract('.'+name) for name in ('text','data')}
-    for address, section in [(0x1ca000,'text'),(0x1ef800,'data')]:
+    data_load = int(next(line.split()[0] for line in symbols.splitlines() if line.split()[-1]=='__data_load'),16)
+    for address, section in [(0x1ca000,'text'),(data_load,'data')]:
         assert len(code) <= address
         code.extend(bytes(address-len(code)))
         code.extend(sections[section])
@@ -71,6 +72,7 @@ def build():
     struct.pack_into('<I', image,0x607,length+4)
     image.extend(code)
     image.extend(struct.pack('<I',binascii.crc_hqx(image,0)))
+    assert len(image) <= 0x1f0000, 'MVA exceeds stock Bluetooth staging capacity'
     patches.report(image)
     report = {'version':patches.version,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
               'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':49152,'arena_page_unit':1024,'arena_page_slots':48,
