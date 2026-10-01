@@ -70,6 +70,7 @@ void runtime_bt_peek(struct bt_command *command) {
     stock_bt_peek(command);
     if (command->op==BT_HID_COMMAND && command->length==32 && command->data) {
         unsigned values[4]; memcpy(values,command->data,16);
+        if(values[2]==HID_MODE && preferences.bt_mode) values[3]=preferences.bt_mode==1;
         if (values[0]==peripheral.epoch)
             runtime_hid_command(values[2],values[3],command->data+16,values[0],values[1]);
         return;
@@ -97,7 +98,7 @@ static unsigned native_priority(void) {
 
 unsigned runtime_indicator_filter(unsigned level) {
     peripheral.native_indicator = level;
-    return peripheral.indicator_owned ? peripheral.indicator_level : level;
+    return preferences.indicator_off ? 0 : peripheral.indicator_owned ? peripheral.indicator_level : level;
 }
 
 void runtime_noise_sample(unsigned value) {
@@ -269,6 +270,7 @@ static const char *perform_job(void) {
         break;
     }
     case AUDIO_SOURCE:
+        if(n==7 && preferences.usb_noaudio) return "USB audio disabled in Settings";
         if (peripheral.recording) return "recording is active";
         if (n == 3 && !stock_sd_present()) return "no SD card";
         if (n == 7 && !stock_usb_power) return "USB disconnected";
@@ -373,10 +375,11 @@ void runtime_native_service(void) {
     }
     if (peripheral.indicator_dirty) {
         peripheral.indicator_dirty = 0;
-        stock_indicator_write(peripheral.indicator_owned ? peripheral.indicator_level : peripheral.native_indicator);
+        stock_indicator_write(preferences.indicator_off ? 0 : peripheral.indicator_owned ? peripheral.indicator_level : peripheral.native_indicator);
     }
     if (peripheral.recording && (!stock_memo_context || native_priority() ||
             (unsigned)(stock_ticks()-peripheral.record_started) >= 60000)) stop_recording();
+    menu_service();
     if (peripheral.state != JOB_QUEUED) return;
     if (peripheral.job_epoch == peripheral.epoch && peripheral.had_job &&
             (unsigned)(stock_ticks()-peripheral.last_job)<100) return;
@@ -625,6 +628,7 @@ static int keyboard_status(lua_State *L) {
     field(L,"state",s.state);flag(L,"connected",s.state==2);
     flag(L,"enabled",s.enabled==1);flag(L,"busy",s.busy);field(L,"sent",s.sent);
     flag(L,"keyboard_only",s.keyboard_only);
+    flag(L,"mode_locked",preferences.bt_mode!=0);
     field(L,"released",s.released);field(L,"errors",s.errors);field(L,"error",s.error);
     field(L,"bonds_saved",peripheral.bt_bonds_saved);
     flag(L,"paired",s.enabled && keyboard_bonded(s.peer));flag(L,"encrypted",s.state==2 && s.encryption_state==2);

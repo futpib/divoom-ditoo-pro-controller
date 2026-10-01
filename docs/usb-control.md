@@ -35,6 +35,10 @@ another native audio input can re-enumerate USB (`1719` versus `171e`); reconnec
 the CLI after enumeration. In particular, Bluetooth audio selection is separate
 from selecting USB as the **controller** transport.
 
+Firmware 306028 adds **Settings → USB mode → Charge and control**, which removes
+the USB audio interfaces while retaining this command bridge and flashing.
+See the [device menu](device-menu.md).
+
 ## Wire format and lifetime
 
 The application vendor HID has no interrupt endpoints. The host uses serialized
@@ -88,8 +92,12 @@ concurrent controllers can observe each other's notifications, so serialize
 writes to the same device. One process exclusively claims the vendor interface.
 The notification timer recognizes USB sessions without faking BLE state.
 
-A session allocates 12,292 bytes for command assembly and replies only if at
-least another 24 KiB of stock heap remains. Close releases that allocation;
+A session in firmware 306028 allocates an 8 KiB reply ring. Command assembly
+allocates only the current frame (up to 4,100 bytes) and releases it after
+dispatch; earlier versions retained all 12,292 bytes for the whole session.
+Both allocations preserve at least another 24 KiB of stock heap. This leaves
+4,100 more bytes available between commands, including while starting Lua.
+Close releases both allocations, including a partially received command;
 15 seconds without USB activity also releases it after a crashed host/unplug.
 The host polls during long raw-script delays to keep the session alive and
 preserve pending events.

@@ -1,0 +1,239 @@
+{
+  "firmware": 306028,
+  "sha256": "d3f0ef3d42f03437eccbec451358cfcd37d3417e7f4e35e89ef7a1ac74ae8153",
+  "mva_bytes": 2017655,
+  "staging_limit_bytes": 2031616,
+  "remaining_staging_bytes": 13961,
+  "native_globals_bytes": 7856,
+  "native_globals_limit_bytes": 8192,
+  "usb_flash": {
+    "application_reenumerated": true,
+    "ble_version_check_requested": false,
+    "blocks_verified": 477,
+    "erase_transfer_verify_seconds": 10.999547625,
+    "event": "usb_complete",
+    "total_usb_seconds": 19.941126694,
+    "usb_port": "1-6",
+    "version": 306028,
+    "boot_entry_reset_observed": true
+  },
+  "startup": {
+    "autostart_on_after_reboot": "active; TV: READY",
+    "autostart_off_after_reboot": "idle; autostart skipped",
+    "charge_control_retained_after_reboot": true
+  },
+  "menu_checks": [
+    {
+      "check": "Lua menu escape",
+      "passed": true
+    },
+    {
+      "check": "Native Settings",
+      "passed": true
+    },
+    {
+      "check": "USB preferences",
+      "passed": true
+    },
+    {
+      "check": "USB audio enabled",
+      "passed": true
+    },
+    {
+      "check": "USB audio disabled",
+      "passed": true
+    },
+    {
+      "check": "Autostart retained",
+      "passed": true
+    },
+    {
+      "check": "Remove defaults to No",
+      "passed": true
+    },
+    {
+      "check": "Remove cancelled",
+      "passed": true
+    },
+    {
+      "check": "Bluetooth mode",
+      "passed": true
+    },
+    {
+      "check": "Remote preference saved",
+      "passed": true
+    },
+    {
+      "check": "App Bluetooth policy restored",
+      "passed": true
+    },
+    {
+      "check": "Saved device list",
+      "passed": true
+    },
+    {
+      "check": "Forget defaults to No",
+      "passed": true
+    },
+    {
+      "check": "Forget cancelled",
+      "passed": true
+    },
+    {
+      "check": "Key lights Off saved",
+      "passed": true
+    },
+    {
+      "check": "Key lights restored",
+      "passed": true
+    },
+    {
+      "check": "Indicator Off saved",
+      "passed": true
+    },
+    {
+      "check": "Indicator restored",
+      "passed": true
+    },
+    {
+      "check": "Native Tools Voice Memo",
+      "passed": true
+    },
+    {
+      "check": "Memo delete defaults to No",
+      "passed": true
+    },
+    {
+      "check": "Memo delete cancelled",
+      "passed": true
+    },
+    {
+      "check": "Saved app launcher",
+      "passed": true
+    }
+  ],
+  "final_app": {
+    "state": "active",
+    "peak_memory_bytes": 41104,
+    "instructions": 190,
+    "result": "TV: READY",
+    "abi": 2,
+    "memory_bytes": 41104,
+    "frames": 19,
+    "callbacks": 56,
+    "dropped_keys": 0,
+    "held_keys": 0,
+    "generation": 20
+  },
+  "usb_descriptors": {
+    "audio_control": {
+      "vid_pid": "8888:1719",
+      "audio_interfaces": true
+    },
+    "charge_control": {
+      "vid_pid": "8888:171e",
+      "interfaces": 1,
+      "audio_interfaces": false
+    }
+  },
+  "guard_checks": {
+    "count": 43,
+    "all_passed": true,
+    "native_version_query_afterwards": true,
+    "cases": [
+      "integer",
+      "float",
+      "libraries",
+      "loop",
+      "pcall",
+      "coroutine",
+      "nested-coroutine",
+      "finalizer",
+      "close",
+      "tostring",
+      "sort",
+      "gsub",
+      "pattern",
+      "oom",
+      "caught-oom",
+      "recursion",
+      "native-call-limit",
+      "syntax",
+      "binary",
+      "capabilities",
+      "stock-heap-headroom",
+      "led-frame",
+      "one-shot-present",
+      "resident-start",
+      "incoming-message",
+      "outgoing-message",
+      "outgoing-acknowledged",
+      "paused",
+      "resumed",
+      "stopped",
+      "update-loop",
+      "update-loop-recovery",
+      "timer-loop",
+      "timer-loop-recovery",
+      "message-loop",
+      "message-loop-recovery",
+      "full-8192-byte-upload",
+      "led-resident",
+      "led-paused",
+      "led-resumed",
+      "led-error-reclaimed",
+      "led-error-recovery",
+      "final-stop"
+    ]
+  },
+  "memory_probe": {
+    "bundle_bytes": 7725,
+    "bundle_sha256": "b8f8b7d278bdbd13c1c42b1a4e5456a6a533824d993a8cc89482ae3e1539bce0",
+    "instrumented_bytes": 7922,
+    "consecutive_starts": 5,
+    "samples": 30,
+    "usb_session_open": true,
+    "bounds": {
+      "free_native_heap": {
+        "min": 29824,
+        "max": 35084
+      },
+      "lua_used": {
+        "min": 39232,
+        "max": 46440
+      },
+      "lua_reserved": {
+        "min": 43008,
+        "max": 48128
+      },
+      "lua_peak": {
+        "min": 41440,
+        "max": 46696
+      }
+    }
+  },
+  "offline": {
+    "isolated_identical_builds_per_retained_profile": 2,
+    "retained_profiles": 4,
+    "native_asan_ubsan": "passed runtime, menu, number parser, USB, HID and Bluetooth trace suites",
+    "rust_tests": 75,
+    "python_firmware_tests": 20,
+    "lua_format_lint": "passed",
+    "production_clippy_no_default_features": "passed"
+  },
+  "limitations": [
+    "Physical button wiring and audible voice memo capture/playback were not retested in this run. USB navigation executes the on-device input and menu handlers.",
+    "Remove app, memo delete and bond forget were exercised with No on hardware; destructive paths and journal failure handling were covered by native sanitizer tests.",
+    "No existing memo or TV bond was intentionally deleted. Microphone audio was not recorded for this menu test.",
+    "Repository-wide Clippy and rustfmt checks are not clean: existing test lint violations and formatting differences remain outside this change.",
+    "A READY app state verifies the connected keyboard link; TV playback response was not retested in this run."
+  ],
+  "final_preferences": {
+    "autostart": true,
+    "bluetooth": "app control",
+    "keyboard_lights": "app and stock",
+    "battery_indicator": "auto",
+    "usb": "charge and control"
+  },
+  "private_artifacts": "Raw transcripts and configuration backups remain in ignored target/ paths or /tmp; they are not committed."
+}

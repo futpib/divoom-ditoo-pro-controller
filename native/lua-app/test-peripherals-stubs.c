@@ -10,7 +10,7 @@ void stock_noise_enable(unsigned n) { noise_enabled = n; noise_context[3] = n; }
 void stock_noise_display(unsigned n) { (void)n; }
 void *stock_config_read(unsigned model,unsigned id,uint16_t *n) {
     if (model==PERSIST_MODEL) {
-        assert(id<4);if(!persisted_size[id]) return NULL;
+        assert(id<6);if(!persisted_size[id]) return NULL;
         *n=(persisted_size[id]+4+255)&~255U;unsigned char *p=stock_alloc(*n);
         if(p) { memset(p,0,*n);memcpy(p,persisted[id],persisted_size[id]); }return p;
     }
@@ -25,7 +25,7 @@ void *stock_config_read(unsigned model,unsigned id,uint16_t *n) {
 }
 void stock_config_write(unsigned model,unsigned id,const void *p,unsigned n) {
     if(model==PERSIST_MODEL) {
-        assert(id<4 && n==24+(id<2 ? SOURCE_LIMIT : SETTINGS_LIMIT));++persist_writes;
+        assert(id<6 && n==24+(id<2 ? SOURCE_LIMIT : SETTINGS_LIMIT));++persist_writes;
         persisted_size[id]=n;memcpy(persisted[id],p,n);
         if(persist_torn) persisted[id][20]^=1;
         return;

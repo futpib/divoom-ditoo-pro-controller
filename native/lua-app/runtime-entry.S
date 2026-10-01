@@ -168,6 +168,32 @@ runtime_irq_restore:
 irq_restore_done:
     ret
 
+.section .menu_root_init_hook,"ax"
+    la $r0, runtime_menu_root
+.section .menu_root_back_hook,"ax"
+    la $r0, runtime_menu_root
+.section .menu_select_hook,"ax"
+    j runtime_menu_select
+.section .text.stock_menu_dispatch,"ax"
+.global stock_menu_dispatch
+stock_menu_dispatch:
+    smw.adm $r6, [$sp], $r6, 2
+    j stock_menu_dispatch_resume
+.section .usb_mode_hook,"ax"
+    j runtime_usb_select
+.section .text.stock_usb_mode_original,"ax"
+.global stock_usb_mode_original
+stock_usb_mode_original:
+    addi.gp $r3, -36924
+    j stock_usb_mode_resume
+.section .source_select_hook,"ax"
+    j runtime_source_select
+.section .text.stock_source_original,"ax"
+.global stock_source_original
+stock_source_original:
+    smw.adm $sp, [$sp], $sp, 2
+    j stock_source_resume
+
 .section .text.indicator_filter,"ax"
 indicator_filter:
     smw.adm $r6, [$sp], $r6, 2

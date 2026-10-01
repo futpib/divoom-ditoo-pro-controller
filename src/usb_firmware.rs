@@ -171,14 +171,48 @@ pub(crate) async fn select(requested: Option<&str>) -> Result<DeviceInfo> {
 }
 
 async fn wait_for(physical_port: &str, boot: bool) -> Result<DeviceInfo> {
+  wait_for_mode(physical_port, boot, None).await
+}
+
+async fn wait_for_mode(
+  physical_port: &str,
+  boot: bool,
+  entered_from: Option<&DeviceInfo>,
+) -> Result<DeviceInfo> {
   let start = Instant::now();
+  let mut reset_attempted = false;
   while start.elapsed() < ENUM_TIMEOUT {
-    if let Some(device) = nusb::list_devices()
+    let devices: Vec<_> = nusb::list_devices()
       .await?
-      .find(|d| port(d) == physical_port && if boot { is_boot(d) } else { is_app(d) })
+      .filter(|d| port(d) == physical_port)
+      .collect();
+    if let Some(device) = devices
+      .iter()
+      .find(|d| if boot { is_boot(d) } else { is_app(d) })
     {
-      if accessible(&device).await? {
-        return Ok(device);
+      if accessible(device).await? {
+        return Ok(device.clone());
+      }
+    }
+    if !reset_attempted && start.elapsed() >= Duration::from_secs(3) {
+      if let Some(original) = entered_from {
+        if let Some(stale) = devices.iter().find(|d| d.id() == original.id() && is_app(d)) {
+          // Some stock boots retain the old, unresponsive USB identity until
+          // a bus reset. Reset only the exact application we just armed, once,
+          // before metadata/erase; never reset or retry a transfer in progress.
+          reset_attempted = true;
+          println!("{}", json!({"event":"bootloader_entry_reset", "usb_port":physical_port}));
+          match stale.open().await {
+            Ok(opened) => {
+              if let Err(error) = opened.reset().await {
+                // ENODEV is normal when the reset changes the device identity.
+                log::info!("USB entry reset ended with {error}; checking bootloader enumeration");
+              }
+            }
+            Err(error) if matches!(error.kind(), nusb::ErrorKind::NotFound | nusb::ErrorKind::Disconnected) => (),
+            Err(error) => return Err(error.into()),
+          }
+        }
       }
     }
     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -331,7 +365,7 @@ async fn enter(device: DeviceInfo, physical_port: &str) -> Result<DeviceInfo> {
     }
   }
   drop(interface);
-  wait_for(physical_port, true).await
+  wait_for_mode(physical_port, true, Some(&device)).await
 }
 
 async fn finish(interface: &Interface) -> Result<()> {
@@ -590,6 +624,7 @@ mod tests {
       ("306025-lua.MVA", 1_965_792, 480),
       ("306026-lua.MVA", 1_965_792, 480),
       ("306027-lua.MVA", 1_963_968, 480),
+      ("306028-lua.MVA", 1_950_564, 477),
     ] {
       let image = Image::load(
         &Path::new(env!("CARGO_MANIFEST_DIR"))

@@ -1,0 +1,19 @@
+Use bounded binary32 conversion without newlib double-precision parsing.
+
+--- a/luaconf.h
++++ b/luaconf.h
+@@ -1,4 +1,5 @@
+ extern int runtime_number(char *, unsigned, float);
++extern float runtime_parse_number(const char *, char **);
+ /*
+ ** $Id: luaconf.h $
+ ** Configuration file for Lua
+@@ -451,7 +452,7 @@
+ 
+ #define l_mathop(op)		op##f
+ 
+-#define lua_str2number(s,p)	strtof((s), (p))
++#define lua_str2number(s,p)	runtime_parse_number((s), (p))
+ 
+ 
+ #elif LUA_FLOAT_TYPE == LUA_FLOAT_LONGDOUBLE	/* }{ long double */

@@ -1,6 +1,6 @@
 # Saved apps and settings
 
-Firmware 306022 and 306023 store one startup app (up to 8,192 source bytes) and one shared
+Firmware 306022 and later store one startup app (up to 8,192 source bytes) and one shared
 settings string (up to 128 bytes). After a one-time installation, neither a USB
 connection nor a Bluetooth controller is needed to run the app.
 
@@ -27,7 +27,7 @@ and one second between writes. Debounce changes and avoid periodic saves.
 
 Autostart waits three seconds after settings become available. Hold any keyboard
 key during startup to skip it for that boot. The existing five-second held-key
-escape stops a running app. An app that exceeds its time, instruction or memory
+escape stops a running app; from 306028 it also opens the native menu. An app that exceeds its time, instruction or memory
 budget releases its controls and is not restarted until the next boot. USB
 `lua stop` and `lua uninstall` work independently of Lua callbacks. An unavailable
 storage layout disables autostart rather than indefinitely consuming keys; save
@@ -38,7 +38,8 @@ failure or cancellation cannot leave the runtime stuck in its saving state.
 The native configuration partition is selected through `stock_partition(5)`.
 On the tested device it occupies SPI `0x8b0000..0x8fffff`, preceding the larger
 filesystem. The new namespace is model `0xd7`, slots 0/1 for app generations and
-2/3 for settings. Every record has a magic, kind, generation, payload length and
+2/3 for settings. Firmware 306028 uses slots 4/5 for the independent
+[system menu preferences](device-menu.md). Every record has a magic, kind, generation, payload length and
 CRC32. The two banks retain the previous valid generation; boot picks the newer
 valid record and ignores a damaged newer record. Writes use fixed native record
 sizes and are checked by readback. Unexpected allocations or foreign records

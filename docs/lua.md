@@ -1,6 +1,6 @@
 # Resident Lua apps
 
-Firmware **306027** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
+Firmware **306028** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
 over Bluetooth, disconnect, and it keeps running. Changing scripts does not flash
 firmware. 306014 adds independent RGB control of 12 keyboard LED positions;
 306013 remains supported for the original resident app API. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
@@ -22,7 +22,7 @@ and does not replace the saved app. See [persistence and recovery](lua-storage.m
 
 ```sh
 # Install the runtime once; see docs/usb.md for USB permissions.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306027-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306028-lua.MVA
 
 # Save the standalone remote once; it runs after subsequent power-ons.
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
@@ -53,11 +53,14 @@ Reusable scrolling text, progress bars, and screen helpers live in
 
 The clock cycles colors on each key-down. Use `examples/lua/key-monitor.lua`
 to see physical key IDs and event numbers. **Hold a keyboard key for five seconds
-to stop the app.** The native worker handles this escape, including while paused;
+to stop the app and open the native menu.** The native worker handles this escape, including while paused;
 Lua cannot disable it. The separate native power-key scanner remains untouched.
 Hold any keyboard key during power-on to skip the saved app for that boot.
 Autostart waits three seconds for that escape and tries only once; a failing app
 returns control to stock firmware without a restart loop.
+
+Firmware 306028 adds the [standalone menu](device-menu.md): a saved-app launcher,
+persistent system settings, USB audio mode and voice memo controls.
 
 ## App contract
 
@@ -98,7 +101,7 @@ The next stock redraw restores the native screen; immediate redraw is not forced
 | 6 | `timer.after(ms,fn)`, `every(ms,fn)`, `cancel(id)` | 12 timers, 10 ms–1 day delay, callbacks serviced at app ticks. |
 | 7 | `keys.held(id)` and `key(id,event)` | Physical ADC IDs 0–10; events 1=down, 2=up, 3=long-down, 4=held-repeat, 5=long-release. Hardware simultaneous-key support is not established. |
 | 8 | `device.brightness(0..100)`, `device.volume([0..15])` | Native controls; globals `brightness` and `volume` also exist. No volume argument reads the current value. |
-| 9 | `app.claim(bool)`, `app.stop()`, `app.log(value)` | Ownership, stop request and last-result logging. `print(value)` logs its first argument. |
+| 9 | `app.claim(bool)`, `app.stop()`, `app.menu()`, `app.log(value)` | Ownership, stop/menu requests and last-result logging. `print(value)` logs its first argument. |
 | 10 | `comms.send(string)` and `message(string)` | 128-byte inbox/outbox; send returns false while the outgoing slot is occupied. Host `lua receive` reads/acknowledges that slot. |
 | 11 | `lights.count`, `fill(rgb)`, `pixel(index,rgb)`, `frame([rgb888])` | 306014: 12 LED positions indexed 0–11; 36-byte packed RGB buffer, independent of display pixels. Physical key/LED correspondence is not assumed. |
 | 12 | `lights.present()`, `enabled([bool])`, `claim(bool)` | 306014: publish lights at the next tick; disable to publish black; release ownership to restore native lighting. |
@@ -208,7 +211,8 @@ To reproduce the previous 306013 image exactly, build the source at commit
 Use `ae62a69` for 306016, `95d7f6e` for 306017 and `ac82bb9` for 306018.
 Use `606eb91` to reproduce 306019, `b703bc0` for 306020 and `c79d982` for 306021.
 Use `a586981` to reproduce 306022.
-The current builder produces 306027 with [persistent keyboard connections](lua-keyboard.md#idle-links-and-reconnecting),
+The current builder produces 306028 with the [native device menu](device-menu.md),
+[persistent keyboard connections](lua-keyboard.md#idle-links-and-reconnecting),
 [disconnect-request tracing](bluetooth-trace.md),
 [stock assets](lua-assets.md), [lower Lua memory use](lua-memory.md),
 saved apps, settings,
@@ -228,7 +232,8 @@ records whose stock action is zero; the ADC hook precedes that filtering.
 
 The command prefix is `7f DLUA`, followed by operation: 0=status, 1=one-shot,
 2=stop, 3=begin upload (u16 length, u8 mode: 0 one-shot, 1 resident, 2 install), 4=chunk (u16 offset, bytes),
-5=commit upload, 6=pause, 7=resume, 8=incoming message, 9=read/ack outgoing, 10=filesystem diagnostic, 11=uninstall, 12=config diagnostic.
+5=commit upload, 6=pause, 7=resume, 8=incoming message, 9=read/ack outgoing, 10=filesystem diagnostic, 11=uninstall, 12=config diagnostic,
+13=Bluetooth trace, 14=[menu diagnostics](device-menu.md#build-and-diagnostics).
 ABI 2 replies start with `DLUA`, ABI, state, request error, result length, then
 little-endian u32 peak memory, work units, current memory, frames, callbacks,
 dropped keys, held bits and generation, followed by result bytes. States are

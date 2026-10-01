@@ -56,6 +56,8 @@ static void frame(unsigned size) {
         request(2,usb.read);usb_put16(out+16,size);usb_put16(out+18,offset);
         usb_put16(out+20,count);memcpy(out+32,data+offset,count);submit();
         assert(!usb.status);offset+=count;
+        assert(allocated==(offset==size ? 1 : 2));
+        assert((usb.frame!=NULL)==(offset<size));
     }
 }
 int main(void) {
@@ -88,6 +90,17 @@ int main(void) {
     assert(usb.status==USB_OVERFLOW && usb.written==4100);
     open_session();clock_ms+=15001;runtime_usb_service();assert(!allocated);
     free_heap=30000;sequence=0;++session;request(1,0);submit();assert(usb.status==USB_MEMORY_ERROR && !allocated);
-    free_heap=100000;open_session();request(4,0);submit();
+    /* Input allocation failure and incomplete frames release everything on
+     * close, replacement, or expiry, without reducing the maximum packet. */
+    free_heap=100000;open_session();free_heap=24576;
+    request(2,0);usb_put16(out+16,4100);usb_put16(out+20,1);submit();
+    assert(usb.status==USB_MEMORY_ERROR && allocated==1 && !usb.frame);
+    request(4,0);submit();assert(!allocated);
+    free_heap=100000;open_session();request(2,0);usb_put16(out+16,4100);usb_put16(out+20,1);submit();
+    assert(!usb.status && allocated==2 && usb.frame);
+    open_session();assert(allocated==1 && !usb.frame);
+    request(2,0);usb_put16(out+16,4100);usb_put16(out+20,1);submit();
+    clock_ms+=15001;runtime_usb_service();assert(!allocated && !usb.frame);
+    open_session();request(4,0);submit();
     puts("USB bridge: fragmentation, duplicates, wrap, overflow, malformed frames, expiry and legacy routing passed");
 }

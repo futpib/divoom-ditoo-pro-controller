@@ -64,7 +64,7 @@ static struct saved_record *persist_latest(unsigned kind,unsigned *bank,unsigned
 /* App records consume source blocks; settings remain a contiguous byte string. */
 static const char *persist_save(unsigned kind,const void *data,unsigned size,unsigned *changed) {
     *changed=0;
-    if ((kind!=1 && kind!=2) || size>persist_capacity(kind) || (!data && size)) return "invalid storage value";
+    if ((kind<1 || kind>3) || size>persist_capacity(kind) || (!data && size)) return "invalid storage value";
     unsigned bytes=sizeof(struct saved_record)+persist_capacity(kind),bank=0,foreign=0;
     if (!persist_layout()) return "storage layout unavailable";
     /* The native writer allocates a copy, scratch page and old record. */

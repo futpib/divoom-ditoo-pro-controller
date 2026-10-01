@@ -79,8 +79,13 @@ static struct {
     struct timer timers[TIMER_COUNT];
     jmp_buf escape;
 } app;
+struct system_preferences { unsigned char version,autostart_off,bt_mode,lights,indicator_off,usb_noaudio,reserved[2]; };
+static struct system_preferences preferences;
 static unsigned runtime_boot_key(unsigned,unsigned);
 static void runtime_boot_service(void);
+static unsigned menu_key(unsigned,unsigned),menu_visible(void);
+static void menu_service(void),menu_request(unsigned);
+static const char *runtime_load_saved(void);
 
 static void source_free(struct source *s) {
     if(!s) return;
@@ -278,6 +283,7 @@ unsigned runtime_key(const unsigned char *raw) {
         if (event == 2 || event == 5) app.suppressed &= ~mask;
         return 1;
     }
+    if(menu_key(key,event)) return 1;
     if (app.state != RUNNING && app.state != ACTIVE && app.state != PAUSED) return 0;
     if (event == 1 || event == 3 || event == 4) {
         if (!(app.held & mask)) app.held_since[key] = stock_ticks();
@@ -304,12 +310,14 @@ unsigned runtime_adc_result(unsigned packed) {
 }
 
 unsigned runtime_screen_allowed(const void *frame) {
-    return native_priority() ? frame != app.frame : (!app.owner || frame == app.frame);
+    return native_priority() ? frame != app.frame : ((!app.owner && !menu_visible()) || frame == app.frame);
 }
 
 /* The stock LED task performs I/O. Lua only publishes a complete packed buffer
  * and requests its normal refresh, so no script enters the LED driver. */
 unsigned runtime_led_override(void) {
+    if(preferences.lights==2) { static const unsigned char off[LED_COUNT*3]={0};stock_led_write(off,sizeof off);return 1; }
+    if(preferences.lights==1) return 0;
     if (native_priority() || !app.led_owner || app.state != ACTIVE) return 0;
     stock_led_write(app.led_buffers[app.led_active], LED_COUNT * 3);
     return 1;
@@ -538,6 +546,7 @@ static void remove_field(lua_State *L, const char *key) { lua_pushnil(L); lua_se
 #include "persistence.c"
 #include "peripherals.c"
 #include "assets.c"
+#include "system-menu.c"
 
 static unsigned runtime_boot_key(unsigned key,unsigned event) {
     if (saved.boot_done || app.state!=IDLE) return 0;
@@ -562,7 +571,7 @@ static void runtime_boot_service(void) {
         }
         unsigned bank=0,foreign=0;struct saved_record *r=persist_latest(2,&bank,&foreign);
         if (r) { saved.settings_size=r->length;memcpy(saved.settings,r->data,r->length);stock_free(r); }
-        saved.initialized=1;saved.boot_started=stock_ticks();
+        system_load();saved.initialized=1;saved.boot_started=stock_ticks();
     }
     if (app.state==SAVING) {
         const char *error=NULL;unsigned changed=0;
@@ -576,16 +585,22 @@ static void runtime_boot_service(void) {
     }
     if (saved.boot_done || (unsigned)(stock_ticks()-saved.boot_started)<3000) return;
     saved.boot_done=1;
-    if (saved.boot_skip || app.state!=IDLE) { if(app.state==IDLE) result("autostart skipped: key held");return; }
+    if (saved.boot_skip || preferences.autostart_off || app.state!=IDLE) { if(app.state==IDLE) result("autostart skipped");return; }
+    const char *error=runtime_load_saved();if(error) result(error);
+}
+static const char *runtime_load_saved(void) {
+    if(!saved.initialized || !persist_layout()) return "STORAGE NOT READY";
+    if(stock_free_heap()<2*(SOURCE_LIMIT+512)+STOCK_HEAP_RESERVE) return "LOW MEMORY";
     unsigned bank=0,foreign=0;struct saved_record *r=persist_latest(1,&bank,&foreign);
-    if (!r || !r->length) { stock_free(r);return; }
+    if (!r || !r->length) { stock_free(r);return "NO SAVED APP"; }
     app.source=source_new(r->length);
     if (app.source) { app.source_size=r->length;source_copy(app.source,0,r->data,r->length,1); }
     stock_free(r);
-    if (!app.source) { result("autostart allocation failed");app.state=ERROR;return; }
+    if (!app.source) { app.state=ERROR;return "APP ALLOCATION FAILED"; }
     if (!app.task) app.task=stock_task(runtime_worker_entry,"lua_app",NULL,4096,1,0);
-    if (!app.task) { source_free(app.source);app.source=NULL;result("autostart worker unavailable");app.state=ERROR;return; }
+    if (!app.task) { source_free(app.source);app.source=NULL;app.state=ERROR;return "APP WORKER UNAVAILABLE"; }
     app.cancel=app.action=0;app.resident=1;app.install=0;app.state=RUNNING;
+    return NULL;
 }
 
 static int setup(lua_State *L) {
@@ -613,7 +628,7 @@ static int setup(lua_State *L) {
     static const luaL_Reg device[] = {{"brightness",brightness},{"volume",volume},{"stats",stats},{NULL,NULL}};
     static const luaL_Reg lights[] = {{"fill",led_fill},{"pixel",led_pixel},{"frame",led_frame},
         {"enabled",led_enable},{"present",led_present},{"claim",led_claim},{NULL,NULL}};
-    static const luaL_Reg control[] = {{"claim",claim},{"stop",stop},{"log",logging},{NULL,NULL}};
+    static const luaL_Reg control[] = {{"claim",claim},{"stop",stop},{"menu",app_menu},{"log",logging},{NULL,NULL}};
     static const luaL_Reg comms[] = {{"send",send},{NULL,NULL}};
     module(L,"display",drawing); module(L,"time",timing); module(L,"timer",timers);
     module(L,"keys",keyboard); module(L,"device",device); module(L,"app",control); module(L,"comms",comms);
@@ -654,10 +669,13 @@ static void launch(void) {
     app.used = app.peak = app.frames = app.callbacks = app.dropped = app.steps = 0;
     app.outbox_size = 0; app.app_ref = 0; app.last_tick = stock_ticks();
     app.led_enabled = 1; app.led_dirty = 0; memset(app.leds,0,sizeof app.leds);
-    if (stock_free_heap() < STARTUP_HEAP_BUDGET + 8 + STOCK_HEAP_RESERVE) {
+    /* Parsing returns each consumed source page before API tables are built.
+     * Count that reclaimable payload, while allocate() still enforces the
+     * native reserve at every actual arena growth, including during parsing. */
+    if (stock_free_heap()+app.source_size < STARTUP_HEAP_BUDGET + 8 + STOCK_HEAP_RESERVE) {
         result("insufficient stock heap headroom"); discard(ERROR); return;
     }
-    if (setjmp(app.escape)) { discard(ERROR); return; }
+    if (setjmp(app.escape)) { discard(app.cancel ? DONE : ERROR); return; }
     begin_budget();
     app.L = lua_newstate(allocate,NULL);
     if (!app.L) abort_script("Lua allocation failed");
@@ -689,7 +707,7 @@ static void service(void) {
         led_refresh();
     }
     for (unsigned k = 0; k < KEY_COUNT; ++k)
-        if ((app.held & (1U << k)) && (unsigned)(now-app.held_since[k]) >= 5000) app.cancel = 1;
+        if ((app.held & (1U << k)) && (unsigned)(now-app.held_since[k]) >= 5000) menu_request(1);
     if (app.cancel) { result("stopped"); discard(DONE); return; }
     if (app.action) {
         unsigned action = app.action; app.action = 0;
@@ -701,7 +719,7 @@ static void service(void) {
     }
     if (app.state != ACTIVE || (unsigned)(now-app.last_tick) < FRAME_MS) return;
     unsigned dt = now-app.last_tick; app.last_tick = now;
-    if (setjmp(app.escape)) { discard(ERROR); return; }
+    if (setjmp(app.escape)) { discard(app.cancel ? DONE : ERROR); return; }
     begin_budget();
     lua_State *L = app.L;
     /* One aggregate budget bounds the entire tick, including queued callbacks. */
@@ -746,9 +764,10 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         stock_set_version(data+2); return;
     }
     unsigned op = data[6], error = 0;
+    if(op==14) { menu_command(context,data,length);return; }
     if (op == 13) { runtime_bt_trace_read(context,data,length); return; }
     if (op == 10 || op == 12) { runtime_storage_diagnostic(context,data,length); return; }
-    unsigned busy = app.state == RUNNING || app.state == ACTIVE || app.state == PAUSED || app.state==SAVING;
+    unsigned busy = app.state == RUNNING || app.state == ACTIVE || app.state == PAUSED || app.state==SAVING || menu.operation;
     if (op == 1 || op == 3) {
         if (busy) error = 2;
         else if (length < 11) error = 1;

@@ -28,8 +28,8 @@ patches = [
 ]
 
 [profiles.app]
-version = 306027
-source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch"]
+version = 306028
+source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch", "lua/0003-binary32-parser.patch"]
 patches = [
     "command_dispatch",
     "runtime_init",
@@ -37,6 +37,11 @@ patches = [
     "physical_keys",
     "keyboard_lights",
     "native_jobs",
+    "menu_root_init",
+    "menu_root_back",
+    "menu_selection",
+    "usb_audio_policy",
+    "audio_source_policy",
     "usb_receive",
     "usb_send",
     "usb_response",
@@ -492,4 +497,61 @@ original = '''
     lwi.gp $r2, [ + -35356]
     movi55 $r7, 0
     movi $r1, 0x7c
+'''
+
+[[patches]]
+name = "menu_root_init"
+section = ".menu_root_init_hook"
+site = "stock_patch_menu_init"
+max_size = 8
+original_size = 8
+purpose = "Add saved app and Settings to the stock menu."
+original = '''
+    sethi $r0, 0x17a
+    ori $r0, $r0, 0xfd8
+'''
+
+[[patches]]
+name = "menu_root_back"
+section = ".menu_root_back_hook"
+site = "stock_patch_menu_back"
+max_size = 8
+original_size = 8
+purpose = "Keep the extended root when navigating back."
+original = '''
+    sethi $r0, 0x17a
+    ori $r0, $r0, 0xfd8
+'''
+
+[[patches]]
+name = "menu_selection"
+section = ".menu_select_hook"
+site = "stock_patch_menu_select"
+max_size = 4
+original_size = 4
+purpose = "Dispatch added menu leaves on the stock main task."
+original = '''
+    smw.adm $r6, [$sp], $r6, 2
+'''
+
+[[patches]]
+name = "usb_audio_policy"
+section = ".usb_mode_hook"
+site = "stock_usb_mode"
+max_size = 4
+original_size = 4
+purpose = "Omit USB audio descriptors in charge-and-control mode."
+original = '''
+    addi.gp $r3, -36924
+'''
+
+[[patches]]
+name = "audio_source_policy"
+section = ".source_select_hook"
+site = "stock_set_source"
+max_size = 4
+original_size = 4
+purpose = "Keep disabled USB audio out of source selection."
+original = '''
+    smw.adm $sp, [$sp], $sp, 2
 '''

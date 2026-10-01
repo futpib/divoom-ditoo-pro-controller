@@ -13,7 +13,7 @@ local shown = 0
 local menu, confirm, notice
 local key_at, errors, linked = 0, 0
 local online = true
-local choices = { 'LINK', 'PAIR', 'OFF', 'BACK' }
+local choices = { 'LINK', 'PAIR', 'OFF', 'EXIT', 'BACK' }
 local labels = { 'PLAY', 'MUTE', 'SPC', 'MENU', 'VOL+', 'VOL-', 'LEFT', 'RGHT' }
 local actions =
   { 'play_pause', 'mute', 'space', false, 'volume_up', 'volume_down', 'left', 'right' }
@@ -92,12 +92,23 @@ local function select()
     menu = nil
   elseif s == 'BACK' then
     menu = nil
+  elseif s == 'EXIT' then
+    if app.menu then
+      app.menu()
+    else
+      app.stop()
+    end
   else
     begin(s == 'OFF' and 'off' or 'connect')
   end
 end
 local function connect()
-  if not b.keyboard_only and not job and (b.enabled or not flow or stage > 1) then
+  if
+    not b.keyboard_only
+    and not b.mode_locked
+    and not job
+    and (b.enabled or not flow or stage > 1)
+  then
     queue('mode', keyboard.mode, 'keyboard')
     return
   end

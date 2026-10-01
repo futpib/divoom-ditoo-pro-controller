@@ -2,7 +2,7 @@
 
 For pairing failures, firmware 306024 adds [device-side Bluetooth tracing](bluetooth-trace.md) over USB without stopping this app.
 
-Firmware **306027** runs the remote directly on the Ditoo with its speaker
+Firmware **306028** runs the remote directly on the Ditoo with its speaker
 profiles disabled and prevents stock audio policy from disconnecting the keyboard.
 After one installation,
 setup, pairing, reconnection and ordinary use need only the Ditoo and TV.
@@ -11,7 +11,7 @@ older `tv-remote.lua` remain available separately.
 
 ```sh
 # One-time setup from a computer.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306027-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306028-lua.MVA
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
 ```
 
@@ -71,25 +71,27 @@ separate lever confirmation; M or Source cancels it. Items are:
 | 1 | LINK | Connect to the saved TV, or start pairing if none is saved. |
 | 2 | PAIR | Confirm, then open a pairing window for the first incoming keyboard host. Forget the old accessory on the TV first. |
 | 3 | OFF | Disconnect the keyboard and stop listening; the Ditoo stays powered on. |
-| 4 | BACK | Return to the remote. |
+| 4 | EXIT | Stop the app and open the native device menu. |
+| 5 | BACK | Return to the remote. |
 
 Each short press sends one automatically released report; long-down, repeat
-and release events do not repeat actions. The five-second recovery hold is
-unchanged. Brief action symbols (`>II`, `X`, `_`, `+`, `-`, `<`, `>`) and a
+and release events do not repeat actions. The five-second recovery hold opens
+the native menu on firmware 306028. Brief action symbols (`>II`, `X`, `_`, `+`, `-`, `<`, `>`) and a
 scrolling action label with **SENT** identify a submitted report, not measured
 TV playback or volume state. The screen shows menu items, connection state,
 pairing instructions for the TV, and save progress. It has no keybinding
 prompts or persistent button guide.
 
 The app selects keyboard-only mode automatically, including when reusing an
-existing connection. This closes native audio connections and prevents new ones.
+existing connection, unless Settings has a saved Bluetooth-mode override.
+Keyboard-only mode closes native audio connections and prevents new ones.
 If a link is still closing, wait briefly before retrying Pair. A TV may retain
 the old speaker services in its accessory cache; forgetting the accessory and
 pairing again refreshes that cache. The advertised name remains DitooPro-Audio.
 
 Hold any keyboard key for five seconds to stop the app and return to stock
-controls. Hold a key during power-on to skip the app for that boot. Power cycling
-starts the saved remote again. `lua uninstall` removes autostart; `lua start`
+controls and the native menu. Hold a key during power-on to skip the app for
+that boot. Power cycling starts the saved remote when Settings → Autostart is on. `lua uninstall` removes autostart; `lua start`
 is only temporary and does not replace the saved app. See [storage and boot
 recovery](lua-storage.md).
 

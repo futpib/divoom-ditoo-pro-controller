@@ -34,14 +34,17 @@ def build():
              '-I/usr/nds32le-elf/include/newlib-nano','-Dluai_makeseed(L)=((unsigned)(L)^0x44554c41)', '-I'+str(src)]
     skip = {'lua.c','luac.c','linit.c','liolib.c','loslib.c','loadlib.c','ldblib.c'}
     sources = sorted(p for p in src.glob('*.c') if p.name not in skip)
-    sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','usb-control.c','bluetooth-hid.c','bluetooth-trace.c','runtime-entry.S']]
+    sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','parse-number.c','usb-control.c','bluetooth-hid.c','bluetooth-trace.c','runtime-entry.S']]
     sources += [ROOT/'native/lua/libc.c']
     patch_object = patches.prepare()
     objects = []
     def run(*args): subprocess.run(args, cwd=ROOT, check=True)
     for source in sources:
         obj = out/(source.name+'.o')
-        run('nds32le-elf-gcc', *flags, '-c', str(source), '-o', str(obj))
+        # Newlib may discover allocator references after the LTO pass. Keep
+        # these syscall definitions visible to the final archive resolution.
+        source_flags = [f for f in flags if f != '-flto'] if source.name == 'libc.c' else flags
+        run('nds32le-elf-gcc', *source_flags, '-c', str(source), '-o', str(obj))
         objects.append(str(obj))
     run('nds32le-elf-gcc','-mcpu=d1088-spu','-mabi=2','-mno-fp-as-gp','-nostartfiles','-flto','-Os',
         '-Wl,--gc-sections,--no-relax,-T,native/lua-app/runtime.ld,-Map,'+str(out/'runtime.map'),

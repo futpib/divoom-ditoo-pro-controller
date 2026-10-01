@@ -330,6 +330,11 @@ documentation for subsequent flashing experiments.
 
 ### On-device Lua
 
+Firmware 306028 adds a [standalone native menu](docs/device-menu.md): launch the
+saved app, switch autostart, manage Bluetooth modes/bonds, control keyboard and
+battery lights, record voice memos, and disable USB audio while keeping USB
+control. The TV app's **M → Exit** returns to this menu.
+
 Firmware 306025 adds a reversible [keyboard-only Bluetooth mode](docs/lua-keyboard.md)
 used automatically by the standalone TV app to prevent speaker connections.
 Firmware 306024 adds [Bluetooth event diagnostics](docs/bluetooth-trace.md) over

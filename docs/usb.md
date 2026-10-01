@@ -117,6 +117,13 @@ the command with `--reflash` then verified all 479 blocks. `usbreset` itself
 reported "No such device" during this successful identity change, so check
 the new enumeration. No erase command had been sent before that entry failure.
 
+The updater now performs that targeted recovery automatically when the exact
+application device it just armed remains on the same port after three seconds.
+It attempts one USB bus reset, then still requires the real bootloader identity
+and report descriptor before sending metadata. A reset can report disconnection
+while succeeding. This fallback never resets an unrelated/new device, and never
+retries or resets a flash transfer already in progress.
+
 ## Performance and verification
 
 Measured on the attached Ditoo Pro using Linux, `nusb` 0.2.7, USB full speed,

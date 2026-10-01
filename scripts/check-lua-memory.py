@@ -58,7 +58,7 @@ for _ in range(a.samples):
     steps += [{'op':'sleep', 'ms':1000}, {'op':'send', 'message':'__heap'},
               {'op':'sleep', 'ms':100}, {'op':'receive'}]
 steps += [{'op':'send', 'message':'menu'}, {'op':'sleep', 'ms':200},
-          {'op':'wait', 'state':'active', 'result_contains':'MENU NEXT'}]
+          {'op':'wait', 'state':'active', 'result_contains':'LINK: TV REMOTE'}]
 sequence = a.output/'sequence.json'
 sequence.write_text(json.dumps(steps, indent=2)+'\n')
 try:

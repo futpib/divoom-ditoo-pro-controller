@@ -21,9 +21,14 @@ for name, entry in [('tv-keyboard','examples/lua/tv-keyboard.lua'),
         cwd=ROOT,check=True)
 skip = {'lua.c','luac.c','linit.c','liolib.c','loslib.c','loadlib.c','ldblib.c'}
 output = ROOT/'target/lua-app/runtime/test-runtime'
+number_output = output.with_name('test-number')
+subprocess.run(['cc','-m32','-O1','-g','-fsanitize=address,undefined',
+    str(ROOT/'native/lua-app/test-number.c'), str(ROOT/'native/lua-app/parse-number.c'),
+    '-o',str(number_output)],check=True)
+subprocess.run([str(number_output)],check=True,timeout=30,cwd=ROOT)
 subprocess.run(['cc','-m32','-O1','-g','-fsanitize=address,undefined','-DLUAI_MAXCCALLS=20',
     '-Dluai_makeseed(L)=((unsigned long)(L)^0x44554c41)','-I'+str(source),
-    str(ROOT/'native/lua-app/test-runtime.c'), str(ROOT/'native/lua-app/number.c'),
+    str(ROOT/'native/lua-app/test-runtime.c'), str(ROOT/'native/lua-app/number.c'), str(ROOT/'native/lua-app/parse-number.c'),
     *[str(p) for p in sorted(source.glob('*.c')) if p.name not in skip],
     '-lm','-o',str(output)],check=True)
 subprocess.run([str(output)],check=True,timeout=30,cwd=ROOT)

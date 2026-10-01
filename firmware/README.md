@@ -115,7 +115,16 @@ and `standalone-evidence/verification.json` for verification and limitations.
 
 `306025-lua.MVA` adds reversible keyboard-only Bluetooth mode, retaining the
 memory improvements and device-side tracing from 306023/306024. The current
-builder produces this image from pinned stock 306007. The saved TV example hides
+builder retains its behavior in the newer images. The saved TV example hides
 native audio/serial services and blocks their connections while preserving HID,
 BLE and USB. See [the remote guide](../docs/lua-keyboard.md) and
 `keyboard-only-evidence/verification.json` for direct TV and restart checks.
+
+`306028-lua.MVA` adds a [native saved-app launcher and Settings menu](../docs/device-menu.md),
+voice memo controls and persistent USB audio policy. It retains the 306026 stock
+assets and 306027 keyboard-link fixes. A bounded binary32 number parser recovers
+flash space without reducing the Lua API. Build the current image with
+`scripts/build-lua-app-runtime.py`; previous 306027 is reproducible at `3ea3d2f`.
+See [menu verification](menu-evidence/verification.json) for hardware checks,
+memory measurements, reproducibility and test limitations.
+Private configuration backups and raw execution logs remain ignored.

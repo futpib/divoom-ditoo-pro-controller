@@ -150,3 +150,22 @@ stock_patch_bt_force_disconnect = 0x128308;
 stock_bt_force_disconnect_resume = 0x12830c;
 stock_patch_bt_link_disconnect = 0x126b8a;
 stock_bt_link_disconnect_resume = 0x126b90;
+
+/* Native menu tables, callback and USB descriptor policy. */
+stock_menu_context = 0x2000d2f8 - 33892;
+stock_music_menu = 0x17b188;
+stock_game_menu = 0x17b038;
+stock_menu_close = 0x38bc4;
+stock_menu_reset = 0x54434;
+stock_menu_action = 0x546c4;
+stock_menu_dispatch_resume = 0x38bfc;
+stock_usb_mode = 0x79eac;
+stock_usb_mode_resume = 0x79eb0;
+stock_usb_descriptor = 0x2000d2f8 - 36924;
+stock_usb_init = 0x8b644;
+stock_usb_disconnect = 0x8afec;
+stock_source_resume = 0x7771c;
+stock_keyboard_light = 0x765c8;
+stock_patch_menu_init = 0x548b8;
+stock_patch_menu_back = 0x54714;
+stock_patch_menu_select = 0x38bf8;

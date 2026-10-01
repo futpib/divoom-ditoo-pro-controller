@@ -39,7 +39,8 @@ void runtime_worker_entry(void *p) { (void)p; }
 void stock_delay(unsigned n) { clock_ms += n; }
 unsigned stock_ticks(void) { return clock_ms; }
 unsigned stock_volume(unsigned n) { return n == 255 ? 3 : n; }
-unsigned stock_event(void *p) { (void)p;return 0; }
+static void fake_menu_open(void);
+unsigned stock_event(void *p) { if(((unsigned char *)p)[2]==22) fake_menu_open();return 0; }
 void stock_calendar(void *p) { unsigned char t[8] = {0xea,7,9,28,12,34,56,1}; memcpy(p,t,8); }
 unsigned stock_screen_command(unsigned c,const void *p,unsigned n) { (void)c;(void)p;(void)n;return 1; }
 unsigned runtime_screen(const void *p) { assert(p == app.frame); ++frames; return 1; }
@@ -53,14 +54,14 @@ unsigned char stock_asset_rom[0x80000];
 static unsigned font_reads,font_page,font_bad_layout,font_read_error;
 static unsigned char config_context[20];
 unsigned char *volatile stock_config_context;
-static unsigned char persisted[4][SOURCE_LIMIT+24];
-static unsigned persisted_size[4],persist_writes,persist_torn;
+static unsigned char persisted[6][SOURCE_LIMIT+24];
+static unsigned persisted_size[6],persist_writes,persist_torn;
 unsigned stock_partition(unsigned kind,unsigned *p) {
     if (kind==3) { *p=font_bad_layout ? 0 : 0x1f30;return 0x119000; }
     assert(kind==5);*p=0x6000;return 0;
 }
 unsigned stock_config_find(unsigned model,unsigned id,void *e,void *scratch) {
-    assert(model==PERSIST_MODEL && id<4);(void)scratch;
+    assert(model==PERSIST_MODEL && id<6);(void)scratch;
     if (!persisted_size[id]) return 0xffff;
     unsigned char *p=e;memset(p,0,8);p[0]=model;p[1]=id;
     p[2]=(persisted_size[id]+4+255)/256;uint16_t page=id*40;memcpy(p+4,&page,2);return id;
@@ -73,7 +74,7 @@ unsigned stock_page_read(unsigned page, void *data, unsigned n) {
         return font_read_error;
     }
     if (page>=0x6100 && page<0x6500) {
-        assert(n==1);unsigned slot=(page-0x6100)/40;assert(slot<4);
+        assert(n==1);unsigned slot=(page-0x6100)/40;assert(slot<6);
         unsigned char *p=data;memset(p,255,256);p[0]=persisted_size[slot];p[1]=persisted_size[slot]>>8;
         memcpy(p+2,persisted[slot],persisted_size[slot]<254 ? persisted_size[slot] : 254);return 0;
     }
@@ -85,6 +86,7 @@ void stock_reply(unsigned c,unsigned o,const void *p,unsigned n) {
 }
 
 #include "test-peripherals-stubs.c"
+#include "test-menu-stubs.c"
 
 static void load(const char *source, unsigned resident) {
     runtime_native_service(); clock_ms += 100;
@@ -109,6 +111,7 @@ static void tick(void) { clock_ms += FRAME_MS; service(); }
 
 #include "test-peripherals.c"
 #include "test-persistence.c"
+#include "test-menu.c"
 #include "test-allocator.c"
 #include "test-source.c"
 #include "test-assets.c"
@@ -125,7 +128,7 @@ int main(void) {
     check("return tostring(time.calendar().year)",DONE,"2026");
     check("return io or os or package or debug or load or string.dump or string.format",DONE,"nil");
     check("return device.stats().free_heap",DONE,"100000");
-    free_heap = 65536;
+    free_heap = STARTUP_HEAP_BUDGET+STOCK_HEAP_RESERVE-1024;
     check("return 1",ERROR,"insufficient stock heap headroom");free_heap=100000;
     const char *attacks[] = {
         "while true do end",
@@ -259,4 +262,5 @@ int main(void) {
     assert(!allocate(NULL,NULL,0,2048));free_heap=100000;
     app.cancel=1;service();runtime_native_service();assert(!allocations);
     puts("Resident lifecycle, upload, keys, arena reclamation, and adversarial guard checks passed");
+    test_menu();
 }

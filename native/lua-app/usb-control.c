@@ -7,7 +7,6 @@
 #define USB_CHUNK (USB_REPORT-USB_HEADER)
 #define USB_FRAME 4100
 #define USB_RING 8192
-#define USB_MEMORY (USB_FRAME+USB_RING)
 #define USB_REPORT_ID 0x7d
 
 extern void *stock_alloc(unsigned);
@@ -31,7 +30,7 @@ static struct {
     uint32_t context[0x178/4];
     unsigned char inbox[USB_REPORT], report[USB_REPORT];
     volatile unsigned pending, seen;
-    unsigned char *memory;
+    unsigned char *memory, *frame;
     unsigned session, sequence, read, written, received, total, status;
 } usb;
 
@@ -68,7 +67,7 @@ void runtime_usb_send(const void *original, unsigned n, unsigned kind) {
     unsigned count = usb.written-usb.read;
     if (count>USB_CHUNK) count=USB_CHUNK;
     usb_put16(p+28,count);
-    for (unsigned i=0;i<count;++i) p[USB_HEADER+i]=usb.memory[USB_FRAME+((usb.read+i)%USB_RING)];
+    for (unsigned i=0;i<count;++i) p[USB_HEADER+i]=usb.memory[(usb.read+i)%USB_RING];
     usb.seen=stock_ticks();
     runtime_irq_restore(irq);
     /* Persistent storage remains unchanged until the next serialized EP0 request. */
@@ -82,10 +81,11 @@ static void usb_close(void) {
     usb.received=usb.total=usb.status=0;
     runtime_irq_restore(irq);
     stock_free(memory);
+    stock_free(usb.frame);usb.frame=NULL;
 }
 
 static unsigned usb_frame(void) {
-    unsigned char *p=usb.memory;
+    unsigned char *p=usb.frame;
     unsigned size=usb.total;
     if (size<7 || p[0]!=1 || p[size-1]!=2 || usb_u16(p+1)+4!=size) return USB_FRAME_ERROR;
     unsigned sum=0;
@@ -108,10 +108,10 @@ void runtime_usb_service(void) {
     if (op==1 && session && seq==1 && session!=usb.session) {
         usb_close();
         unsigned char *memory=NULL;
-        if (stock_free_heap()<USB_MEMORY+24576 || !(memory=stock_alloc(USB_MEMORY))) {
+        if (stock_free_heap()<USB_RING+8+24576 || !(memory=stock_alloc(USB_RING))) {
             usb.status=USB_MEMORY_ERROR;
         } else {
-            memset(memory,0,USB_MEMORY);
+            memset(memory,0,USB_RING);
             memset(usb.context,0,sizeof usb.context);
             unsigned irq=runtime_irq_save();
             usb.memory=memory;
@@ -138,13 +138,21 @@ void runtime_usb_service(void) {
                 offset!=usb.received || offset+count>total ||
                 (offset && total!=usb.total)) usb.status=USB_INVALID;
             else {
-                usb.total=total;
-                memcpy(usb.memory+offset,p+USB_HEADER,count);
-                usb.received+=count;
-                if (usb.received==total) {
-                    unsigned result=usb_frame();
-                    if (result) usb.status=result;
-                    usb.received=usb.total=0;
+                /* Retain only the response ring between commands. The input
+                 * frame is main-task-only and sized to this command, freeing
+                 * the former idle 4100-byte buffer for Lua and native audio. */
+                if (!offset && (stock_free_heap()<total+8+24576 || !(usb.frame=stock_alloc(total))))
+                    usb.status=USB_MEMORY_ERROR;
+                if (!usb.status) {
+                    usb.total=total;
+                    memcpy(usb.frame+offset,p+USB_HEADER,count);
+                    usb.received+=count;
+                    if (usb.received==total) {
+                        unsigned result=usb_frame();
+                        if (result) usb.status=result;
+                        stock_free(usb.frame);usb.frame=NULL;
+                        usb.received=usb.total=0;
+                    }
                 }
             }
         } else if (!usb.status && op!=3 && op!=4) usb.status=USB_INVALID;
@@ -168,15 +176,15 @@ unsigned runtime_usb_response(unsigned context, unsigned outer, unsigned opcode,
             usb_put16(head+1,size+5);
             unsigned sum=0, cursor=usb.written;
             for (unsigned i=0;i<6;++i) {
-                usb.memory[USB_FRAME+(cursor++%USB_RING)]=head[i];
+                usb.memory[cursor++%USB_RING]=head[i];
                 if (i) sum+=head[i];
             }
             for (unsigned i=0;i<size;++i) {
-                usb.memory[USB_FRAME+(cursor++%USB_RING)]=data[i]; sum+=data[i];
+                usb.memory[cursor++%USB_RING]=data[i]; sum+=data[i];
             }
-            usb.memory[USB_FRAME+(cursor++%USB_RING)]=sum;
-            usb.memory[USB_FRAME+(cursor++%USB_RING)]=sum>>8;
-            usb.memory[USB_FRAME+(cursor++%USB_RING)]=2;
+            usb.memory[cursor++%USB_RING]=sum;
+            usb.memory[cursor++%USB_RING]=sum>>8;
+            usb.memory[cursor++%USB_RING]=2;
             usb.written=cursor; copied=1;
         }
     }
