@@ -93,7 +93,15 @@ static void test_menu(void) {
         memset(fake_le_bonds[i],i+1,6);fake_le_bonds[i][6]=i%2;fake_le_bonds[i][7]=1;
     }
     menu_bonds();assert(menu.bond_count==16);
+    char name[BT_NAME_BYTES+1],label[BT_NAME_BYTES+8];
+    memset(name,'N',BT_NAME_BYTES);name[BT_NAME_BYTES]=0;fake_le_names[15]=name;
+    menu_address(label,menu.bonds[15]);assert(!strcmp(label,name));
+    unsigned char other_type[7];memcpy(other_type,menu.bonds[15],7);other_type[6]=0;
+    menu_address(label,other_type);assert(!strcmp(label,"10:10:10:10:10:10"));
     menu.index=15;menu_press(4);assert(menu.peer[0]==16 && menu.peer[6]==1);
+    memcpy(label,"FORGET ",7);menu_address(label+7,menu.peer);
+    assert(strlen(label)==7+BT_NAME_BYTES && !strcmp(label+7,name));
+    fake_le_names[15]=NULL;
     fake_hid_status.state=2;memcpy(fake_hid_status.peer,menu.peer,6);
     fake_hid_status.address_type=0;menu_press(3);menu_press(4);assert(!menu.operation);
     fake_hid_status.state=0;menu_press(4);menu_tick();

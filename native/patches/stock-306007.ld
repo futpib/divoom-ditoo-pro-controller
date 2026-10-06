@@ -233,3 +233,18 @@ stock_cache_invalidate_all = 0x87a44;
 stock_cache_invalidate_pop = 0x87ad4;
 stock_tlv_flash_bank_guard = 0x10d50a;
 stock_tlv_hal_init = 0x1342b2;
+
+/* Retained asynchronous GATT client, including its 30-second request timer. */
+stock_gatt_context = 0x137604;
+stock_gatt_prepare = 0x137ac2;
+stock_gatt_run = 0x137d08;
+stock_gatt_allocate = 0x137a56;
+stock_gatt_prepare_end = 0x137af4;
+stock_gatt_timer_callback = 0x137b80;
+stock_gatt_timer_remove = 0x10f8bc;
+stock_gatt_timer_handler = 0x10f82e;
+stock_gatt_timer_set = 0x10f832;
+stock_gatt_timer_add = 0x10f86a;
+stock_gatt_read_by_type = 0x137f44;
+stock_gatt_read_by_type_long = 0x137f64;
+stock_gatt_send_uuid16 = 0x138020;

@@ -19,7 +19,9 @@ local function same(address, addr_type)
   return peer == address and kind == addr_type
 end
 local function label(address, addr_type)
-  return address and (address .. ' ' .. addr_type:upper()) or 'NO SAVED DEVICE'
+  return address
+    and ((keyboard.name and keyboard.name(address, addr_type)) or (address .. ' ' .. addr_type:upper()))
+    or 'NO SAVED DEVICE'
 end
 local function dirty_settings()
   dirty, save_at = true, now()

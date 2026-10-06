@@ -36,6 +36,19 @@ extern void stock_le_random_address(const unsigned char *);
 extern void stock_le_random_mode(unsigned);
 extern void stock_cache_invalidate(unsigned,unsigned);
 extern volatile unsigned stock_le_address_mode;
+/* Prefix of the stock GATT client context. The public read-by-UUID wrapper
+ * was discarded by its linker; its asynchronous state machine remains. */
+typedef void (*gatt_callback)(unsigned,unsigned,unsigned char *,unsigned);
+struct gatt_prefix {
+    void *next;unsigned state;gatt_callback callback,write_callback;
+    uint16_t handle,mtu;unsigned mtu_state;
+    uint16_t uuid;unsigned char uuid128[16];
+    uint16_t start,end,query_start,query_end;
+};
+_Static_assert(offsetof(struct gatt_prefix,uuid)==0x18,"stock GATT UUID offset");
+_Static_assert(offsetof(struct gatt_prefix,query_end)==0x30,"stock GATT query offset");
+extern struct gatt_prefix *stock_gatt_context(unsigned),*stock_gatt_prepare(unsigned);
+extern void stock_gatt_run(void);
 struct tlv {
     int (*get)(void *,unsigned,void *,unsigned);
     int (*store)(void *,unsigned,const void *,unsigned);
@@ -60,11 +73,14 @@ static struct hogp {
     unsigned setup_at,setup_size,setup_done;
     uint8_t setup_response[80];
     const unsigned char *scan_data;
-    struct { uint8_t address[6],type,valid,subscriptions; } bonds[16];
+    unsigned name_requested;
+    struct { uint8_t address[6],type,valid,subscriptions,name_loaded;char *name; } bonds[16];
 } *ble;
 static void release(void) {
     struct hogp *old=ble;next_generation=old->status.generation+1;
-    ble=NULL;stock_free(old);
+    ble=NULL;
+    for(unsigned i=0;i<16;++i) stock_free(old->bonds[i].name);
+    stock_free(old);
 }
 static const unsigned char remote_adv[]={2,1,6,3,3,0x12,0x18,3,0x19,0x80,1};
 static const unsigned char control_adv[]={2,1,6,3,3,0,0xab};
@@ -79,6 +95,7 @@ static void reverse(unsigned char *d,const unsigned char *s) {
     for (unsigned i=0;i<6;++i) d[i]=s[5-i];
 }
 static unsigned subscription_tag(unsigned index) { return 0x44485200U+index; }
+static unsigned name_tag(unsigned index) { return 0x44484e00U+index; }
 static void journal_refresh(void) {
     /* The stock TLV HAL programs SPI flash but reads its memory-mapped cache.
      * Invalidate only the two pinned, read-only flash banks, never RAM. */
@@ -89,17 +106,35 @@ static void bonds(void) {
     for (unsigned i=0;i<16;++i) {
         int type=-1;unsigned char address[6]={0};
         stock_le_device_info(i,&type,address,NULL);
+        unsigned char native[6];reverse(native,address);
+        if(type!=ble->bonds[i].type || memcmp(native,ble->bonds[i].address,6) || (type!=0 && type!=1)) {
+            char *old=ble->bonds[i].name;ble->bonds[i].name=NULL;stock_free(old);ble->bonds[i].name_loaded=0;
+        }
         ble->bonds[i].valid=type==0 || type==1;ble->bonds[i].type=type;
-        reverse(ble->bonds[i].address,address);
+        memcpy(ble->bonds[i].address,native,6);
         unsigned char saved[8];ble->bonds[i].subscriptions=0;
         if (ble->bonds[i].valid && stock_le_tlv &&
                 stock_le_tlv->get(stock_le_tlv_context,subscription_tag(i),saved,sizeof saved)==sizeof saved &&
                 !memcmp(saved,ble->bonds[i].address,6) && saved[6]==type && saved[7]<=3)
             ble->bonds[i].subscriptions=saved[7];
+        if(ble->bonds[i].valid && !ble->bonds[i].name_loaded && stock_le_tlv) {
+            unsigned char record[8+BT_NAME_BYTES];
+            unsigned n=stock_le_tlv->get(stock_le_tlv_context,name_tag(i),record,sizeof record);
+            ble->bonds[i].name_loaded=1;
+            if(n>8 && n<=sizeof record && !memcmp(record,native,6) && record[6]==type &&
+                    !record[n-1] && !memchr(record+7,0,n-8) && stock_free_heap()>=n+32+24576) {
+                char *name=stock_alloc(n-7);
+                if(name) { memcpy(name,record+7,n-7);ble->bonds[i].name=name; }
+            }
+        }
     }
 }
 static void forget_subscriptions(unsigned index) {
-    if (stock_le_tlv) stock_le_tlv->remove(stock_le_tlv_context,subscription_tag(index));
+    if (stock_le_tlv) {
+        stock_le_tlv->remove(stock_le_tlv_context,subscription_tag(index));
+        stock_le_tlv->remove(stock_le_tlv_context,name_tag(index));
+    }
+    char *old=ble->bonds[index].name;ble->bonds[index].name=NULL;stock_free(old);ble->bonds[index].name_loaded=1;
     journal_refresh();
     ble->bonds[index].subscriptions=0;
 }
@@ -125,6 +160,60 @@ unsigned runtime_hogp_bond(unsigned i,unsigned char *a,unsigned *type) {
     unsigned valid=ble && i<16 && ble->bonds[i].valid;
     if(valid) { memcpy(a,ble->bonds[i].address,6);*type=ble->bonds[i].type; }
     runtime_irq_restore(irq);return valid;
+}
+unsigned runtime_hogp_name(const unsigned char *a,unsigned type,char *out) {
+    unsigned irq=runtime_irq_save(),n=0;
+    if(ble) for(unsigned i=0;i<16;++i) {
+        if(ble->bonds[i].valid && ble->bonds[i].type==type && !memcmp(a,ble->bonds[i].address,6) && ble->bonds[i].name) {
+            n=strlen(ble->bonds[i].name);memcpy(out,ble->bonds[i].name,n);break;
+        }
+    }
+    out[n]=0;runtime_irq_restore(irq);return n;
+}
+static void name_reply(unsigned type,unsigned channel,unsigned char *p,unsigned n) {
+    (void)channel;
+    if(!ble || ble->name_requested!=1 || type!=4 || n<8 || p[0]!=0xa5 ||
+            word(p+2)!=ble->handle || stock_le_key_size(ble->handle)<7) return;
+    unsigned size=word(p+6);
+    if(!size || size>n-8) return;
+    int index=stock_le_device_index(ble->handle);
+    if(index<0 || index>=16) return;
+    bonds();
+    if(!ble->bonds[index].valid || ble->bonds[index].type!=ble->status.address_type ||
+            memcmp(ble->bonds[index].address,ble->status.peer,6)) return;
+    ble->name_requested=2;
+    unsigned length=size>BT_NAME_BYTES ? BT_NAME_BYTES : size;
+    /* Do not split a UTF-8 code point at the bounded cache limit. */
+    while(length<size && length && (p[8+length]&0xc0)==0x80) --length;
+    char name[BT_NAME_BYTES+1];
+    for(unsigned i=0;i<length;++i) {
+        unsigned c=p[8+i];name[i]=c<32 || c==127 ? ' ' : c;
+    }
+    while(length && name[length-1]==' ') --length;
+    name[length]=0;
+    if(!length || (ble->bonds[index].name && !strcmp(name,ble->bonds[index].name))) return;
+    if(stock_free_heap()<length+33+24576) return;
+    char *copy=stock_alloc(length+1);if(!copy) return;
+    memcpy(copy,name,length+1);
+    char *old=ble->bonds[index].name;ble->bonds[index].name=copy;stock_free(old);
+    if(stock_le_tlv) {
+        unsigned char record[8+BT_NAME_BYTES];memcpy(record,ble->bonds[index].address,6);
+        record[6]=ble->bonds[index].type;memcpy(record+7,name,length+1);
+        stock_le_tlv->store(stock_le_tlv_context,name_tag(index),record,length+8);
+        journal_refresh();
+    }
+}
+static void name_service(void) {
+    if(ble->name_requested || ble->status.state!=2 || ble->phase || age(ble->started)<2000) return;
+    struct gatt_prefix *g=stock_gatt_context(ble->handle);
+    if(g && g->state) return;
+    if(stock_free_heap()<24576+512) return;
+    ble->name_requested=1;
+    g=stock_gatt_prepare(ble->handle);if(!g) return;
+    g->callback=name_reply;g->uuid=0x2a00;
+    g->start=g->query_start=1;g->end=g->query_end=0xffff;
+    g->state=19; /* P_W2_SEND_READ_BY_TYPE_REQUEST, guarded against stock code. */
+    stock_gatt_run();
 }
 static unsigned peer(unsigned handle,unsigned char *a,unsigned *type) {
     unsigned char *c=stock_hci_stack ? stock_hci_connection(handle) : NULL;
@@ -152,6 +241,7 @@ static unsigned allowed(unsigned handle,unsigned adopt) {
     if (adopt && ble->handle==0xffff) {
         memcpy(ble->status.peer,a,6);ble->status.address_type=type;
         ble->handle=handle;ble->status.state=1;++ble->status.generation;
+        ble->name_requested=0;
         ++ble->status.incoming;ble->started=stock_ticks();
         int i=stock_le_device_index(handle);
         if (i>=0 && i<16 && stock_le_key_size(handle)>=7) {
@@ -262,6 +352,7 @@ void runtime_hogp_event(unsigned type,unsigned channel,unsigned char *p,unsigned
             bonds();return;
         }
         if (p[0]==5 && n>=6 && word(p+3)==ble->handle) {
+            ble->name_requested=0;
             ble->setup_size=ble->setup_done=0;
             ++ble->status.closed;ble->status.close_status=p[5];
             ble->handle=0xffff;ble->phase=0;ble->status.busy=0;
@@ -438,6 +529,7 @@ void runtime_hogp_service(unsigned epoch) {
                 ble->down[ble->report]=0;ble->phase=0;ble->status.busy=0;++ble->status.released;
             } else if (age(ble->release_at)>=1000) { error(10);disconnect(); }
         }
+        name_service();
     }
 }
 void runtime_hogp_status(struct hid_status *s) {

@@ -1,0 +1,25 @@
+{
+  "firmware": 306037,
+  "path": "Lua message -> Ditoo BLE HID -> Android input",
+  "key_down": 2,
+  "key_up": 2,
+  "playback_states": [
+    [
+      "STOPPED(1)"
+    ],
+    [
+      "STOPPED(1)"
+    ],
+    [
+      "STOPPED(1)"
+    ]
+  ],
+  "playback_unchanged": true,
+  "events": [
+    "[  141437.337402] EV_KEY       KEY_PLAYPAUSE        DOWN",
+    "[  141437.412482] EV_KEY       KEY_PLAYPAUSE        UP",
+    "[  141441.838476] EV_KEY       KEY_PLAYPAUSE        DOWN",
+    "[  141441.912577] EV_KEY       KEY_PLAYPAUSE        UP"
+  ],
+  "passed": true
+}

@@ -328,6 +328,23 @@ static void test_tv_keyboard(void) {
     printf("Android-style remote: source %u, Lua peak %u, reserved %u, native free %u\n",(unsigned)n,app.peak,app.reserved,stock_free_heap());
     assert(app.peak<=MEMORY_LIMIT && stock_free_heap()>=STOCK_HEAP_RESERVE);
     assert(tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==reports+1);
+    /* Distinct maximal names must fit under the same Lua/native limits.
+     * Enumeration keeps only identities; resolve the displayed row on demand. */
+    tv_stop();char names[16][BT_NAME_BYTES+1];
+    for(unsigned i=0;i<16;++i) {
+        memset(names[i],'A'+i,BT_NAME_BYTES);names[i][BT_NAME_BYTES]=0;
+        fake_le_names[i]=names[i];fake_le_bonds[i][7]=1;
+    }
+    load(source,1);tv_ticks(100);fake_hid_status.state=2;tv_ticks(20);
+    assert(strstr(app.result,names[2]));
+    tv_key(0);tv_key(4);
+    for(unsigned i=0;i<16;++i) { assert(strstr(app.result,names[i]));tv_key(3);tv_ticks(20); }
+    assert(strstr(app.result,"BACK: DEVICES"));tv_key(3);tv_key(4);tv_key(3);tv_key(4);
+    assert(strstr(app.result,"CANCEL: FORGET ") && strstr(app.result,names[0]));
+    tv_key(4);assert(tv_ops[HID_FORGET]==1);
+    printf("Named remote: Lua peak %u, reserved %u, native free %u\n",app.peak,app.reserved,stock_free_heap());
+    assert(app.peak<=MEMORY_LIMIT && stock_free_heap()>=STOCK_HEAP_RESERVE);
+    memset(fake_le_names,0,sizeof fake_le_names);
     tv_stop();saved.settings_size=0;fake_hid_status.state=0;memset(fake_le_bonds,0,sizeof fake_le_bonds);
     load(source,1);tv_ticks(100);assert(!strcmp(app.result,"PAIR NEW DEVICE: REMOTE"));
     tv_key(4);tv_ticks(100);assert(fake_hid_status.pairing && tv_ops[HID_FORGET]==1);

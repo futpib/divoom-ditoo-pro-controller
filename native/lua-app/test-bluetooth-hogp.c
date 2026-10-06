@@ -7,7 +7,7 @@ static unsigned clock_ms,confirmations,disconnects,notifications,notify_rc,encry
 static unsigned char connection[0x500],second[0x500],last_report;
 static unsigned last_attribute,last_connection,forwarded;
 static unsigned setup_sent,setup_busy,setup_rc;
-static const unsigned char address[]={0x84,0x5c,0xf3,0xef,0x87,0x78};
+static unsigned char address[]={0x84,0x5c,0xf3,0xef,0x87,0x78};
 static unsigned char hci_context[0x500];
 static const unsigned char local_address[]={0xb1,0x21,0x81,0xdd,0xb8,0x9b};
 static unsigned address_sets,address_deferred;
@@ -18,7 +18,23 @@ static unsigned char saved_ccc[16][8];
 static unsigned char cached_ccc[16][8];
 static unsigned cached_valid[16];
 static unsigned ccc_valid[16],ccc_writes,ccc_error,ccc_drop;
+static unsigned char saved_names[16][8+BT_NAME_BYTES],cached_names[16][8+BT_NAME_BYTES];
+static unsigned saved_name_size[16],cached_name_size[16],name_writes;
+static struct gatt_prefix gatt;
+static unsigned gatt_enabled,gatt_prepared,gatt_started,gatt_failed;
+struct gatt_prefix *stock_gatt_context(unsigned handle) { assert(handle==4);return gatt_enabled ? &gatt : NULL; }
+struct gatt_prefix *stock_gatt_prepare(unsigned handle) {
+    assert(handle==4);++gatt_prepared;return gatt_enabled && !gatt_failed ? &gatt : NULL;
+}
+void stock_gatt_run(void) {
+    assert(gatt.state==19 && gatt.uuid==0x2a00 && gatt.start==1 && gatt.end==0xffff);
+    assert(gatt.query_start==1 && gatt.query_end==0xffff && gatt.callback==name_reply);++gatt_started;
+}
 static int tlv_get(void *context,unsigned tag,void *data,unsigned size) {
+    if(tag>=0x44484e00 && tag<0x44484e10) {
+        assert(!context && size==sizeof saved_names[0]);unsigned i=tag-0x44484e00;
+        memcpy(data,cached_names[i],cached_name_size[i]>size ? size : cached_name_size[i]);return cached_name_size[i];
+    }
     assert(!context && tag>=0x44485200 && tag<0x44485210 && size==8);
     unsigned i=tag-0x44485200;if (!cached_valid[i]) return 0;
     memcpy(data,cached_ccc[i],size);return size;
@@ -26,14 +42,20 @@ static int tlv_get(void *context,unsigned tag,void *data,unsigned size) {
 void stock_cache_invalidate(unsigned address,unsigned size) {
     assert(address==0x1f0000 && size==0x2000);
     memcpy(cached_ccc,saved_ccc,sizeof saved_ccc);memcpy(cached_valid,ccc_valid,sizeof ccc_valid);
+    memcpy(cached_names,saved_names,sizeof saved_names);memcpy(cached_name_size,saved_name_size,sizeof saved_name_size);
 }
 static int tlv_store(void *context,unsigned tag,const void *data,unsigned size) {
+    if(tag>=0x44484e00 && tag<0x44484e10) {
+        assert(!context && size<=sizeof saved_names[0]);unsigned i=tag-0x44484e00;
+        memcpy(saved_names[i],data,size);saved_name_size[i]=size;++name_writes;return 0;
+    }
     assert(!context && tag>=0x44485200 && tag<0x44485210 && size==8);
     if (ccc_error) return 1;
     if (ccc_drop) return 0;
     unsigned i=tag-0x44485200;memcpy(saved_ccc[i],data,size);ccc_valid[i]=1;++ccc_writes;return 0;
 }
 static void tlv_remove(void *context,unsigned tag) {
+    if(tag>=0x44484e00 && tag<0x44484e10) { assert(!context);saved_name_size[tag-0x44484e00]=0;return; }
     assert(!context && tag>=0x44485200 && tag<0x44485210);ccc_valid[tag-0x44485200]=0;
 }
 static const struct tlv tlv={tlv_get,tlv_store,tlv_remove};
@@ -123,6 +145,10 @@ static void subscribe(unsigned connection_handle) {
     assert(write_value(connection_handle,0x29,0,0,on,2)==0);
     assert(write_value(connection_handle,0x2d,0,0,on,2)==0);
     runtime_hogp_service(1);
+}
+static void name_value(const char *value,unsigned size) {
+    unsigned char packet[128]={0xa5,0,4,0,3,0,size,0};assert(size<=sizeof packet-8);
+    memcpy(packet+8,value,size);gatt.callback(4,0,packet,size+8);
 }
 int main(void) {
     memcpy(connection+4,address,6);memset(second+4,0x77,6);
@@ -256,5 +282,57 @@ int main(void) {
         runtime_hogp_service(1);assert(allocated==1 && ble); /* Address restoration still owns it. */
         hci_context[0x4e5]=0;runtime_hogp_service(1);assert(!ble && !allocated);
     }
-    puts("HOGP: bounded attributes, peer/security gates, all remote reports, bond reuse, timeout/abort releases, stale jobs and control routing passed");
+    /* Friendly names are optional: they neither own the HID job queue nor
+     * change the typed bond identity, and native client busy/failure is benign. */
+    paired=encrypted=gatt_enabled=1;gatt.state=37;
+    assert(runtime_hogp_mode(1));runtime_hogp_service(1);
+    reverse(target,address);target[6]=0;
+    runtime_hogp_command(HID_CONNECT,0,target,1,0);subscribe(4);
+    unsigned prepared=gatt_prepared;clock_ms+=2001;runtime_hogp_service(1);
+    assert(gatt_prepared==prepared && !ble->name_requested);
+    gatt.state=0;gatt_failed=1;runtime_hogp_service(1);
+    assert(!gatt_started && ble->name_requested==1);
+    unsigned name_errors=ble->status.errors;
+    key(HID_CONSUMER,0xcd);clock_ms+=80;runtime_hogp_service(1);
+    assert(!ble->phase && ble->status.errors==name_errors);
+    key(HID_DISCONNECT,0);closed();gatt_failed=0;
+    runtime_hogp_command(HID_CONNECT,0,target,1,0);subscribe(4);clock_ms+=2001;
+    runtime_hogp_service(1);assert(gatt_started==1 && ble->name_requested==1);
+    char name[BT_NAME_BYTES+1];assert(!runtime_hogp_name(target,0,name));
+    unsigned char not_found[]={0xa0,3,4,0,0x0a};
+    name_reply(4,0,not_found,sizeof not_found);assert(!runtime_hogp_name(target,0,name));
+    key(HID_CONSUMER,0xcd);clock_ms+=80;runtime_hogp_service(1);
+    assert(!ble->phase && ble->status.errors==name_errors);
+    unsigned char malformed[]={0xa5,0,5,0,3,0,1,0,'x'};
+    name_reply(4,0,malformed,sizeof malformed);assert(!name_writes);
+    malformed[2]=4;malformed[6]=2;name_reply(4,0,malformed,sizeof malformed);assert(!name_writes);
+    name_reply(4,0,malformed,7);assert(!name_writes);
+    encrypted=0;name_value("Living Room TV",14);assert(!name_writes);encrypted=1;
+    name_value("Living Room TV",14);assert(name_writes==1);
+    assert(runtime_hogp_name(target,0,name)==14 && !strcmp(name,"Living Room TV"));
+    assert(!runtime_hogp_name(target,1,name));
+    name_value("Unsolicited overwrite",21);assert(name_writes==1);
+    unsigned errors=ble->status.errors;
+    key(HID_CONSUMER,0xcd);clock_ms+=80;runtime_hogp_service(1);assert(!ble->phase && ble->status.errors==errors);
+    key(HID_DISCONNECT,0);closed();gatt.state=0;
+    assert(runtime_hogp_mode(0));runtime_hogp_service(1);assert(!ble && !allocated);
+    assert(runtime_hogp_mode(1));runtime_hogp_service(1);
+    assert(runtime_hogp_name(target,0,name)==14 && !strcmp(name,"Living Room TV"));
+    assert(name_writes==1); /* The persisted name works before reconnecting. */
+    runtime_hogp_command(HID_CONNECT,0,target,1,0);subscribe(4);clock_ms+=2001;runtime_hogp_service(1);
+    name_value("Living Room TV",14);assert(name_writes==1); /* No redundant flash writes. */
+    ble->name_requested=1;fail_alloc=1;name_value("New TV",6);fail_alloc=0;
+    assert(runtime_hogp_name(target,0,name)==14 && name_writes==1);
+    ble->name_requested=1;name_value("\n\t ",3);assert(name_writes==1);
+    ble->name_requested=1;name_value("New\nTV",6);
+    assert(runtime_hogp_name(target,0,name)==6 && !strcmp(name,"New TV"));
+    char utf8[33];memset(utf8,'a',31);utf8[31]=(char)0xc3;utf8[32]=(char)0xa9;
+    ble->name_requested=1;name_value(utf8,sizeof utf8);
+    assert(runtime_hogp_name(target,0,name)==31 && name[30]=='a');
+    unsigned name_write_count=name_writes;address[0]^=1;bonds();assert(!runtime_hogp_name(target,0,name));
+    address[0]^=1;bonds();assert(runtime_hogp_name(target,0,name)==31 && name_writes==name_write_count);
+    key(HID_DISCONNECT,0);closed();
+    runtime_hogp_command(HID_FORGET,0,target,1,0);assert(!saved_name_size[0] && !runtime_hogp_name(target,0,name));
+    assert(runtime_hogp_mode(0));runtime_hogp_service(1);assert(!allocated);
+    puts("HOGP: peer/security gates, reports, bond reuse, name lookup/cache/lifecycle, failure isolation and memory cleanup passed");
 }

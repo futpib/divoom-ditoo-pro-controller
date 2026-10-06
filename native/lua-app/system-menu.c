@@ -254,13 +254,15 @@ static void menu_text(const char *s,int y,unsigned color) {
     }
 }
 static void menu_address(char *out,const unsigned char *a) {
+    struct hid_status s;runtime_hid_status(&s);
+    if(s.transport && runtime_hogp_name(a,a[6],out)) return;
     const char *hex="0123456789ABCDEF";
     for(unsigned i=0;i<6;++i) { unsigned v=a[5-i];out[i*3]=hex[v>>4];out[i*3+1]=hex[v&15];out[i*3+2]=':'; }out[17]=0;
 }
 static void menu_draw(void) {
     if(!menu_visible() || app.L || app.state==RUNNING || stock_ticks()-menu.rendered<80) return;
     menu.rendered=stock_ticks();
-    const char *label="",*title="SET";char address[25];
+    const char *label="",*title="SET";char address[BT_NAME_BYTES+8];
     unsigned p=menu.page,n=menu.index,count=menu_count(),color=0x30b0ff;
     static const char *const settings[]={"AUTOSTART","REMOVE APP","BLUETOOTH","SAVED DEVICES","KEY LIGHTS","BATTERY INDICATOR","USB MODE"};
     if(!p) { unsigned id=menu_id();title=id==30 ? "LUA" : id==31 ? "SET" : "REC";

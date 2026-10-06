@@ -16,6 +16,7 @@ p.add_argument('--device')
 p.add_argument('--usb-port')
 p.add_argument('--binary', type=Path, default=ROOT/'target/release/divoom-ditoo-pro-controller')
 p.add_argument('--output', type=Path, required=True)
+p.add_argument('--firmware', type=int, choices=[306036, 306037], default=306036)
 a = p.parse_args()
 if a.transport == 'ble' and not a.device:
     p.error('BLE requires --device')
@@ -27,8 +28,8 @@ if a.usb_port:
     base += ['--usb-port', a.usb_port]
 preflight = subprocess.run(base+['firmware'], capture_output=True, text=True, check=True, timeout=45)
 version = json.loads(preflight.stdout)['response']['firmware_versions'][0]
-if version != 306036:
-    raise SystemExit(f'Expected 306036, got {version}; no test commands sent')
+if version != a.firmware:
+    raise SystemExit(f'Expected {a.firmware}, got {version}; no test commands sent')
 
 requests, checks = [], []
 

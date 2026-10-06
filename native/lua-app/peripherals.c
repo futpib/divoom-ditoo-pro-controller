@@ -563,14 +563,9 @@ static int hex_digit(unsigned char c) {
     if (c>='A' && c<='F') return c-'A'+10;
     return -1;
 }
-static int bt_address_connect(lua_State *L,unsigned hid) {
-    if (hid==HID_PAIR && lua_isnoneornil(L,1)) {
-        unsigned seconds=(unsigned)luaL_optinteger(L,2,120);unsigned char address[16]={0};
-        luaL_argcheck(L,seconds>=1 && seconds<=120,2,"pairing window must be 1..120 seconds");
-        return submit(L,BT_HID,HID_PAIR,seconds*1000,address,0);
-    }
+static void parse_bt_address(lua_State *L,unsigned char *address) {
     size_t len; const char *s=luaL_checklstring(L,1,&len);
-    unsigned char address[16]={0}; unsigned any=0,all=255;
+    unsigned any=0,all=255;
     luaL_argcheck(L,len==17,1,"expected XX:XX:XX:XX:XX:XX");
     for (unsigned i=0;i<6;++i) {
         int hi=hex_digit(s[i*3]),lo=hex_digit(s[i*3+1]);
@@ -579,6 +574,14 @@ static int bt_address_connect(lua_State *L,unsigned hid) {
         address[5-i]=(hi<<4)|lo; any|=address[5-i]; all&=address[5-i];
     }
     luaL_argcheck(L,any && all!=255,1,"invalid Bluetooth address");
+}
+static int bt_address_connect(lua_State *L,unsigned hid) {
+    if (hid==HID_PAIR && lua_isnoneornil(L,1)) {
+        unsigned seconds=(unsigned)luaL_optinteger(L,2,120);unsigned char address[16]={0};
+        luaL_argcheck(L,seconds>=1 && seconds<=120,2,"pairing window must be 1..120 seconds");
+        return submit(L,BT_HID,HID_PAIR,seconds*1000,address,0);
+    }
+    unsigned char address[16]={0};parse_bt_address(L,address);
     unsigned duration=hid==HID_PAIR ? (unsigned)luaL_optinteger(L,2,120) : 0;
     if (hid==HID_PAIR) luaL_argcheck(L,duration>=1 && duration<=120,2,"pairing window must be 1..120 seconds");
     if (hid) {
@@ -635,6 +638,19 @@ static int keyboard_bonds(lua_State *L) {
         unsigned char a[6];for (unsigned j=0;j<6;++j) a[j]=stock_bt_manager[7+i*26+j];
         push_bt_address(L,a);lua_rawseti(L,-2,++n);
     }
+    return 1;
+}
+static int keyboard_name(lua_State *L) {
+    struct hid_status s;runtime_hid_status(&s);
+    unsigned char address[6];unsigned type=s.address_type;
+    if(lua_isnoneornil(L,1)) memcpy(address,s.peer,6);
+    else {
+        const char *types[]={"public","random",NULL};
+        parse_bt_address(L,address);type=luaL_checkoption(L,2,"public",types);
+    }
+    char name[BT_NAME_BYTES+1];
+    if(s.transport && runtime_hogp_name(address,type,name)) lua_pushstring(L,name);
+    else lua_pushnil(L);
     return 1;
 }
 static int keyboard_disconnect(lua_State *L) { return submit(L,BT_HID,HID_DISCONNECT,0,NULL,0); }
@@ -727,7 +743,7 @@ static void peripherals_modules(lua_State *L) {
     luaL_newlib(L,storage);lua_setglobal(L,"storage");
     static const luaL_Reg keyboard[]={{"connect",keyboard_connect},{"listen",keyboard_listen},{"disconnect",keyboard_disconnect},
         {"pair",keyboard_pair},{"forget",keyboard_forget},{"bonds",keyboard_bonds},{"mode",keyboard_mode},
-        {"tap",keyboard_tap},{"media",keyboard_media},{"status",keyboard_status},{NULL,NULL}};
+        {"tap",keyboard_tap},{"media",keyboard_media},{"status",keyboard_status},{"name",keyboard_name},{NULL,NULL}};
     luaL_newlib(L,keyboard);lua_setglobal(L,"keyboard");
     static const luaL_Reg bluetooth[] = {{"status",bt_status},{"connect_media",bt_connect},
         {"disconnect_media",bt_disconnect},{"media",bt_media},{"mute",bt_mute},{NULL,NULL}};

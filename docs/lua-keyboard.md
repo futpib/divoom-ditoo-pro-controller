@@ -184,6 +184,8 @@ keyboard.connect('84:5C:F3:EF:87:78', 'public') -- same peripheral listening beh
 keyboard.disconnect()
 keyboard.forget('84:5C:F3:EF:87:78', 'public') -- disconnected only; one LE bond
 keyboard.bonds(true)                        -- {address=..., address_type=...} records
+keyboard.name()                             -- cached name of the selected BLE peer, or nil (306037+)
+keyboard.name('84:5C:F3:EF:87:78', 'public')  -- cached name of this saved identity, or nil
 keyboard.status()                          -- transport='ble', address_type, paired, encrypted
 ```
 
@@ -192,6 +194,34 @@ to observe pairing/connection completion. `connected` requires encryption and
 subscriptions to both input reports. `keyboard.bonds()` retains the simple list
 of address strings; use `bonds(true)` to preserve public/random address types.
 Resolved identities are saved rather than temporary private radio addresses.
+
+### Device names (306037+)
+
+The remote app and native Saved devices menu prefer the peer's Bluetooth name.
+The firmware reads the standard GAP Device Name characteristic (`0x2a00`)
+asynchronously over the existing encrypted BLE connection, once per connection,
+after HID setup. It uses the stock GATT client's request timer and state machine;
+a missing name, busy client, failed read or allocation failure does not fail HID.
+The address remains the fallback until the peer supplies a usable name. Classic
+HID and AVRCP peers currently retain their address labels.
+
+`keyboard.name([address[, address_type]])` returns a cached name or `nil`; it
+does not start a scan or block Lua. Names are limited to 32 UTF-8 bytes, without
+splitting the last code point, and ASCII control characters are replaced with
+spaces. Rendering still uses the display's existing font. Passing no address
+selects the current peer; omitted address type defaults to `public`.
+
+Names are saved alongside the bond under separate `0x44484e00 + bond slot` TLV
+tags, with the address and type checked before reuse. They survive disconnects
+and restarts, refresh when a changed name is received, and are deleted by
+Forget. Cached strings are allocated only for known names and freed when the
+BLE profile is released. The existing `bonds(true)` records remain small;
+scripts can fetch just the name they are displaying. Connections and commands
+always use address plus address type, including when names are duplicated.
+
+The wire format follows the Bluetooth SIG
+[GAP name discovery procedure](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core-62/out/en/host/generic-access-profile.html).
+Reinstall `examples/lua/tv-keyboard.lua` after upgrading to use the new labels.
 
 `keyboard.tap` supports Enter (40), Escape (41), Space (44), Right (79), Left
 (80), Down (81), and Up (82), with no modifiers. All existing `keyboard.media`

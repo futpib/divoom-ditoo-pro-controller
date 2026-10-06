@@ -1,0 +1,105 @@
+{
+  "firmware": 306037,
+  "sha256": "e5d2a41cf9e121fe67c74734ab2d7ffce3f1c72180ffca2f2a100ae855c00613",
+  "bytes": 2027979,
+  "hardware_verified": true,
+  "name_discovery": {
+    "source": "Peer GAP Device Name, UUID 0x2a00, read by the Ditoo over its existing encrypted TV connection",
+    "matches_tv_bluetooth_name": true,
+    "hardcoded_peer_name": false,
+    "shown_while_reconnecting_after_profile_release": true,
+    "shown_when_connected": true,
+    "lua_error": 0,
+    "max_cached_utf8_bytes": 32,
+    "unknown_name_fallback": "address",
+    "classic_name_discovery": false
+  },
+  "hardware": {
+    "transport": "ble",
+    "source_version": 306036,
+    "running_version": 306037,
+    "flash_chunks": 7922,
+    "transfer_seconds": 297.993273012,
+    "post_update_version_verified": true,
+    "saved_app_updated": true,
+    "new_pairing_required": false,
+    "tv_input_check": "tv-input.json",
+    "audio_route": "TV speaker; no active A2DP device",
+    "playback_note": "SmartTube was STOPPED before, between and after the two key taps; input delivery was verified, playback toggling was not exercised.",
+    "temporary_probe_removed": true,
+    "input_device_present_after_cleanup": true,
+    "final_app_state": "active",
+    "final_lua_error": 0,
+    "final_connection": "connected"
+  },
+  "checks": {
+    "native_32bit_asan_ubsan": "passed, including long-name menus, 16 named peers, cache identity/type/forget/profile cleanup, GATT busy/failure isolation and UTF-8 truncation",
+    "rust_tests_passed": 77,
+    "python_firmware_tests_passed": 20,
+    "manifest": "no drift",
+    "reproducible_builds": [
+      {
+        "run": "first",
+        "profile": "reflash",
+        "version": 306008,
+        "sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "probe",
+        "version": 306009,
+        "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "runtime",
+        "version": 306012,
+        "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "app",
+        "version": 306037,
+        "sha256": "e5d2a41cf9e121fe67c74734ab2d7ffce3f1c72180ffca2f2a100ae855c00613",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "reflash",
+        "version": 306008,
+        "sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "probe",
+        "version": 306009,
+        "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "runtime",
+        "version": 306012,
+        "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "app",
+        "version": 306037,
+        "sha256": "e5d2a41cf9e121fe67c74734ab2d7ffce3f1c72180ffca2f2a100ae855c00613",
+        "identical": true
+      }
+    ],
+    "maximum_named_remote_lua_peak_bytes": 47760,
+    "lua_limit_bytes": 49152
+  },
+  "limits": [
+    "The existing display font does not cover all UTF-8 characters.",
+    "Physical key actuation, optical display comparison and power cycling were not performed. Persistent cache reuse was exercised by disabling and re-enabling the BLE profile."
+  ]
+}

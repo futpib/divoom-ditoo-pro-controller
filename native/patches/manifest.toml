@@ -28,7 +28,7 @@ patches = [
 ]
 
 [profiles.app]
-version = 306036
+version = 306037
 source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch", "lua/0003-binary32-parser.patch"]
 patches = [
     "command_dispatch",
@@ -776,4 +776,50 @@ original = '''
     movi $r1, 0x1000
     movi $r2, 0x1f0
     jal stock_tlv_hal_init
+'''
+
+[[guards]]
+site = "stock_gatt_prepare"
+profiles = ["app"]
+original_size = 54
+purpose = "Validate native GATT context acquisition and its bounded request timeout for remote-name reads."
+original = '''
+    push25 $r8, 0
+    jal stock_gatt_allocate
+    mov55 $r7, $r0
+    beqz38 $r0, stock_gatt_prepare_end
+    addi $r6, $r0, 0x5c
+    mov55 $r0, $r6
+    jal stock_gatt_timer_remove
+    mov55 $r0, $r6
+    sethi $r1, hi20(stock_gatt_timer_callback)
+    ori $r1, $r1, lo12(stock_gatt_timer_callback)
+    jal stock_gatt_timer_handler
+    mov55 $r0, $r6
+    movi $r1, 30000
+    jal stock_gatt_timer_set
+    mov55 $r0, $r6
+    jal stock_gatt_timer_add
+    mov55 $r0, $r7
+    pop25 $r8, 0
+'''
+
+[[guards]]
+site = "stock_gatt_read_by_type"
+profiles = ["app"]
+original_size = 32
+purpose = "Validate native GATT read-by-type state 19, response state 20 and UUID/range offsets."
+original = '''
+    lhi $r1, [$r6 + 0x18]
+    movpi45 $r0, 0x14
+    swi333 $r0, [$r6 + 4]
+    lhi $r9, [$r6 + 0x10]
+    lhi $r11, [$r6 + 0x2a]
+    lhi $r10, [$r6 + 0x2c]
+    beqz38 $r1, stock_gatt_read_by_type_long
+    movi55 $r0, 8
+    mov55 $r2, $r9
+    mov55 $r3, $r11
+    mov55 $r4, $r10
+    j8 stock_gatt_send_uuid16
 '''

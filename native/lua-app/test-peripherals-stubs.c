@@ -102,6 +102,15 @@ unsigned stock_bt_record_count(void) { return bond_count; }
 void stock_bt_save_records(unsigned size,unsigned count) { assert(size==0x1f9 && count==bond_count);++saved_bonds; }
 
 static unsigned char fake_le_bonds[16][8];
+static const char *fake_le_names[16];
+unsigned runtime_hogp_name(const unsigned char *a,unsigned type,char *out) {
+    for(unsigned i=0;i<16;++i) if(fake_le_bonds[i][7] && fake_le_bonds[i][6]==type &&
+            !memcmp(a,fake_le_bonds[i],6) && fake_le_names[i]) {
+        unsigned n=strlen(fake_le_names[i]);assert(n<=BT_NAME_BYTES);
+        memcpy(out,fake_le_names[i],n+1);return n;
+    }
+    out[0]=0;return 0;
+}
 unsigned runtime_hogp_bond(unsigned i,unsigned char *a,unsigned *type) {
     if(i>=16 || !fake_le_bonds[i][7]) return 0;
     memcpy(a,fake_le_bonds[i],6);*type=fake_le_bonds[i][6];return 1;

@@ -356,7 +356,10 @@ with a restricted non-alphabetic remote descriptor and persistent LE bonds.
 Use **306035** for normal Android TV **Pair accessory** setup and bonded
 reconnection. It gives the remote a separate BLE identity and fixes HID setup,
 subscription persistence and saved-app startup in the Ditoo firmware.
-Firmware **306036** adds [on-demand allocation and idle cleanup](docs/lua-memory.md#allocate-only-while-used-306036). It is built and tested on the host; hardware validation is pending.
+Firmware **306036** adds [on-demand allocation and idle cleanup](docs/lua-memory.md#allocate-only-while-used-306036), verified on the device.
+Firmware **306037** adds [cached Bluetooth device names](docs/lua-keyboard.md#device-names-306037)
+to the BLE remote app and native Saved devices menu, with `keyboard.name()` for other scripts.
+It is [verified on the TV](firmware/device-names-evidence/README.md), including saved-name reuse and HID key delivery.
 See [the TV pairing verification](firmware/ble-pairing-evidence/README.md).
 Install `examples/lua/tv-keyboard.lua` with `lua install` for the BLE remote.
 Classic HID and AVRCP remain available to other scripts.
