@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include "bluetooth-trace.h"
 
-#define SOURCE_LIMIT 8192
+#define SOURCE_LIMIT 16384
 #define SOURCE_CHUNK 512
 #define SOURCE_PAGES ((SOURCE_LIMIT+SOURCE_CHUNK-1)/SOURCE_CHUNK)
 #define RESULT_LIMIT 192
@@ -93,11 +93,13 @@ static void source_free(struct source *s) {
     stock_free(s);
 }
 static struct source *source_new(unsigned size) {
+    if(!size || size>SOURCE_LIMIT || stock_free_heap()<size+sizeof(struct source)+SOURCE_PAGES*8+STOCK_HEAP_RESERVE) return NULL;
     struct source *s=stock_alloc(sizeof *s);
     if(!s) return NULL;
     memset(s,0,sizeof *s);s->size=size;
     for(unsigned offset=0;offset<size;offset+=SOURCE_CHUNK) {
         unsigned n=size-offset;if(n>SOURCE_CHUNK) n=SOURCE_CHUNK;
+        if(stock_free_heap()<n+8+STOCK_HEAP_RESERVE) { source_free(s);return NULL; }
         s->pages[offset/SOURCE_CHUNK]=stock_alloc(n);
         if(!s->pages[offset/SOURCE_CHUNK]) { source_free(s);return NULL; }
     }
@@ -569,6 +571,7 @@ static void runtime_boot_service(void) {
             }
             return;
         }
+        persist_retire_legacy();
         unsigned bank=0,foreign=0;struct saved_record *r=persist_latest(2,&bank,&foreign);
         if (r) { saved.settings_size=r->length;memcpy(saved.settings,r->data,r->length);stock_free(r); }
         system_load();saved.initialized=1;saved.boot_started=stock_ticks();

@@ -80,7 +80,7 @@ def build():
     patches.report(image)
     report = {'version':patches.version,'sha256':hashlib.sha256(image).hexdigest(),'bytes':len(image),
               'checksum':sum(image),'lua':'5.4.9','number_bits':32,'memory_limit':49152,'arena_page_unit':1024,'arena_page_slots':48,
-              'task_stack_words':4096,'globals_reserved':8192,'source_limit':8192,'source_chunk_bytes':512,
+              'task_stack_words':4096,'globals_reserved':8192,'source_limit':16384,'source_chunk_bytes':512,
               'gc_pause_percent':120,'gc_step_multiplier':200,'gc_step_bytes':1024,
               'allocator_reclaims_shrunk_blocks':True,'allocator_grows_in_place':True,
               'instruction_limit':100000,'callback_ms_limit':50,'boot_crc16':0x5f08,

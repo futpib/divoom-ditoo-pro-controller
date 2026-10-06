@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test the Ditoo BLE remote against this Linux laptop, never a TV.
 
-Requires root for EVIOCGRAB, python-dbus, PyGObject, and 306029+ on the Ditoo.
+Requires root for EVIOCGRAB, python-dbus, PyGObject, and 306030 on the Ditoo.
 The Ditoo must already be bonded to this laptop. The running app must select
 ble-remote and target this laptop. Replaces
 that app during input tests; restores tv-keyboard.lua with the existing saved
@@ -29,6 +29,8 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--device', required=True)
 p.add_argument('--adapter', default='hci0')
 p.add_argument('--binary', type=Path, default=ROOT/'target/release/divoom-ditoo-pro-controller')
+p.add_argument('--reconnect-only', action='store_true',
+               help='Check the running remote app after reconnect, without replacing it')
 a = p.parse_args()
 if os.geteuid() != 0:
     raise SystemExit('Run with sudo to grab only the matching Ditoo input nodes')
@@ -48,7 +50,7 @@ checks = []
 
 def command(*args, allow_error=False):
     r = subprocess.run(base+list(args), capture_output=True, text=True,
-                       env={**os.environ,'RUST_LOG':'warn'}, timeout=45)
+                       env={**os.environ,'RUST_LOG':'warn'}, timeout=90)
     if r.returncode and not allow_error:
         raise RuntimeError(r.stderr or r.stdout)
     rows = [json.loads(s) for s in r.stdout.splitlines() if s.startswith('{')]
@@ -112,9 +114,30 @@ def receive(code):
         if events==[[code,1],[code,0]]: return events
     raise AssertionError(f'Expected press/release {code}, received {events}')
 
+
+def remote_reconnect():
+    ungrab()
+    if bool(props.Get('org.bluez.Bearer.LE1','Connected')):
+        le.Disconnect(timeout=15)
+    spin(1);connect();grab();spin(1)
+    command('send','status');spin(.2)
+    status=command('receive')['result']
+    assert status=='2 '+laptop+' public',status
+    command('send','play_pause')
+    check('connect-after-explicit-disconnect',events=receive(164))
+
+
+if a.reconnect_only:
+    try:
+        assert bool(props.Get('org.bluez.Bearer.LE1','Bonded')),'Pair this laptop first'
+        remote_reconnect()
+    finally:
+        ungrab()
+    raise SystemExit(0)
+
 INPUT_APP = '''local b={}
 return {init=function()
- assert(storage.get()=='TV5|LAPTOP|public|','saved target must be this laptop')
+ assert((storage.get() or ''):match('^TV[56]|LAPTOP|public|'),'saved target must be this laptop')
  keyboard.status(b)
  assert(b.transport=='ble' and (not b.connected or b.peer=='LAPTOP'),'BLE peer must be this laptop')
  if not b.connected then assert(keyboard.listen('LAPTOP')) end
@@ -126,6 +149,15 @@ end}'''.replace('LAPTOP',laptop)
 safe_to_restore=False
 try:
     assert bool(props.Get('org.bluez.Bearer.LE1','Bonded')),'Pair this laptop first'
+    # Separate one-query CLI sessions used to ACK a reused sequence without a reply.
+    versions=[]
+    for _ in range(3):
+        r=subprocess.run(base[:-1]+['raw','send','0x37','--data','00','--query'],
+                         capture_output=True,text=True,timeout=45,check=True)
+        versions.append(json.loads(r.stdout)['response']['firmware_versions'][0])
+    assert versions==[306030]*3,versions
+    check('consecutive-control-sessions',queries=3)
+
     # Explicitly select LE; generic Connect could select a Classic audio bearer.
     # Discard an ATT session left over from a firmware restart before uploading.
     if bool(props.Get('org.bluez.Bearer.LE1','Connected')):
@@ -148,6 +180,8 @@ try:
     expected={1,28,57,103,105,106,108,113,114,115,163,164,165,166}
     assert supported==expected,supported
     check('restricted-remote-descriptor',linux_keys=sorted(supported))
+    command('send','play_pause')
+    check('media-before-any-keyboard-report',events=receive(164))
     for action,code in [('k40',28),('k41',1),('k44',57),('k79',106),('k80',105),('k81',108),('k82',103),
                         ('play_pause',164),('mute',113),('volume_up',115),('volume_down',114),
                         ('next',163),('previous',165),('stop',166)]:
@@ -165,11 +199,25 @@ update=function() if keyboard.status().sent>before then while true do end end en
     command('send','play_pause');check('bonded-reconnect',events=receive(164))
     source=subprocess.check_output([str(a.binary),'lua','bundle',str(ROOT/'examples/lua/tv-keyboard.lua')],text=True)
     wrapper="local a=(function()\n"+source+"\nend)();local m=a.message;a.message=function(s) local k=s:match('^K(%d+)$');if k then a.key(tonumber(k),1) else m(s) end end;return a"
-    assert len(wrapper.encode())<=8192
+    assert len(wrapper.encode())<=16384
     script(wrapper)
     spin(3)
     for key,code in [(4,164),(10,113),(7,57),(1,115),(9,114),(2,105),(3,106)]:
         command('send','K'+str(key));check('remote-app-button-'+str(key),events=receive(code))
+    command('send','K0');spin(.2)
+    assert command('status')['result']=='DEVICES: REMOTE'
+    command('send','K4');spin(.2)
+    # The device list uses real addresses; find this laptop without sending input.
+    for _ in range(17):
+        if laptop in command('status')['result']: break
+        command('send','K3');spin(.1)
+    else: raise AssertionError('Laptop absent from saved devices')
+    command('send','K4');command('send','K3');command('send','K4');spin(.2)
+    assert command('status')['result']=='CANCEL: FORGET '+laptop+' PUBLIC?'
+    command('send','K4');spin(.2)
+    assert command('status')['result']=='DISCONNECT: '+laptop+' PUBLIC'
+    command('send','K0')
+    check('app-device-menu-and-cancel-forget')
     # Open native Saved devices and cancel its default-No confirmation.
     steps=[(1,0,0,0),(2,2,0,0),(2,4,1,0),(2,3,1,1),
            (2,3,1,2),(2,3,1,3),(2,4,5,0),(2,4,11,0),(2,0,5,0)]
@@ -189,6 +237,17 @@ update=function() if keyboard.status().sent>before then while true do end end en
         assert (r[6],r[7])==(page,index),(page,index,list(r[:16]))
     assert rows[13][9]>0 and rows[13][9]==rows[17][9]
     check('native-ble-bonds-and-cancel',bond_count=rows[13][9])
+    command('start',str(ROOT/'examples/lua/tv-keyboard.lua'));spin(3)
+    ungrab()
+    command('send','disconnect');spin(4)
+    status=command('status')
+    assert status['state']=='active' and status['result']=='DISCONNECTED: '+laptop+' PUBLIC',status
+    command('start',str(ROOT/'examples/lua/tv-keyboard.lua'));spin(4)
+    status=command('status')
+    assert status['state']=='active' and status['result']=='DISCONNECTED: '+laptop+' PUBLIC',status
+    check('disconnect-survives-app-restart',status=status['result'])
+    command('send','connect');spin(3)
+    remote_reconnect()
     check('complete',checks=len(checks))
 finally:
     failed=sys.exc_info()[0] is not None

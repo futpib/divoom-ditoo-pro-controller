@@ -29,7 +29,8 @@ pub const ASSETS_VERSION: u32 = 306026;
 pub const PERSISTENT_HID_VERSION: u32 = 306027;
 pub const MENU_VERSION: u32 = 306028;
 pub const BLE_REMOTE_VERSION: u32 = 306029;
-pub const APP_SOURCE_LIMIT: usize = 8192;
+pub const LARGE_APP_VERSION: u32 = 306030;
+pub const APP_SOURCE_LIMIT: usize = 16384;
 
 #[derive(Debug, Serialize)]
 pub struct Status {
@@ -220,10 +221,10 @@ pub(crate) async fn execute(
       | STORAGE_VERSION
       | DEVICE_VERSION
       | BLUETOOTH_VERSION
-      | MUTE_VERSION | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION | MEMORY_VERSION | BLUETOOTH_TRACE_VERSION | KEYBOARD_ONLY_VERSION | ASSETS_VERSION | PERSISTENT_HID_VERSION | MENU_VERSION | BLE_REMOTE_VERSION
+      | MUTE_VERSION | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION | MEMORY_VERSION | BLUETOOTH_TRACE_VERSION | KEYBOARD_ONLY_VERSION | ASSETS_VERSION | PERSISTENT_HID_VERSION | MENU_VERSION | BLE_REMOTE_VERSION | LARGE_APP_VERSION
   ) {
     return Err(
-      format!("Lua requires firmware {VERSION}, {APP_VERSION}, {IO_VERSION}, {STORAGE_VERSION}, {DEVICE_VERSION}, {BLUETOOTH_VERSION}, {MUTE_VERSION}, {USB_VERSION}, {KEYBOARD_VERSION}, {KEYBOARD_PAIRING_VERSION}, {STANDALONE_VERSION} or {MEMORY_VERSION}, {BLUETOOTH_TRACE_VERSION}, {KEYBOARD_ONLY_VERSION}, {ASSETS_VERSION}, {PERSISTENT_HID_VERSION}, {MENU_VERSION}, {BLE_REMOTE_VERSION}; no program sent")
+      format!("Lua requires firmware {VERSION}, {APP_VERSION}, {IO_VERSION}, {STORAGE_VERSION}, {DEVICE_VERSION}, {BLUETOOTH_VERSION}, {MUTE_VERSION}, {USB_VERSION}, {KEYBOARD_VERSION}, {KEYBOARD_PAIRING_VERSION}, {STANDALONE_VERSION} or {MEMORY_VERSION}, {BLUETOOTH_TRACE_VERSION}, {KEYBOARD_ONLY_VERSION}, {ASSETS_VERSION}, {PERSISTENT_HID_VERSION}, {MENU_VERSION}, {BLE_REMOTE_VERSION}, {LARGE_APP_VERSION}; no program sent")
         .into(),
     );
   }
@@ -246,8 +247,9 @@ pub(crate) async fn execute(
   }
   match action {
     Action::Run(source) | Action::Start(source) | Action::Install(source) => {
-      if source.is_empty() || source.len() > APP_SOURCE_LIMIT {
-        return Err(format!("Lua source must contain 1..={APP_SOURCE_LIMIT} bytes").into());
+      let limit = if installed >= LARGE_APP_VERSION { APP_SOURCE_LIMIT } else { 8192 };
+      if source.is_empty() || source.len() > limit {
+        return Err(format!("Firmware {installed} accepts 1..={limit} Lua source bytes; 16 KiB requires {LARGE_APP_VERSION}").into());
       }
       let status = exchange(conn, &operation(2, &[])).await?;
       wait_for_worker(conn, status, true).await?;

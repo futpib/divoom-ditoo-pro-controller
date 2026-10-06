@@ -49,22 +49,32 @@ void stock_set_version(const unsigned char *p) { (void)p; }
 static unsigned char reply[1200];
 static unsigned reply_size;
 static uint32_t fs_context[8] = {0,0x9200,0x9000,0,0x9100,0,0,1760};
-static unsigned page_reads;
+static unsigned page_reads, compactions;
 unsigned char stock_asset_rom[0x80000];
 static unsigned font_reads,font_page,font_bad_layout,font_read_error;
 static unsigned char config_context[20];
 unsigned char *volatile stock_config_context;
-static unsigned char persisted[6][SOURCE_LIMIT+24];
-static unsigned persisted_size[6],persist_writes,persist_torn;
+static unsigned char persisted[8][SOURCE_LIMIT+24];
+static unsigned persisted_size[8],persist_writes,persist_torn;
 unsigned stock_partition(unsigned kind,unsigned *p) {
     if (kind==3) { *p=font_bad_layout ? 0 : 0x1f30;return 0x119000; }
     assert(kind==5);*p=0x6000;return 0;
 }
 unsigned stock_config_find(unsigned model,unsigned id,void *e,void *scratch) {
-    assert(model==PERSIST_MODEL && id<6);(void)scratch;
+    assert(model==PERSIST_MODEL && id<8);(void)scratch;
     if (!persisted_size[id]) return 0xffff;
     unsigned char *p=e;memset(p,0,8);p[0]=model;p[1]=id;
-    p[2]=(persisted_size[id]+4+255)/256;uint16_t page=id*40;memcpy(p+4,&page,2);return id;
+    p[2]=(persisted_size[id]+4+255)/256;uint16_t page=id*100;memcpy(p+4,&page,2);return id;
+}
+void stock_config_entry(void *entry,unsigned index,void *scratch) {
+    unsigned char *out=entry,*in=(unsigned char *)scratch+1+(index%51)*5;
+    memset(out,0,8);memcpy(out,in,3);memcpy(out+4,in+3,2);
+}
+
+void stock_config_compact(void) {
+    ++compactions;unsigned used=0;
+    for(unsigned i=0;i<8;++i) used+=(persisted_size[i]+4+255)/256;
+    memcpy(config_context+4,&used,4);config_context[2]=config_context[0]>51 ? 2 : 1;config_context[3]=0;
 }
 unsigned char *runtime_fs_context(void) { return (unsigned char *)fs_context; }
 unsigned stock_page_read(unsigned page, void *data, unsigned n) {
@@ -73,8 +83,15 @@ unsigned stock_page_read(unsigned page, void *data, unsigned n) {
         for (unsigned i=0;i<256;++i) ((unsigned char *)data)[i]=i;
         return font_read_error;
     }
+    if(page>=0x6000 && page<0x6100) {
+        assert(n==1);unsigned char *p=data;memset(p,0,256);unsigned at=1;
+        for(unsigned i=0;i<8;++i) if(persisted_size[i]) {
+            p[at]=PERSIST_MODEL;p[at+1]=i;p[at+2]=(persisted_size[i]+4+255)/256;at+=5;
+        }
+        return 0;
+    }
     if (page>=0x6100 && page<0x6500) {
-        assert(n==1);unsigned slot=(page-0x6100)/40;assert(slot<6);
+        assert(n==1);unsigned slot=(page-0x6100)/100;assert(slot<8);
         unsigned char *p=data;memset(p,255,256);p[0]=persisted_size[slot];p[1]=persisted_size[slot]>>8;
         memcpy(p+2,persisted[slot],persisted_size[slot]<254 ? persisted_size[slot] : 254);return 0;
     }

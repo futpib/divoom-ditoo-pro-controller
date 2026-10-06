@@ -1,7 +1,10 @@
 # Saved apps and settings
 
-Firmware 306022 and later store one startup app (up to 8,192 source bytes) and one shared
-settings string (up to 128 bytes). After a one-time installation, neither a USB
+Firmware 306030 stores one startup app (up to 16,384 source bytes) and one shared
+settings string (up to 128 bytes). Firmware 306022–306029 accepted 8,192 bytes.
+Upgrading to 306030 discards the old saved app; install it again. The app-record
+migration does not rewrite settings, system preferences or Bluetooth records.
+After a one-time installation, neither a USB
 connection nor a Bluetooth controller is needed to run the app.
 
 ```sh
@@ -9,10 +12,20 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
 divoom-ditoo-pro-controller --transport usb lua uninstall
 ```
 
+The hardware regression test replaces the saved app with full-size probes,
+reloads them through the native menu, and exercises native journal compaction.
+Use `--restore` to reinstall the desired app afterward:
+
+```sh
+python3 scripts/check-lua-storage-device.py --transport ble \
+  --device B1:21:81:DD:B8:9B --output target/storage-check \
+  --restore examples/lua/tv-keyboard.lua
+```
+
 `lua install` saves then starts the app. Reinstalling identical source skips the
 flash write. `lua start` temporarily replaces the running app without changing
 the saved source. Uninstall stops the app and writes an empty startup record;
-it preserves the settings string. Firmware updates preserve these records.
+it preserves the settings string. Updates that retain the saved-app format preserve these records; 306030 changes it.
 
 `storage.get()` returns the cached string, or nil when empty. `storage.set(value)`
 queues a native write and returns a ticket; wait for `device.result(ticket)`
@@ -37,8 +50,10 @@ failure or cancellation cannot leave the runtime stuck in its saving state.
 
 The native configuration partition is selected through `stock_partition(5)`.
 On the tested device it occupies SPI `0x8b0000..0x8fffff`, preceding the larger
-filesystem. The new namespace is model `0xd7`, slots 0/1 for app generations and
-2/3 for settings. Firmware 306028 uses slots 4/5 for the independent
+filesystem. Namespace model `0xd7` uses slots **6/7** for the two 16 KiB app
+generations and 2/3 for settings. The old 8 KiB app slots 0/1 are never loaded;
+known old app records become small tombstones to reclaim live pages during
+journal compaction. Foreign records are left alone. Slots 4/5 hold the independent
 [system menu preferences](device-menu.md). Every record has a magic, kind, generation, payload length and
 CRC32. The two banks retain the previous valid generation; boot picks the newer
 valid record and ignores a damaged newer record. Writes use fixed native record
@@ -54,7 +69,7 @@ been tested. Keep a private backup before experimentation:
 python3 scripts/backup-lua-config.py --output firmware/runs/config-backup
 ```
 
-The read-only 306022/306023 diagnostic backs up all five 64-KiB sectors and checks that
+The read-only 306022–306030 diagnostic backs up all five 64-KiB sectors and checks that
 the native context remains unchanged. The backup can contain Bluetooth link
 keys; it is private and ignored by Git. Opcode 12 uses the same framing as the
 filesystem diagnostic below, with magic `DCFG`, a 20-byte context plus 12 bytes of padding, and indices

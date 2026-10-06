@@ -657,7 +657,8 @@ static int keyboard_tap(lua_State *L) {
 static int keyboard_media(lua_State *L) {
     const char *names[]={"play_pause","mute","volume_up","volume_down","next","previous","stop",NULL};
     static const unsigned usages[]={0xcd,0xe2,0xe9,0xea,0xb5,0xb6,0xb7};
-    return submit(L,BT_HID,HID_CONSUMER,usages[luaL_checkoption(L,1,NULL,names)],NULL,0);
+    unsigned char data[16]={0};
+    return submit(L,BT_HID,HID_CONSUMER,usages[luaL_checkoption(L,1,NULL,names)],data,0);
 }
 static int keyboard_status(lua_State *L) {
     unsigned reuse=lua_istable(L,1),diagnostics=lua_toboolean(L,reuse ? 2 : 1);

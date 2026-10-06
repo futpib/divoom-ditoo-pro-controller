@@ -46,7 +46,7 @@ static void test_bt_mute(void) {
     puts("Mute queue copies payload, runs on Bluetooth task, reserves release space and rejects stale/disconnected peers");
 }
 static void test_tv_remote(void) {
-    char source[8193];
+    char source[SOURCE_LIMIT+1];
     FILE *file=fopen("examples/lua/tv-remote.lua","rb");assert(file);
     size_t n=fread(source,1,sizeof(source)-1,file);assert(!ferror(file));fclose(file);source[n]=0;
     bt_media_state=2;bt_audio_state=0;
@@ -228,148 +228,111 @@ static void tv_frame(unsigned stage) {
     FILE *f=fopen(path,"wb");assert(f);fputs("P6\n16 16\n255\n",f);
     assert(fwrite(app.frame,1,sizeof app.frame,f)==sizeof app.frame);fclose(f);
 }
+static unsigned tv_ops[32],tv_value,tv_last;
+static void tv_ticks(unsigned n) {
+    for(unsigned i=0;i<n;++i) {
+        tick();runtime_native_service();
+        if(app.state!=ACTIVE) { fprintf(stderr,"TV app failed: %s peak %u\n",app.result,app.peak);abort(); }
+        if(bt_queued.op==BT_HID_COMMAND) {
+            unsigned v[4];memcpy(v,bt_payload,sizeof v);tv_last=v[2];tv_value=v[3];++tv_ops[tv_last];
+            if(tv_last==HID_MODE) { fake_hid_status.transport=1;fake_hid_status.keyboard_only=1; }
+            if(tv_last==HID_DISCONNECT) { fake_hid_status.state=0;fake_hid_status.pairing=0; }
+            if(tv_last==HID_LISTEN || tv_last==HID_CONNECT || tv_last==HID_PAIR) {
+                fake_hid_status.state=4;memcpy(fake_hid_status.peer,bt_payload+16,6);
+                fake_hid_status.address_type=bt_payload[22];
+                fake_hid_status.pairing=tv_last==HID_PAIR;fake_hid_status.pair_remaining_ms=120000;
+            }
+            if(tv_last==HID_FORGET) for(unsigned j=0;j<16;++j) {
+                if(!memcmp(fake_le_bonds[j],bt_payload+16,7)) fake_le_bonds[j][7]=0;
+            }
+            bt_queued.op=0;
+        }
+    }
+}
+static void tv_key(unsigned key) {
+    runtime_adc_result(1U<<16|key);tv_ticks(1);runtime_adc_result(2U<<16|key);tv_ticks(8);
+}
+static void tv_message(const char *message) {
+    strcpy(app.message,message);app.message_size=strlen(message);tv_ticks(100);
+}
+static void tv_stop(void) {
+    app.cancel=1;service();runtime_native_service();assert(!allocations);
+}
 static void test_tv_keyboard(void) {
-    char source[8193];
+    char source[SOURCE_LIMIT+1];
     FILE *file=fopen("target/lua-app/runtime/tv-keyboard.bundle.lua","rb");assert(file);
     size_t n=fread(source,1,sizeof source-1,file);assert(!ferror(file));fclose(file);source[n]=0;
-    fake_hid_status=(struct hid_status){.state=0,.enabled=1};memset(fake_hid_status.peer,8,6);bt_queued.op=0;
-    saved.initialized=saved.boot_done=1;stock_config_context=config_context;saved.settings_size=0;
-    track_heap=1;free_heap=76000;load(source,1);
-    if(app.state!=ACTIVE) { fprintf(stderr,"Standalone app: %s peak %u\n",app.result,app.peak);abort(); }
-    printf("Standalone startup: peak %u, reserved %u, stock heap %u\n",app.peak,app.reserved,stock_free_heap());
-    for(unsigned i=0;i<8 && !bt_queued.op;++i) { tick();runtime_native_service(); }
-    unsigned policy[4];memcpy(policy,bt_payload,sizeof policy);
-    assert(bt_queued.op==BT_HID_COMMAND && policy[2]==HID_MODE && policy[3]==2);
-    app.cancel=1;service();runtime_native_service();assert(!allocations);
-    fake_hid_status.keyboard_only=1;fake_hid_status.transport=1;fake_hid_status.state=2;bt_queued.op=0;
-    load(source,1);
-    for(unsigned i=0;i<3;++i) tick();tv_frame(0);
-    for(unsigned i=0;i<100;++i) { tick();runtime_native_service(); }
-    assert(strstr(app.result,"TV: READY") && !bt_queued.op);
-    const unsigned keys[]={4,10,7,1,9,2,3};
-    const unsigned usages[]={0xcd,0xe2,44,0xe9,0xea,80,79};
-    for (unsigned i=0;i<sizeof keys/sizeof keys[0];++i) {
-        unsigned key=keys[i];
-        clock_ms+=600;runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);
-        for (unsigned j=0;j<8;++j) { tick();runtime_native_service(); }
-        unsigned values[4];memcpy(values,bt_payload,sizeof values);
-        assert(bt_queued.op==BT_HID_COMMAND && bt_queued.length==32);
-        assert(values[2]==(key==7 || key==2 || key==3 ? HID_KEY : HID_CONSUMER));
-        assert(values[3]==usages[i]);
-        bt_queued.op=0;
-        runtime_adc_result(3U<<16 | key);tick();runtime_adc_result(4U<<16 | key);tick();
-        runtime_adc_result(5U<<16 | key);tick();assert(!bt_queued.op);
+    memset(fake_le_bonds,0,sizeof fake_le_bonds);
+    for(unsigned i=0;i<16;++i) { memset(fake_le_bonds[i],i+1,6);fake_le_bonds[i][6]=i%2;fake_le_bonds[i][7]=1; }
+    fake_hid_status=(struct hid_status){.state=2,.enabled=1,.transport=1};memset(fake_hid_status.peer,1,6);
+    saved.initialized=saved.boot_done=1;stock_config_context=config_context;
+    const char *setting="TV5|01:01:01:01:01:01|public|";
+    memcpy(saved.settings,setting,strlen(setting));saved.settings_size=strlen(setting);
+    track_heap=1;free_heap=76000;bt_queued.op=0;memset(tv_ops,0,sizeof tv_ops);
+    load(source,1);tv_ticks(100);tv_frame(0);
+    assert(strstr(app.result,"CONNECTED: 01:01:01:01:01:01 PUBLIC"));
+    assert(!memcmp(saved.settings,"TV6|01:01:01:01:01:01|public|1",saved.settings_size));
+    unsigned sent_message=tv_ops[HID_CONSUMER];
+    tv_message("play_pause");assert(tv_ops[HID_CONSUMER]==sent_message+1 && tv_value==0xcd);
+    const unsigned keys[]={4,10,7,1,9,2,3},usages[]={0xcd,0xe2,44,0xe9,0xea,80,79};
+    for(unsigned i=0;i<7;++i) {
+        clock_ms+=600;tv_key(keys[i]);assert(tv_value==usages[i]);
+        assert(tv_last==(i==2 || i>=5 ? HID_KEY : HID_CONSUMER));
+        unsigned before=tv_ops[HID_KEY]+tv_ops[HID_CONSUMER];
+        for(unsigned e=3;e<=5;++e) { runtime_adc_result(e<<16|keys[i]);tv_ticks(1); }
+        assert(tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==before);
     }
-    for(unsigned key=5;key<=8;++key) {
-        if(key==7) continue;
-        runtime_adc_result(1U<<16 | key);tick();runtime_adc_result(2U<<16 | key);tick();
-        assert(!bt_queued.op); /* Unused stock ADC slots do not become controls. */
-    }
-    runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();assert(!bt_queued.op);
-    for(unsigned i=0;i<3;++i) tick();tv_frame(9);
-    assert(strstr(app.result,"LINK:"));
-    runtime_adc_result(1U<<16 | 3);tick();runtime_adc_result(2U<<16 | 3);tick();
-    assert(strstr(app.result,"PAIR:") && !bt_queued.op);
-    runtime_adc_result(1U<<16 | 1);tick();runtime_adc_result(2U<<16 | 1);tick();
-    assert(strstr(app.result,"PAIR:") && !bt_queued.op); /* Volume stays local in menus. */
-    runtime_adc_result(1U<<16 | 4);tick();runtime_adc_result(2U<<16 | 4);tick();
-    assert(strstr(app.result,"RESET SAVED TV?") && !bt_queued.op);
-    runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();
-    runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();
-    assert(strstr(app.result,"LINK:"));
-    runtime_adc_result(1U<<16 | 2);tick();runtime_adc_result(2U<<16 | 2);tick();
-    assert(strstr(app.result,"BACK:") && !bt_queued.op); /* Left wraps backwards. */
-    for(unsigned i=0;i<1000;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
-    printf("Standalone sustained: used %u, peak %u, reserved %u, stock heap %u\n",app.used,app.peak,app.reserved,stock_free_heap());
-    /* Close the menu, then model loss of an outgoing connection. Native HID
-       disables incoming acceptance until the app explicitly listens again. */
-    runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();
-    fake_hid_status.state=0;bt_queued.op=0;
-    for(unsigned i=0;i<80;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
-    unsigned reconnect[4];memcpy(reconnect,bt_payload,sizeof reconnect);
-    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_LISTEN);
-    assert(!memcmp(bt_payload+16,fake_hid_status.peer,6));
-    fake_hid_status.state=4;bt_queued.op=0;
-    for(unsigned i=0;i<1000;++i) { tick();runtime_native_service(); }
-    assert(!bt_queued.op); /* Listening is passive, without outgoing attempts. */
-    /* An offline action starts a bonded connection and sends once it opens. */
-    clock_ms+=10001;
-    runtime_adc_result(1U<<16 | 4);tick();runtime_adc_result(2U<<16 | 4);
-    for(unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
-    memcpy(reconnect,bt_payload,sizeof reconnect);
-    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_CONNECT);
-    assert(!memcmp(bt_payload+16,fake_hid_status.peer,6));
-    fake_hid_status.state=1;bt_queued.op=0;
-    for(unsigned i=0;i<50;++i) { tick();runtime_native_service(); }
-    assert(!bt_queued.op);
-    fake_hid_status.state=2;
-    for(unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
-    memcpy(reconnect,bt_payload,sizeof reconnect);
-    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_CONSUMER && reconnect[3]==0xcd);
-    bt_queued.op=0;
-    for(unsigned i=0;i<100;++i) { tick();runtime_native_service(); }
-    assert(!bt_queued.op); /* The deferred action is not repeated. */
-    /* A late connection must not replay an old action. */
-    fake_hid_status.state=0;
-    for(unsigned i=0;i<80;++i) { tick();runtime_native_service(); }
-    fake_hid_status.state=4;bt_queued.op=0;clock_ms+=10001;
-    runtime_adc_result(1U<<16 | 7);tick();runtime_adc_result(2U<<16 | 7);
-    for(unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
-    memcpy(reconnect,bt_payload,sizeof reconnect);
-    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_CONNECT);
-    fake_hid_status.state=1;bt_queued.op=0;
-    for(unsigned i=0;i<150;++i) { tick();runtime_native_service(); }
-    fake_hid_status.state=2;
-    for(unsigned i=0;i<80;++i) { tick();runtime_native_service(); }
-    assert(app.state==ACTIVE && strstr(app.result,"TV: READY") && !bt_queued.op);
-    /* Explicit OFF must not be undone by automatic recovery. */
-    memcpy(app.message,"disconnect",10);app.message_size=10;bt_queued.op=0;
-    for(unsigned i=0;i<30;++i) { tick();runtime_native_service(); }
-    memcpy(reconnect,bt_payload,sizeof reconnect);
-    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_DISCONNECT);
-    fake_hid_status.state=0;bt_queued.op=0;
-    for(unsigned i=0;i<1000;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
-    assert(!bt_queued.op);
-    runtime_adc_result(1U<<16 | 4);tick();runtime_adc_result(2U<<16 | 4);
-    for(unsigned i=0;i<80;++i) { tick();runtime_native_service(); }
-    assert(!bt_queued.op); /* Ordinary keys respect explicit OFF. */
-    /* A developer/listen request re-enables the remote without clearing bonds. */
-    memcpy(app.message,"listen",6);app.message_size=6;
-    for(unsigned i=0;i<160;++i) { tick();runtime_native_service(); }
-    memcpy(reconnect,bt_payload,sizeof reconnect);
-    assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_LISTEN);
-    app.cancel=1;service();runtime_native_service();assert(!allocations);fake_hid_status.state=0;
-    fake_hid_status=(struct hid_status){.state=2,.enabled=1,.keyboard_only=1,.transport=1};
-    memset(fake_hid_status.peer,8,6);bt_queued.op=0;
-    const char *legacy[]={"TV2|08:08:08:08:08:08|2,3,4,5",
-                          "TV3|08:08:08:08:08:08|4,10,9,0",
-                          "TV3|08:08:08:08:08:08|9,9,bad",
-                          "TV4|08:08:08:08:08:08|"};
-    for(unsigned i=0;i<sizeof legacy/sizeof legacy[0];++i) {
-        memcpy(saved.settings,legacy[i],strlen(legacy[i])+1);saved.settings_size=strlen(legacy[i]);
-        load(source,1);
-        for(unsigned j=0;j<100;++j) { tick();runtime_native_service(); }
-        const char *current="TV5|08:08:08:08:08:08|public|";
-        assert(saved.settings_size==strlen(current) && !memcmp(saved.settings,current,strlen(current)));
-        assert(app.state==ACTIVE && !strcmp(app.result,"TV: READY") && !bt_queued.op);
-        runtime_adc_result(1U<<16 | 1);tick();runtime_adc_result(2U<<16 | 1);
-        for(unsigned j=0;j<8;++j) { tick();runtime_native_service(); }
-        unsigned values[4];memcpy(values,bt_payload,sizeof values);
-        assert(bt_queued.op==BT_HID_COMMAND && values[2]==HID_CONSUMER && values[3]==0xe9);
-        bt_queued.op=0;
-        app.cancel=1;service();runtime_native_service();assert(!allocations);
-    }
-    saved.settings_size=0;fake_hid_status.state=0;
-    load(source,1);
-    for(unsigned i=0;i<200;++i) { tick();runtime_native_service();assert(app.state==ACTIVE); }
-    assert(strstr(app.result,"RESET SAVED TV?") && !strstr(app.result,"KEY"));
-    runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();
-    assert(!strcmp(app.result,"TV: NOT PAIRED"));
-    app.cancel=1;service();runtime_native_service();assert(!allocations);
-    puts("Legacy settings adopt an active BLE peer only; fresh startup has no binding prompts");
-    stock_config_context=NULL;saved.settings_size=0;track_heap=0;free_heap=100000;
-    puts("TV keyboard uses stock ADC IDs, sends seven reports, and keeps M/arrows/lever navigation local");
-    puts("TV keyboard resumes listening, reconnects on input with bounded deferred action, and respects OFF");
+    unsigned reports=tv_ops[HID_KEY]+tv_ops[HID_CONSUMER];
+    tv_key(0);assert(!strcmp(app.result,"DEVICES: REMOTE"));
+    tv_key(2);assert(!strcmp(app.result,"BACK: REMOTE"));
+    tv_key(3);tv_key(4);assert(strstr(app.result,"01:01:01:01:01:01 PUBLIC"));
+    /* All sixteen native bonds, including address type, remain selectable. */
+    for(unsigned i=0;i<16;++i) { tv_key(3);tv_ticks(20); }
+    assert(strstr(app.result,"BACK: DEVICES"));tv_key(3);tv_frame(1);
+    tv_key(4);assert(strstr(app.result,"DISCONNECT:"));tv_key(3);tv_key(4);
+    assert(strstr(app.result,"CANCEL: FORGET 01:01:01:01:01:01 PUBLIC?"));tv_frame(2);
+    tv_key(1);tv_key(7);assert(strstr(app.result,"CANCEL:"));
+    tv_key(4);assert(!tv_ops[HID_FORGET]); /* Default selection cancels. */
+    tv_key(10);tv_key(3);tv_key(4);assert(strstr(app.result,"CONNECT: 02:02:02:02:02:02 RANDOM"));
+    tv_key(4);tv_ticks(100);assert(tv_last==HID_LISTEN && fake_hid_status.address_type==1);
+    assert(strstr(app.result,"WAITING FOR DEVICE: 02:02:02:02:02:02 RANDOM"));tv_frame(3);
+    tv_key(4);fake_hid_status.state=2;tv_ticks(8);assert(tv_last==HID_CONSUMER && tv_value==0xcd);
+    tv_ticks(50);assert(strstr(app.result,"CONNECTED: 02:02:02:02:02:02 RANDOM"));
+    /* Opening a menu discards a deferred action. A late connection does too. */
+    fake_hid_status.state=4;tv_ticks(1);tv_key(7);tv_key(0);
+    unsigned sent=tv_ops[HID_KEY];fake_hid_status.state=2;tv_ticks(50);assert(tv_ops[HID_KEY]==sent);tv_key(0);
+    fake_hid_status.state=4;tv_ticks(1);tv_key(7);tv_ticks(150);fake_hid_status.state=2;tv_ticks(50);
+    assert(tv_ops[HID_KEY]==sent);
+    tv_message("disconnect");tv_ticks(200);assert(strstr(app.result,"DISCONNECTED:"));tv_frame(4);
+    unsigned listens=tv_ops[HID_LISTEN];tv_key(4);tv_ticks(200);assert(tv_ops[HID_LISTEN]==listens);
+    tv_stop();load(source,1);tv_ticks(200);assert(strstr(app.result,"DISCONNECTED:") && tv_ops[HID_LISTEN]==listens);
+    /* Pairing is separate from deletion. Expiry is persistent and explicit. */
+    tv_key(0);tv_key(3);tv_key(4);tv_ticks(100);
+    assert(strstr(app.result,"READY TO PAIR: SELECT DITOO BLE REMOTE"));tv_frame(5);
+    assert(tv_ops[HID_PAIR] && !tv_ops[HID_FORGET]);
+    fake_hid_status.state=1;memset(fake_hid_status.peer,20,6);tv_ticks(1);assert(strstr(app.result,"PAIRING:"));
+    fake_hid_status.pairing=0;fake_hid_status.state=4;tv_ticks(200);
+    assert(strstr(app.result,"PAIRING TIMED OUT"));tv_frame(6);
+    tv_ticks(200);assert(strstr(app.result,"PAIRING TIMED OUT"));
+    tv_message("pair");assert(fake_hid_status.pairing);tv_key(10);tv_ticks(100);
+    assert(!fake_hid_status.pairing && !tv_ops[HID_FORGET] && strstr(app.result,"DISCONNECTED:"));
+    tv_message("pair");fake_hid_status.state=2;fake_hid_status.pairing=0;
+    memset(fake_hid_status.peer,3,6);fake_hid_status.address_type=0;tv_ticks(100);
+    assert(strstr(app.result,"CONNECTED: 03:03:03:03:03:03 PUBLIC"));
+    /* Forget selects exactly one typed bond and reconnects the other selection. */
+    tv_key(0);tv_key(4);tv_key(4);tv_key(3);tv_key(4);tv_key(3);tv_key(4);tv_ticks(100);
+    assert(tv_ops[HID_FORGET]==1 && !fake_le_bonds[0][7] && fake_le_bonds[2][7]);
+    tv_key(0);tv_ticks(100);assert(strstr(app.result,"WAITING FOR DEVICE: 03:03:03:03:03:03 PUBLIC"));
+    for(unsigned i=0;i<20;++i) { tv_key(0);tv_key(4);tv_ticks(10);tv_key(0); }
+    printf("Android-style remote: source %u, Lua peak %u, reserved %u, native free %u\n",(unsigned)n,app.peak,app.reserved,stock_free_heap());
+    assert(app.peak<=MEMORY_LIMIT && stock_free_heap()>=STOCK_HEAP_RESERVE);
+    assert(tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==reports+1);
+    tv_stop();saved.settings_size=0;fake_hid_status.state=0;memset(fake_le_bonds,0,sizeof fake_le_bonds);
+    load(source,1);tv_ticks(100);assert(!strcmp(app.result,"PAIR NEW DEVICE: REMOTE"));
+    tv_key(4);tv_ticks(100);assert(fake_hid_status.pairing && tv_ops[HID_FORGET]==1);
+    tv_stop();stock_config_context=NULL;saved.settings_size=0;track_heap=0;free_heap=100000;
+    fake_hid_status=(struct hid_status){0};bt_queued.op=0;
+    puts("Remote UX: typed devices, navigation, default-cancel forgetting, pairing without deletion, persistent disconnect/timeout, deferred inputs and 16-bond memory passed");
 }
 
 static void test_keyboard_lifecycle(void) {
@@ -395,6 +358,13 @@ static void test_keyboard_lifecycle(void) {
     request_test("local t;return {init=function() t=assert(keyboard.connect('08:08:08:08:08:08','random')) end,"
         "update=function() assert(device.result(t));print('ok') end}");
     assert(bt_payload[22]==1 && peripheral.bt_attempts==32);
+    /* A media key immediately after connection must not inherit its address
+     * as keyboard modifiers. No preceding keyboard.tap clears this buffer. */
+    fake_hid_status.state=2;
+    request_test("local t;return {init=function() t=assert(keyboard.media('play_pause')) end,"
+        "update=function() assert(device.result(t));print('ok') end}");
+    for(unsigned i=16;i<32;++i) assert(bt_payload[i]==0);
+    fake_hid_status.state=0;
     fake_hid_status.transport=0;peripheral.bt_attempts=0;
     check("local t={peer='stale'};assert(keyboard.status(t)==t and not t.peer);return t.state",DONE,"0");
     for (unsigned i=0;i<8;++i) {

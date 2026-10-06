@@ -1,11 +1,38 @@
 # Lua memory on the Ditoo Pro
 
-Firmware 306023 reduces memory overhead without changing the Lua API, upload
-protocol or saved-app format. UI helpers remain ordinary Lua modules bundled
-on the host. The source limit remains 8,192 bytes and the Lua arena ceiling
-remains 49,152 bytes.
+Firmware 306030 accepts up to 16,384 source bytes with a 49,152-byte Lua arena.
+It retains the allocator and streaming-parser improvements introduced in
+306023. UI helpers remain ordinary Lua modules bundled on the host.
 
-## What changed
+## 16 KiB source limit (306030)
+
+The upload and saved-app ceiling is now 16,384 bytes. The 48 KiB Lua arena,
+24 KiB native reserve, instruction/time guards and recovery controls are unchanged.
+A larger source is not a promise that its compiled code or runtime data fits.
+Source upload now checks native headroom as well as allocation success.
+
+Installation copies source blocks into the saved record and releases each block
+immediately. Native writing then needs the record, one writer copy, and one
+page-rounded old record, rather than retaining the uploaded source too. A changed
+16 KiB save requires about 74 KiB of native heap before the uploaded source;
+low-memory operations fail before writing. Boot needs about 57 KiB available to
+read the two generations and construct source blocks.
+
+The stock journal collector can temporarily buffer live flash pages. Before it is
+needed, the installer checks its allocation bound and invokes it separately from
+the native writer. Sector-boundary padding is included in the space check. The
+old app records are retired; this upgrade requires reinstalling the startup app.
+See [saved storage](lua-storage.md) for the exact format and recovery limits.
+
+On hardware, three distinct 16 KiB sources saved and reloaded through the native
+Saved app menu. Journal compaction reduced used pages from 963 to 209, followed
+by another successful reload. All 43 device guard/recovery checks passed.
+The current remote bundle is 9,940 bytes. The native sanitizer test with sixteen
+simulated bonds peaks at 48,064 Lua bytes, under the unchanged 49,152-byte ceiling.
+These are source/storage and bounded-runtime checks, not a guarantee that any
+16 KiB program fits the Lua heap. See the [306030 evidence](../firmware/lua-16k-evidence/verification.json).
+
+## What changed in 306023
 
 - Shrinking a Lua allocation releases its unused tail. Previously the compiler
   could shrink an array while the allocator retained the original large block.
@@ -24,8 +51,8 @@ or a constant-memory upload. Compilation produces Lua VM instructions, function
 prototypes, strings and debug metadata in RAM; that compiled representation stays
 until the app stops. The original source is not retained after compilation.
 
-The source blocks and their 68-byte index are native allocations outside the Lua
-arena. Native allocation headers also consume space. They overlap less with the
+The source blocks and their 132-byte index (68 bytes before 306030) are native
+allocations outside the Lua arena. Native allocation headers also consume space. They overlap less with the
 growing compiler heap because consumed blocks are released progressively. Native
 Bluetooth, audio, the USB session buffer, the 16 KiB Lua task stack and the 8 KiB
 reserved globals also live outside the arena. `device.stats().free_heap` reports
@@ -68,15 +95,20 @@ python3 scripts/build-lua-app-runtime.py
 python3 scripts/test-lua-app-runtime.py
 cargo test --locked --no-default-features
 cargo build --release --locked --no-default-features
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306023-lua.MVA
-python3 scripts/check-lua-app-device.py --transport usb --firmware 306023 \
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306030-lua.MVA
+python3 scripts/check-lua-app-device.py --transport usb --firmware 306030 \
   --output firmware/runs/memory-guards
 python3 scripts/check-lua-memory.py --output firmware/runs/memory-profile
 ```
 
+These commands exercise the current app and firmware. Reproducing the historical
+306022/306023 comparison requires the matching older revision and its 7,828-byte
+remote bundle; the current remote exceeds those versions' source limit.
+
 The memory profiler temporarily starts the bundled TV app five times, then runs
 an instrumented copy for 60 samples, checks its menu and restores the unmodified
-running app. It does not write saved apps, settings or Bluetooth bonds. It replaces
+running app. It does not write saved apps or Bluetooth bonds; the current app may
+migrate its own settings format. It replaces
 any other running app with the TV app. Compare firmware versions with identical
 source, settings, sampling parameters and USB connection state. Bluetooth/native
 activity and garbage-collection timing can still affect individual samples.

@@ -1,0 +1,242 @@
+{
+  "date_utc": "2026-10-06",
+  "firmware": {
+    "version": 306030,
+    "sha256": "26aefe7adda9bbe5fd82a22c9d340f9d8f4c4417badac621e533d4c9134de505",
+    "bytes": 2023403
+  },
+  "limits": {
+    "source_bytes": 16384,
+    "lua_arena_bytes": 49152,
+    "native_heap_reserve_bytes": 24576,
+    "callback_instructions": 100000,
+    "callback_milliseconds": 50
+  },
+  "build": {
+    "text_bytes": 144290,
+    "data_bytes": 1752,
+    "bss_bytes": 6200,
+    "remote_bundle_bytes": 9940,
+    "reproducibility": "All four retained builders reproduced image and metadata bytes twice in different isolated paths."
+  },
+  "offline_checks": {
+    "rust_tests": 75,
+    "python_tests": 30,
+    "lua_lint_files": 16,
+    "native_runtime": "32-bit ASan/UBSan suite passed, including address-to-media payload clearing, full-size save/boot, compaction budgeting, low-memory refusal, legacy retirement, native menu, peripherals, HOGP and USB bridge.",
+    "remote_with_16_simulated_bonds": {
+      "peak_lua_bytes": 48064,
+      "arena_reserved_bytes": 49152,
+      "native_free_bytes": 26592
+    }
+  },
+  "earlier_same_version_hardware": {
+    "sha256": "00c4090b51fae30859d53f88c66787671ab38e4d924da8d6c6323562e50e61f9",
+    "difference_from_final": "Identical source/storage/runtime limits; final image additionally clears keyboard.media payload bytes.",
+    "old_firmware_preflight": "306029 rejected the 9940-byte bundle before stopping the running app; generation stayed 9.",
+    "initial_upgrade": "Booted idle with NO SAVED APP, as expected for discarded legacy app banks.",
+    "storage_checks": [
+      {
+        "check": "full-size-save-A",
+        "passed": true,
+        "source_bytes": 16384,
+        "sha256": "aeb28db5311cf445ec49257ca379f006ad7d67b195e4c6a3a334422bd42ba1d8"
+      },
+      {
+        "check": "full-size-native-menu-reload-A",
+        "passed": true
+      },
+      {
+        "check": "full-size-save-B",
+        "passed": true,
+        "source_bytes": 16384,
+        "sha256": "879351c538bd9ef6964111491248e353b1a98e4b42a2abbf99ba3751b896304c"
+      },
+      {
+        "check": "full-size-native-menu-reload-B",
+        "passed": true
+      },
+      {
+        "check": "full-size-save-C",
+        "passed": true,
+        "source_bytes": 16384,
+        "sha256": "43b388b8dfd6663809bebf021dc6e98fadafc61e1e80e11645d40ddea4d77dba"
+      },
+      {
+        "check": "full-size-native-menu-reload-C",
+        "passed": true
+      },
+      {
+        "check": "native-journal-compaction-and-reload",
+        "passed": true,
+        "before_pages": 963,
+        "after_pages": 209
+      },
+      {
+        "check": "restored-saved-app",
+        "passed": true
+      }
+    ],
+    "runtime_guards": {
+      "passed": 43,
+      "total": 43,
+      "stock_version_query_afterwards": true,
+      "cases": [
+        "integer",
+        "float",
+        "libraries",
+        "loop",
+        "pcall",
+        "coroutine",
+        "nested-coroutine",
+        "finalizer",
+        "close",
+        "tostring",
+        "sort",
+        "gsub",
+        "pattern",
+        "oom",
+        "caught-oom",
+        "recursion",
+        "native-call-limit",
+        "syntax",
+        "binary",
+        "capabilities",
+        "stock-heap-headroom",
+        "led-frame",
+        "one-shot-present",
+        "resident-start",
+        "incoming-message",
+        "outgoing-message",
+        "outgoing-acknowledged",
+        "paused",
+        "resumed",
+        "stopped",
+        "update-loop",
+        "update-loop-recovery",
+        "timer-loop",
+        "timer-loop-recovery",
+        "message-loop",
+        "message-loop-recovery",
+        "full-16384-byte-upload",
+        "led-resident",
+        "led-paused",
+        "led-resumed",
+        "led-error-reclaimed",
+        "led-error-recovery",
+        "final-stop"
+      ]
+    },
+    "ble_source_upload": {
+      "source_bytes": 16384,
+      "att_writes": 96,
+      "write_sizes": {
+        "256": 64,
+        "22": 32
+      },
+      "data_transfer_seconds": 2.727,
+      "pace": "ATT write responses; each source fragment at most 256 bytes"
+    },
+    "initial_hogp_checks_passed": 30
+  },
+  "final_image_hardware": {
+    "host": "Linux laptop, Intel AX201, BlueZ 5.87; only matching Ditoo input nodes grabbed.",
+    "flash": {
+      "transport": "BLE",
+      "chunks": 7904,
+      "transfer_seconds": 352.392627993,
+      "device_completed": true,
+      "reported_version": 306030,
+      "version_reconnect_attempt": 1
+    },
+    "saved_app_autostart": {
+      "passed": true,
+      "generation": 1,
+      "state": "active",
+      "peak_lua_bytes": 45432
+    },
+    "postboot_saved_bond_and_first_media": [
+      {
+        "check": "connect-after-explicit-disconnect",
+        "passed": true,
+        "events": [
+          [
+            164,
+            1
+          ],
+          [
+            164,
+            0
+          ]
+        ]
+      }
+    ],
+    "hogp_checks": {
+      "passed": 32,
+      "cases": [
+        "consecutive-control-sessions",
+        "peer-is-this-laptop",
+        "bonded-host",
+        "restricted-remote-descriptor",
+        "media-before-any-keyboard-report",
+        "k40",
+        "k41",
+        "k44",
+        "k79",
+        "k80",
+        "k81",
+        "k82",
+        "play_pause",
+        "mute",
+        "volume_up",
+        "volume_down",
+        "next",
+        "previous",
+        "stop",
+        "infinite-loop-release",
+        "bonded-reconnect",
+        "remote-app-button-4",
+        "remote-app-button-10",
+        "remote-app-button-7",
+        "remote-app-button-1",
+        "remote-app-button-9",
+        "remote-app-button-2",
+        "remote-app-button-3",
+        "app-device-menu-and-cancel-forget",
+        "native-ble-bonds-and-cancel",
+        "disconnect-survives-app-restart",
+        "connect-after-explicit-disconnect"
+      ],
+      "input_verification": "Every key test received exactly the expected EV_KEY down/up pair.",
+      "saved_bond_count": 4
+    },
+    "handoff": "Ordinary remote app saved for startup; laptop target explicitly disconnected. Host Ditoo connection closed without forgetting its bond.",
+    "host_handoff": {
+      "connected": false,
+      "bonded": true
+    }
+  },
+  "reconnect_regression": {
+    "before": "Post-reboot encrypted HID connected, but Play/Pause produced no Linux input. Native diagnostic recorded error 14. The media command reused nonzero peer-address bytes as modifiers; earlier keyboard.tap calls had masked it.",
+    "fix": "keyboard.media now supplies a zeroed payload; native test covers connect then media, and hardware tests send media before any keyboard report."
+  },
+  "pairing_observation": "After the initial upgrade the laptop was absent from the Ditoo native bond list, while three older peers remained. Encryption alone still succeeded but HID discovery did not. Refreshing the host GATT cache did not fix it. Re-pairing only the laptop restored HID and four bonds. The cause of that initial missing laptop record was not established. Subsequent firmware restarts reused the repaired laptop bond without pairing.",
+  "limitations": [
+    "TV and ADB were not used for compatibility testing.",
+    "App button checks inject real app key callbacks; they are not physical button presses.",
+    "Two simultaneous BLE hosts and physical USB on this version were not tested.",
+    "A 16 KiB source can still exceed the unchanged Lua arena or native headroom; it is rejected safely.",
+    "No power-loss test during native journal compaction was performed."
+  ],
+  "reproduction": [
+    "python3 scripts/build-lua-app-runtime.py",
+    "python3 scripts/test-lua-app-runtime.py",
+    "python3 scripts/check-firmware-repro.py --output target/repro",
+    "cargo test --locked",
+    "cargo build --release --locked",
+    "python3 scripts/check-lua-storage-device.py --transport ble --device DEVICE --output target/storage --restore examples/lua/tv-keyboard.lua",
+    "python3 scripts/check-lua-app-device.py --transport ble DEVICE --firmware 306030 --output target/guards",
+    "sudo python3 scripts/check-bluetooth-hogp.py --device DEVICE",
+    "sudo python3 scripts/check-bluetooth-hogp.py --device DEVICE --reconnect-only"
+  ]
+}

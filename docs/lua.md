@@ -124,7 +124,9 @@ is no `io`, `os`, `package`, `debug`, `load`, `loadfile`, `dofile`,
 
 ## Execution limits and recovery
 
-- Source: 1–8,192 bytes, text only, uploaded in at most 512-byte chunks.
+- Source: 1–16,384 bytes on 306030; earlier resident firmware accepts 8,192.
+  Text only, uploaded in at most 512-byte chunks. The host checks the installed
+  firmware limit before stopping the current app.
   306023 frees consumed source blocks during compilation; it does not retain
   the source after compilation. See [memory accounting](lua-memory.md).
 - Lua memory: a 48 KiB ceiling in 306021 (40 KiB previously), acquired in

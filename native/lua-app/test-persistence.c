@@ -45,7 +45,18 @@ static void test_persistence(void) {
     clock_ms+=3000;runtime_boot_service();assert(saved.boot_done && saved.boot_skip && app.state==IDLE);
     assert(app.suppressed & (1U<<2));runtime_adc_result(2U<<16 | 2);assert(!app.suppressed);
     char full[SOURCE_LIMIT];memset(full,'x',sizeof full);memcpy(full,"return {} --",12);
+    track_heap=1;free_heap=78000;
     assert(!save_app(full,sizeof full,&changed) && changed);
+    /* Exercise compaction with both full-size generations, then reject a
+     * lower native budget before any write or source-page consumption. */
+    full[100]^=1;
+    assert(!save_app(full,sizeof full,&changed) && changed);
+    unsigned used=1000;memcpy(config_context+4,&used,4);config_context[0]=3;config_context[2]=1;
+    full[100]^=1;unsigned before_gc=compactions;
+    assert(!save_app(full,sizeof full,&changed) && changed && compactions==before_gc+1);
+    free_heap=74000;full[101]^=1;unsigned refused=persist_writes;
+    assert(save_app(full,sizeof full,&changed) && !changed && persist_writes==refused && !allocations);
+    full[101]^=1;free_heap=78000;
     unsigned writes=persist_writes;
     assert(!save_app(full,sizeof full,&changed) && !changed && persist_writes==writes);
     memset(&saved,0,sizeof saved);memset(&app,0,sizeof app);
@@ -54,15 +65,17 @@ static void test_persistence(void) {
     assert(source_matches(app.source,full,sizeof full));
     launch();assert(app.state==ACTIVE);app.cancel=1;service();runtime_native_service();assert(!allocations);
     memset(&app,0,sizeof app);
+    track_heap=0;free_heap=100000;
     assert(!save_app("while true do end",17,&changed));
     memset(&saved,0,sizeof saved);runtime_boot_service();clock_ms+=3000;runtime_boot_service();launch();
     assert(app.state==ERROR);clock_ms+=10000;runtime_boot_service();assert(app.state==ERROR && !allocations);
     assert(!save_app(NULL,0,&changed));
     memset(&app,0,sizeof app);memset(&saved,0,sizeof saved);
     runtime_boot_service();clock_ms+=3000;runtime_boot_service();assert(app.state==IDLE);
-    persisted[0][0]=0;foreign=0;r=persist_latest(1,&bank,&foreign);stock_free(r);assert(foreign);
+    persisted[6][0]=0;foreign=0;r=persist_latest(1,&bank,&foreign);stock_free(r);assert(foreign);
     assert(save_app("return {}",9,&changed) && !changed);
     assert(persist_save(2,NULL,129,&changed));
+    config_context[0]=config_context[2]=config_context[4]=config_context[5]=0;
     stock_config_context=NULL;
     assert(save_app("return {}",9,&changed));
     memset(&app,0,sizeof app);memset(&saved,0,sizeof saved);
@@ -72,6 +85,14 @@ static void test_persistence(void) {
     app.state=SAVING;app.source=source_new(1);app.cancel=1;runtime_boot_service();
     assert(app.state==DONE && !app.source && !allocations);
     memset(&app,0,sizeof app);memset(&saved,0,sizeof saved);
+    memset(persisted_size,0,sizeof persisted_size);stock_config_context=config_context;
+    struct saved_record *legacy=(struct saved_record *)persisted[0];
+    memset(legacy,0,8216);legacy->magic=0x41554c44;legacy->kind=1;legacy->length=9;
+    memcpy(legacy->data,"return {}",9);legacy->crc=persist_crc(legacy);persisted_size[0]=8216;
+    persisted_size[1]=8216;memset(persisted[1],0,8216);
+    persist_retire_legacy();assert(persisted_size[0]==24 && persisted_size[1]==8216);
+    foreign=0;r=persist_latest(1,&bank,&foreign);assert(!r && !foreign);
+    stock_config_context=NULL;
     memset(persisted_size,0,sizeof persisted_size);persist_writes=0;peripheral.writes=0;
     puts("Saved app and settings: A/B fallback, corruption, no-op writes, full-size reboot, boot escape, crash without restart and uninstall passed");
 }

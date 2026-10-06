@@ -355,7 +355,10 @@ Firmware 306029 adds `keyboard.mode("ble-remote")`: standard BLE HID over GATT
 with a restricted non-alphabetic remote descriptor and persistent LE bonds.
 Install `examples/lua/tv-keyboard.lua` with `lua install` for the BLE remote.
 Classic HID and AVRCP remain available to other scripts.
-It starts after power-on and remembers the TV. Fixed controls follow the printed
+Firmware 306030 raises the source limit to 16 KiB without raising the 48 KiB Lua
+memory limit. Upgrade, then reinstall the saved app. The remote has
+Devices → Connect / Disconnect / Forget and a separate Pair new device action.
+It starts after power-on and remembers the selected host and disconnected state. Fixed controls follow the printed
 keys: lever for Play/Pause, +/− for TV volume, arrows for seeking/navigation,
 M for menus, source for Mute, and the ☀ sun key for Space. There is no button setup
 or on-screen keybinding guide. Pairing and connection states appear on the

@@ -41,7 +41,7 @@ when USB audio is disabled, selecting it opens USB mode settings instead.
 also works when autostart is off. An empty slot shows **NO SAVED APP**.
 `app.menu()` stops the calling Lua app and opens the native main menu after its
 worker has released its resources. The TV app exposes this through **M → Exit**.
-From the TV remote, press M, move three items right to EXIT, and press the lever.
+From the TV remote, press M, move two items right to Exit, and press the lever.
 In the native root, Saved app is one item before Settings; select it to return.
 The existing five-second keyboard-key hold now stops Lua and opens that menu;
 the held key's release is consumed so it cannot accidentally select an item.
@@ -74,7 +74,7 @@ bounded to 60 seconds, stops on leaving the memo menu, and needs the existing
 native heap/storage headroom. Recording can replace the existing memo; Delete
 requires Yes. The existing native write and recording limits still apply.
 
-Preferences use model `0xd7`, slots **4/5**, separately from saved-app slots 0/1
+Preferences use model `0xd7`, slots **4/5**, separately from saved-app slots 6/7 on 306030 (0/1 before that)
 and app-settings slots 2/3. They use the same CRC, alternating-bank recovery,
 foreign-record refusal, write-rate limit and readback checks. Browsing and
 cancelling never write preferences. Flashing this firmware preserves the native

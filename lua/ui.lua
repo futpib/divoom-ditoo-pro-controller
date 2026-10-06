@@ -7,12 +7,16 @@ function ui.center(y, text, color)
   text = text:sub(1, 4)
   display.text((16 - #text * 4) // 2, y, text, color)
 end
-function ui.scroll(y, text, since, color, speed)
+function ui.scroll(y, text, since, color, speed, immediate)
   if #text <= 4 then
     ui.center(y, text, color)
     return
   end
-  local p = (ui.elapsed(since) // math.max(1, speed or 130)) % (#text * 4 + 24)
+  local t = ui.elapsed(since)
+  local p = (
+    (immediate and math.max(0, t - 700) or t) // math.max(1, speed or 130)
+    + (immediate and 16 or 0)
+  ) % (#text * 4 + 24)
   local window = ('    ' .. text .. '  '):sub(p // 4 + 1, p // 4 + 5)
   display.text(-(p % 4), y, window, color)
 end
@@ -32,7 +36,7 @@ end
 function ui.indicator(on, x, y)
   display.pixel(x or 15, y or 6, on and 0x20ff40 or 0x503010)
 end
-function ui.screen()
+function ui.screen(scroll_title)
   local title, hint, color, since, last = '', '', 0x20a0ff, 0, 0
   return {
     set = function(t, h, c)
@@ -48,8 +52,12 @@ function ui.screen()
       end
       last = time.millis()
       display.clear(0)
-      ui.center(0, title, color)
-      ui.scroll(10, hint, since, 0xb0b0b0)
+      if scroll_title then
+        ui.scroll(0, title, since, color, nil, true)
+      else
+        ui.center(0, title, color)
+      end
+      ui.scroll(10, hint, since, 0xb0b0b0, nil, scroll_title)
       if connected ~= nil then
         ui.indicator(connected)
       end

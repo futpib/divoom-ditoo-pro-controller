@@ -637,7 +637,7 @@ mod tests {
   #[test]
   fn output_limit_catches_large_dependencies() {
     let f = Files::new();
-    f.write("big.lua", &format!("return '{}'", "x".repeat(8192)));
+    f.write("big.lua", &format!("return '{}'", "x".repeat(crate::lua::APP_SOURCE_LIMIT)));
     let p = f.write("main.lua", "return require('big')");
     assert!(bundle(&p).unwrap_err().to_string().contains("device limit"));
   }
@@ -646,10 +646,10 @@ mod tests {
     let f = Files::new();
     let p = f.write(
       "main.lua",
-      &format!("--{}\nreturn 'a  b'", "comment".repeat(1200)),
+      &format!("--{}\nreturn 'a  b'", "comment".repeat(crate::lua::APP_SOURCE_LIMIT / 7 + 1)),
     );
     assert_eq!(bundle(&p).unwrap(), b"return'a  b'\n");
-    let p = f.write("main.lua", &format!("return '{}'", "x".repeat(8192)));
+    let p = f.write("main.lua", &format!("return '{}'", "x".repeat(crate::lua::APP_SOURCE_LIMIT)));
     assert!(bundle(&p).unwrap_err().to_string().contains("device limit"));
   }
   #[test]

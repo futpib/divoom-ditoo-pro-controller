@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Measure the TV app on hardware, then restore its unmodified running source.
 
-Uses volatile uploads only. Saved apps, settings and pairing records are untouched.
+Uses volatile uploads only. Saved apps and pairing records are untouched; the
+remote may migrate its own settings to the current format.
 The probe adds a message handler; compare runs using the same source and parameters.
 """
 import argparse
@@ -41,7 +42,7 @@ probe = original.replace(anchor, anchor+
     "if s=='__heap' then local d=device.stats() "
     "comms.send(d.free_heap..','..d.lua_used..','..d.lua_reserved..','..d.lua_peak) return "
     "elseif s=='__saved' then comms.send(storage.get() or '') return end ")
-assert len(probe.encode()) <= 8192
+assert len(probe.encode()) <= 16384
 (a.output/'probe.lua').write_text(probe)
 version_request = a.output/'version.json'
 version_request.write_text(json.dumps([{'command':'0x37', 'payload_hex':'00', 'response':'0x37'}]))
@@ -58,7 +59,7 @@ for _ in range(a.samples):
     steps += [{'op':'sleep', 'ms':1000}, {'op':'send', 'message':'__heap'},
               {'op':'sleep', 'ms':100}, {'op':'receive'}]
 steps += [{'op':'send', 'message':'menu'}, {'op':'sleep', 'ms':200},
-          {'op':'wait', 'state':'active', 'result_contains':'LINK: TV REMOTE'}]
+          {'op':'wait', 'state':'active', 'result_contains':'DEVICES: REMOTE'}]
 sequence = a.output/'sequence.json'
 sequence.write_text(json.dumps(steps, indent=2)+'\n')
 try:

@@ -1,236 +1,249 @@
 local ui = require('../../lua/ui')
-local view = ui.screen()
-local screen, age = view.set, ui.elapsed
+local view = ui.screen(true)
+local screen, age, now = view.set, ui.elapsed, time.millis
 -- Stock ADC IDs: lever, source, sun, M, +, -, left, right.
 local keys = { [4] = 1, [10] = 2, [7] = 3, [0] = 4, [1] = 5, [9] = 6, [2] = 7, [3] = 8 }
-local target, pending, pending_at
-local addr_type = 'public'
-local b = {}
-local job, flow
-local stage, stage_at = 0, 0
-local save_at, retry_at = 0, 0
-local dirty, saving
-local shown = 0
-local menu, confirm, notice
-local key_at, errors, linked = 0, 0
-local online = true
-local choices = { 'LINK', 'PAIR', 'OFF', 'EXIT', 'BACK' }
-local labels = { 'PLAY', 'MUTE', 'SPC', 'MENU', 'VOL+', 'VOL-', 'LEFT', 'RGHT' }
 local actions =
   { 'play_pause', 'mute', 'space', false, 'volume_up', 'volume_down', 'left', 'right' }
+local labels = { 'PLAY/PAUSE', 'MUTE', 'SPACE', '', 'VOLUME UP', 'VOLUME DOWN', 'LEFT', 'RIGHT' }
 local icons = { '>II', 'X', '_', 'M', '+', '-', '<', '>' }
 local taps = { space = 44, left = 80, right = 79 }
-local now = time.millis
-local function changed()
-  dirty = true
-  save_at = now()
+local b, bonds = {}, {}
+local peer, kind, on = nil, 'public', false
+local job, flow, pair, err, key, icon
+local step, at, retry, key_at, sent_at, shown = 0, 0, 0, 0, 0, 0
+local dirty, saving, save_at, errors = false, nil, 0, 0
+local page, pos, item = nil, 1, nil
+local root = { 'DEVICES', 'PAIR NEW DEVICE', 'EXIT', 'BACK' }
+local function same(address, addr_type)
+  return peer == address and kind == addr_type
+end
+local function label(address, addr_type)
+  return address and (address .. ' ' .. addr_type:upper()) or 'NO SAVED DEVICE'
+end
+local function dirty_settings()
+  dirty, save_at = true, now()
 end
 local function config()
-  return 'TV5|' .. (target or '-') .. '|' .. addr_type .. '|'
-end
-local function hint(s)
-  notice = s
-  shown = now()
+  return 'TV6|' .. (peer or '-') .. '|' .. kind .. '|' .. (on and '1' or '0')
 end
 local function queue(name, fn, ...)
-  local t, err = fn(...)
-  if t then
-    job = { id = t, name = name }
+  local ticket, reason = fn(...)
+  if ticket then
+    job = { id = ticket, name = name }
     return true
+  elseif reason ~= 'busy' then
+    err = 'PLEASE TRY AGAIN'
   end
-  if err ~= 'busy' then
-    hint('WAIT THEN RETRY')
-  end
-  return false
 end
-local function begin(kind)
-  if job then
-    hint('PLEASE WAIT')
+local function begin(action)
+  if flow then
     return
   end
-  menu = nil
-  confirm = false
-  notice = nil
-  pending = nil
-  flow = kind
-  online = kind ~= 'off'
-  stage = 1
+  flow, step, at = action, 1, now()
+  page, key, icon, err, pair = nil, nil, nil, nil, nil
+  if action ~= 'forget' then
+    on = action == 'connect'
+    dirty_settings()
+  end
+end
+local function open(p)
+  page, pos, key, icon = p, 1, nil, nil
+  if p == 'devices' then
+    bonds = b.transport == 'ble' and keyboard.bonds(true) or {}
+  end
+end
+local function active()
+  return item
+    and (
+      (b.connected and b.peer == item.address and b.address_type == item.address_type)
+      or (on and same(item.address, item.address_type))
+    )
+end
+local function select()
+  if flow then
+    return
+  end
+  if page == 'root' then
+    if pos == 1 then
+      open('devices')
+    elseif pos == 2 then
+      begin((pair or b.pairing) and 'disconnect' or 'pair')
+    elseif pos == 3 then
+      app.menu()
+    else
+      page = nil
+    end
+  elseif page == 'devices' then
+    item = bonds[pos]
+    if item then
+      open('device')
+    else
+      open('root')
+    end
+  elseif page == 'device' then
+    if pos == 1 then
+      if active() then
+        begin('disconnect')
+      else
+        peer, kind = item.address, item.address_type
+        begin('connect')
+      end
+    elseif pos == 2 then
+      open('forget')
+    else
+      open('devices')
+    end
+  elseif pos == 1 then
+    open('device')
+  else
+    begin('forget')
+  end
+end
+local function count()
+  return page == 'root' and 4 or page == 'devices' and (#bonds + 1) or page == 'device' and 3 or 2
 end
 local function press(role)
-  keyboard.status(b)
-  if b.transport ~= 'ble' then
-    hint('SETTING UP')
+  if flow or pair or b.transport ~= 'ble' then
     return
   end
   if not b.connected then
-    if online and target then
-      if not flow and not job and (b.state == 0 or b.state == 4) then
-        if queue('done', keyboard.connect, target, addr_type) then
-          retry_at = now()
-          pending, pending_at = role, now()
-          hint('CONNECTING')
-        end
-      elseif b.state == 1 or flow == 'connect' or flow == 'listen' then
-        pending, pending_at = role, now()
-        hint('CONNECTING')
-      end
-    else
-      hint('OFFLINE')
+    if on and peer then
+      key, key_at = role, now()
     end
     return
   end
-  if job or b.busy or age(key_at) < 200 then
-    pending, pending_at = role, now()
+  if job or b.busy or age(sent_at) < 200 then
+    key, key_at = role, now()
     return
   end
-  key_at = now()
   local action = actions[role]
   if queue('key', taps[action] and keyboard.tap or keyboard.media, taps[action] or action) then
-    hint(role)
+    icon, shown, sent_at = role, now(), now()
   end
 end
-local function select()
-  local s = choices[menu]
-  if s == 'PAIR' then
-    confirm = true
-    menu = nil
-  elseif s == 'BACK' then
-    menu = nil
-  elseif s == 'EXIT' then
-    if app.menu then
-      app.menu()
-    else
-      app.stop()
-    end
-  else
-    begin(s == 'OFF' and 'off' or 'connect')
-  end
-end
-local function connect()
-  if b.transport ~= 'ble' then
-    if not job then
-      if b.state ~= 0 then
-        queue('mode', keyboard.disconnect)
-      elseif not b.mode_locked then
-        queue('mode', keyboard.mode, 'ble-remote')
-      else
-        hint('SYSTEM BT SET APP OR REMOTE')
-      end
-    end
+local function progress()
+  if not flow or job then
     return
   end
-  if flow and not job then
-    if stage == 1 then
-      if flow == 'connect' and b.connected and b.peer == target then
-        flow = nil
-      else
-        queue('step', audio.source, 'bluetooth')
+  if age(at) > 15000 then
+    err, flow, on = err or 'COULD NOT COMPLETE', nil, false
+    dirty_settings()
+  elseif b.transport ~= 'ble' then
+    if b.state ~= 0 then
+      queue('mode', keyboard.disconnect)
+    elseif not b.mode_locked then
+      queue('mode', keyboard.mode, 'ble-remote')
+    else
+      err = 'SYSTEM BT - APP OR REMOTE'
+    end
+  elseif step == 1 then
+    if flow == 'connect' and b.connected and same(b.peer, b.address_type) then
+      flow = nil
+    else
+      queue('step', audio.source, 'bluetooth')
+    end
+  elseif step == 2 then
+    if b.state == 0 then
+      step = 4
+    else
+      queue('step', keyboard.disconnect)
+    end
+  elseif step == 3 then
+    if b.state == 0 then
+      step = 4
+    end
+  elseif step == 4 and age(at) > 2000 then
+    if flow == 'disconnect' then
+      flow = nil
+    elseif flow == 'forget' then
+      queue('step', keyboard.forget, item.address, item.address_type)
+    elseif flow == 'pair' then
+      if queue('pair', keyboard.pair) then
+        step = 5
       end
-    elseif stage < 4 then
-      if b.state == 0 or (flow == 'connect' and b.state == 4 and b.peer == target) then
-        if flow == 'off' then
-          flow = nil
-          hint('OFFLINE')
-        else
-          stage = 4
-          stage_at = now()
+    elseif peer and queue('done', keyboard.listen, peer, kind) then
+      flow, retry = nil, now()
+    end
+  elseif step == 5 then
+    if flow == 'pair' then
+      if b.pairing or b.connected then
+        flow, pair = nil, true
+      end
+    else
+      for _, bond in ipairs(keyboard.bonds(true)) do
+        if bond.address == item.address and bond.address_type == item.address_type then
+          return
         end
-      elseif stage == 2 then
-        queue('step', keyboard.disconnect)
       end
-    elseif stage == 4 and age(stage_at) > 2000 then
-      if flow == 'pair' and target then
-        queue('step', keyboard.forget, target, addr_type)
-      else
-        stage = 5
+      if same(item.address, item.address_type) then
+        peer, on = nil, false
+        dirty_settings()
       end
-    elseif stage == 5 then
-      if flow == 'pair' then
-        if queue('done', keyboard.pair) then
-          flow = nil
-        end
-      elseif target then
-        if
-          queue('done', keyboard[flow == 'listen' and 'listen' or 'connect'], target, addr_type)
-        then
-          retry_at = now()
-          flow = nil
-        end
-      else
-        flow = nil
-        confirm = true
-      end
+      flow = nil
+      open('devices')
     end
   end
-  if
-    not flow
-    and not job
-    and not menu
-    and not confirm
-    and b.state == 0
-    and online
-    and target
-    and age(retry_at) > 1000
-  then
-    queue('done', keyboard.listen, target, addr_type)
-    retry_at = now()
-  end
 end
-
 return {
   init = function()
     assert(keyboard.status().transport, 'firmware 306029 required')
     brightness(20)
     lights.fill(0)
     lights.present()
-    local s = storage.get()
-    if s then
-      local peer, kind = s:match('^TV5|([^|]+)|([^|]+)|')
-      if
-        (kind == 'public' or kind == 'random')
-        and peer
-        and peer:match('^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$')
-      then
-        target, addr_type = peer, kind
-      end
+    local version, address, addr_type, enabled = (storage.get() or ''):match(
+      '^TV([56])|([^|]+)|([^|]+)|(.*)'
+    )
+    if
+      (addr_type == 'public' or addr_type == 'random')
+      and address:match('^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$')
+    then
+      peer, kind, on = address, addr_type, version == '5' or enabled == '1'
     end
     keyboard.status(b)
     errors = b.errors
-    if b.connected and b.transport == 'ble' then
-      target, addr_type = b.peer, b.address_type
-      changed()
+    if not version and b.connected and b.transport == 'ble' then
+      peer, kind, on = b.peer, b.address_type, true
+      dirty_settings()
     end
-    begin(target and 'connect' or 'listen')
-    screen('TV', 'CONNECTING')
+    if on then
+      begin('connect')
+    elseif b.connected or b.pairing or b.transport ~= 'ble' then
+      begin('disconnect')
+    end
+    if not peer then
+      open('root')
+      pos = 2
+    end
   end,
   key = function(k, event)
-    if event ~= 1 then
-      return
-    end
     local role = keys[k]
-    if not role then
+    if event ~= 1 or not role then
       return
     end
-    if confirm then
-      if role == 1 then
-        begin('pair')
-      elseif role == 4 or role == 2 then
-        confirm = false
+    if role == 4 then
+      if page then
+        page = nil
+      else
+        open('root')
       end
-    elseif role == 4 then
-      menu = not menu and 1 or nil
-      pending = nil
-      notice = nil
-    elseif menu then
+    elseif page then
       if role == 7 or role == 8 then
-        menu = (menu - 1 + (role == 7 and -1 or 1)) % #choices + 1
+        pos = (pos - 1 + (role == 7 and -1 or 1)) % count() + 1
       elseif role == 1 then
         select()
       elseif role == 2 then
-        menu = nil
+        if page == 'root' then
+          page = nil
+        else
+          open(page == 'forget' and 'device' or page == 'device' and 'devices' or 'root')
+        end
       end
-    elseif not target and not b.connected then
-      confirm = true
+    elseif role == 2 and (pair or b.pairing) then
+      begin('disconnect')
+    elseif not peer and not b.connected then
+      open('root')
+      pos = 2
     else
       press(role)
     end
@@ -239,24 +252,31 @@ return {
     if s == 'toggle' then
       s = 'play_pause'
     end
-    if s == 'pair' or s == 'connect' or s == 'listen' then
+    if s == 'pair' or s == 'disconnect' then
       begin(s)
-    elseif s == 'disconnect' then
-      begin('off')
-    elseif s == 'status' then
-      app.log(b.state .. ' ' .. (b.peer or '-'))
-    elseif s == 'menu' then
-      menu = not menu and 1 or nil
-      pending = nil
-      notice = nil
-    else
-      local peer = s:match('^target (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x)$')
+    elseif s == 'connect' or s == 'listen' then
       if peer then
-        target, addr_type = peer:upper(), 'public'
-        changed()
+        begin('connect')
       else
-        for i, name in ipairs(actions) do
-          if s == name then
+        open('root')
+        pos = 2
+      end
+    elseif s == 'menu' then
+      if page then
+        page = nil
+      else
+        open('root')
+      end
+    elseif s == 'status' then
+      comms.send(b.state .. ' ' .. (b.peer or '-') .. ' ' .. (b.address_type or '-'))
+    else
+      local address = s:match('^target (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x)$')
+      if address and not flow then
+        peer, kind = address:upper(), 'public'
+        dirty_settings()
+      else
+        for i, action in ipairs(actions) do
+          if s == action then
             press(i)
           end
         end
@@ -268,79 +288,109 @@ return {
     if job then
       local ok = device.result(job.id)
       if ok ~= nil then
-        local kind = job.name
+        local name = job.name
         job = nil
         if not ok then
-          flow = nil
-          hint(kind == 'save' and 'SAVE FAILED RETRY' or 'LINK SETUP FAILED')
-        elseif kind == 'save' then
+          err = name == 'save' and 'COULD NOT SAVE' or 'PLEASE TRY AGAIN'
+          flow, key = nil, nil
+          save_at = now()
+        elseif name == 'save' then
           dirty = config() ~= saving
-        elseif kind == 'step' then
-          stage = stage + 1
-          stage_at = now()
+          if not dirty and err == 'COULD NOT SAVE' then
+            err = nil
+          end
+        elseif name == 'step' then
+          step = step + 1
         end
       end
     end
-    if b.connected and b.transport == 'ble' then
-      if not linked then
-        target, addr_type = b.peer, b.address_type
-        changed()
-        notice = nil
-      end
-      retry_at = now()
+    progress()
+    if pair and b.connected then
+      peer, kind, on, pair, err = b.peer, b.address_type, true, nil, nil
+      dirty_settings()
+    elseif pair and not b.pairing then
+      pair, on, err = nil, false, 'PAIRING TIMED OUT'
+      begin('disconnect')
+      err = 'PAIRING TIMED OUT'
     end
-    linked = b.connected and b.transport == 'ble'
-    if pending and age(pending_at) > 5000 then
-      pending = nil
+    if b.connected and (err == 'COULD NOT CONNECT' or err == 'COULD NOT PAIR') then
+      err = nil
     end
-    if pending and b.connected and not job and not b.busy and age(key_at) >= 200 then
-      local a = pending
-      pending = nil
-      press(a)
+    if b.errors ~= errors then
+      errors, key = b.errors, nil
+      err = pair and 'COULD NOT PAIR' or 'COULD NOT CONNECT'
     end
-    connect()
+    if key and age(key_at) > 5000 then
+      key = nil
+    end
+    if key and b.connected and not job and not b.busy and age(sent_at) >= 200 then
+      local role = key
+      key = nil
+      press(role)
+    end
+    if
+      not flow
+      and not job
+      and not pair
+      and on
+      and peer
+      and b.transport == 'ble'
+      and b.state == 0
+      and age(retry) > 1000
+    then
+      queue('done', keyboard.listen, peer, kind)
+      retry = now()
+    end
     if dirty and not flow and not job and age(save_at) > 1200 then
       saving = config()
       queue('save', storage.set, saving)
     end
-    if b.errors ~= errors then
-      errors = b.errors
-      hint('LINK FAILED')
+    if icon and age(shown) > 700 then
+      icon = nil
     end
-    if notice and age(shown) > 3500 then
-      notice = nil
-    end
-    if confirm then
-      screen('PAIR', 'RESET SAVED TV?', 0xffa030)
-    elseif menu then
-      screen(choices[menu], 'TV REMOTE')
-    elseif notice then
-      screen(icons[notice] or 'INFO', labels[notice] and labels[notice] .. ' SENT' or notice)
+    local title, hint = 'DISCONNECTED', label(peer, kind)
+    if page == 'root' then
+      title, hint = root[pos], 'REMOTE'
+      if pos == 2 and (pair or b.pairing) then
+        title = 'CANCEL PAIRING'
+      end
+    elseif page == 'devices' then
+      local bond = bonds[pos]
+      title, hint =
+        bond and 'SAVED DEVICE' or 'BACK',
+        bond and label(bond.address, bond.address_type)
+          or (#bonds == 0 and 'NO SAVED DEVICES' or 'DEVICES')
+    elseif page == 'device' or page == 'forget' then
+      hint = label(item.address, item.address_type)
+      if page == 'forget' then
+        title, hint = pos == 1 and 'CANCEL' or 'FORGET', 'FORGET ' .. hint .. '?'
+      else
+        title = pos == 1 and (active() and 'DISCONNECT' or 'CONNECT')
+          or pos == 2 and 'FORGET'
+          or 'BACK'
+      end
+    elseif err then
+      title, hint = 'ATTENTION', err
     elseif flow then
-      screen('WAIT', 'SETTING UP')
-    elseif dirty then
-      screen('SAVE', 'KEEP POWER ON')
-    elseif linked then
-      screen('TV', 'READY', 0x20ff40)
-    elseif b.pairing then
-      screen(
-        'PAIR',
-        (120000 - b.pair_remaining_ms) // 20000 % 2 == 0 and 'TV OPEN PAIR ACCESSORY'
-          or 'PICK DITOO BLE REMOTE ACCEPT'
-      )
+      title = flow == 'pair' and 'SETTING UP'
+        or flow == 'forget' and 'FORGETTING'
+        or flow == 'disconnect' and 'DISCONNECTING'
+        or 'CONNECTING'
+    elseif b.connected then
+      title, hint =
+        icon and icons[icon] or 'CONNECTED', icon and labels[icon] or label(b.peer, b.address_type)
     elseif b.state == 1 then
-      screen('LINK', 'ACCEPT ON TV')
-    elseif not target then
-      screen('TV', 'NOT PAIRED')
-    else
-      screen('WAIT', 'CONNECT ON TV')
+      title = pair and not b.paired and 'PAIRING' or 'CONNECTING'
+    elseif b.pairing then
+      title, hint = 'READY TO PAIR', 'SELECT DITOO BLE REMOTE'
+    elseif on and peer then
+      title = 'WAITING FOR DEVICE'
     end
-    local value, total
-    if b.pairing then
-      value, total = b.pair_remaining_ms, 120000
-    elseif menu then
-      value, total = menu, #choices
-    end
-    view.draw(b.connected, value, total)
+    screen(title, hint, b.connected and 0x20ff40 or err and 0xffa030 or nil)
+    view.draw(
+      b.connected,
+      page and pos or b.pairing and b.pair_remaining_ms or nil,
+      page and count() or 120000
+    )
   end,
 }

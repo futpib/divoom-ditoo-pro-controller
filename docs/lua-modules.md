@@ -45,7 +45,8 @@ chunk directly and does not resolve imports.
   contents. A file without imports stays unchanged if it fits; otherwise the
   host tries the same compaction. Syntax errors in compacted source refer to
   generated lines, so use `lua bundle` to inspect them.
-- The **resulting text must fit 8,192 bytes**. This is the current native upload
+- The **resulting text must fit 16,384 bytes** on 306030 (8,192 on older firmware).
+  This is the native upload
   and saved-app record limit, not a Lua language or transport limit.
   Bundling cannot increase it. The separate Lua memory ceiling is 48 KiB;
   compiled functions, tables, and runtime allocations still consume that memory.
@@ -90,10 +91,10 @@ stated below.
 | --- | --- | --- |
 | 1 | `ui.elapsed(since[, now])` | Elapsed milliseconds across the native 31-bit clock wrap. Defaults to `time.millis()`. |
 | 2 | `ui.center(y, text, color)` | Centers up to four characters; truncates longer text. |
-| 3 | `ui.scroll(y, text, since, color[, speed])` | Centers short text; scrolls longer text with a bounded five-character drawing window. Speed defaults to 130 ms per pixel. |
+| 3 | `ui.scroll(y, text, since, color[, speed[, immediate]])` | Centers short text; scrolls longer text with a bounded five-character drawing window. Speed defaults to 130 ms per pixel. `immediate=true` shows the first four characters immediately, holds them for 700 ms, then scrolls. |
 | 4 | `ui.bar(y, value, total[, color[, width]])` | One-row progress bar, clamped to 0–100%; positive progress draws at least one pixel. Default width 15; maximum 16. Nonpositive totals draw nothing. |
 | 5 | `ui.indicator(on[, x[, y]])` | Green/amber status pixel, default `(15, 6)`. |
-| 6 | `ui.screen()` | Creates an independent title, scrolling hint, and redraw state. Returns the two functions below. |
+| 6 | `ui.screen([scroll_title])` | Creates an independent title, scrolling hint, and redraw state. Pass `true` to scroll long titles and show both lines immediately; the default centers up to four characters. Returns the two functions below. |
 | 7 | `view.set(title, hint[, color])` | Updates labels; changed labels reset scrolling and emit an app log. Default title color `0x20a0ff`. |
 | 8 | `view.draw([connected[, value, total]])` | At most every 100 ms: clears, draws title at row 0 and hint at row 10, and presents. Optional connection pixel and progress bar at row 7. |
 

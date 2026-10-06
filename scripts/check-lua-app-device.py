@@ -12,7 +12,7 @@ p.add_argument('--transport', choices=['ble','usb'], default='ble')
 p.add_argument('--usb-port')
 p.add_argument('--binary', type=Path, default=ROOT/'target/release/divoom-ditoo-pro-controller')
 p.add_argument('--output', type=Path, required=True)
-p.add_argument('--firmware', type=int, choices=[306013,306014,306015,306016,306017,306018,306019,306020,306021,306022,306023,306024,306025,306026,306027,306028,306029], default=306029)
+p.add_argument('--firmware', type=int, choices=[306013,306014,306015,306016,306017,306018,306019,306020,306021,306022,306023,306024,306025,306026,306027,306028,306029,306030], default=306030)
 a = p.parse_args()
 connection = ['--transport',a.transport]
 if a.transport == 'ble':
@@ -94,9 +94,10 @@ for name,source in [
     status(name,3,reclaimed=True)
     start('return {}')
     status(name+'-recovery',4)
-source='return {}\n--'+('x'*(8192-len('return {}\n--')))
+limit = 16384 if a.firmware >= 306030 else 8192
+source='return {}\n--'+('x'*(limit-len('return {}\n--')))
 start(source)
-status('full-8192-byte-upload',4)
+status(f'full-{limit}-byte-upload',4)
 if a.firmware >= 306014:
     start('return {init=function() lights.fill(0x080008); lights.present() end, '
           'message=function() while true do end end}')
