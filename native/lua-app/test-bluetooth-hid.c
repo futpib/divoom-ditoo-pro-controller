@@ -1,9 +1,15 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "bluetooth-hid.c"
 void runtime_bt_trace(unsigned k,unsigned e,const void *p,unsigned n) {
     (void)k;(void)e;assert(p && n<=12);
 }
+static unsigned allocated,fail_alloc,unregister_busy,security_busy;
+void *stock_alloc(unsigned n) { if(fail_alloc)return NULL;void *p=calloc(1,n);if(p)++allocated;return p; }
+void stock_free(void *p) { if(p){--allocated;free(p);} }
+unsigned runtime_irq_save(void) { return 1; }
+void runtime_irq_restore(unsigned x) { (void)x; }
 static unsigned clock_ms,disconnects,sends,rc=2,connect_rc;
 static unsigned char context[256],remote[256],sent[12],core[0x3200];
 volatile unsigned char stock_bt_manager[0x1c4];
@@ -21,11 +27,13 @@ void *volatile stock_bt_context=context;
 unsigned stock_ticks(void) { return clock_ms; }
 unsigned stock_free_heap(void) { return 100000; }
 unsigned stock_l2_register(struct psm *p) { assert(p->mtu==672);memcpy(core+0x28fc+(p->id==0x13)*sizeof p,&p,sizeof p);return 0; }
-unsigned stock_bt_class(unsigned cod) { assert(cod==0x2c0540 || cod==0x540);memcpy(core+0x9a8,&cod,4);return 0; }
+unsigned stock_bt_class(unsigned cod) { assert(cod==0x2c0540 || cod==0x540 || cod==0);memcpy(core+0x9a8,&cod,4);return 0; }
 unsigned stock_sec_register(struct security *s) {
     assert(s->callback==stock_l2_security && (s->psm==0x11 || s->psm==0x13));
     assert(s->level==0x22 && !s->min_key);return 0;
 }
+unsigned stock_sec_unregister(struct security *s) { (void)s;return security_busy; }
+unsigned stock_cmgr_unregister(void *p) { (void)p;return unregister_busy; }
 void stock_l2_security(void *p) { (void)p; }
 static struct record *sdp_head(void) { return (struct record *)(core+0x3068); }
 unsigned stock_sdp_add(struct record *p) {
@@ -57,6 +65,8 @@ static void event(unsigned i,unsigned ev,void *data) {
 }
 static void connected(void) {
     unsigned char addr[16]={1,2,3,4,5,6};
+    if(hid_context) { release(); }
+    memset(&idle_status,0,sizeof idle_status);assert(acquire());
     memset(&hid,0,sizeof hid);memset(core,0,sizeof core);rc=2;
     remote[0xb1]=8;remote[0xb3]=2;
     runtime_hid_command(HID_CONNECT,0,addr,1,0);
@@ -99,7 +109,7 @@ static void modes(void) {
     for (unsigned i=0;i<4;++i) assert(registered_psms()[i+2]==&profiles[i]);
     assert(records[2].next==&records[0] && records[0].next==&records[1] && records[1].next==sdp_head());
     runtime_hid_command(HID_MODE,1,NULL,2,0);memset(core,0,sizeof core);runtime_hid_service(2);
-    assert(!hid.status.enabled && !hid.status.keyboard_only); /* No stale pointers after stack recreation. */
+    assert(!hid_context && !idle_status.enabled && !idle_status.keyboard_only); /* No stale pointers after stack recreation. */
     connected();hid.record.next=&hid.record;
     runtime_hid_command(HID_MODE,1,NULL,2,0);
     assert(hid.status.error==18 && !hid.status.keyboard_only); /* Corrupt list stays bounded and unchanged. */
@@ -200,7 +210,7 @@ int main(void) {
     runtime_hid_command(HID_PAIR,1000,unknown,1,hid.status.generation);
     clock_ms+=1000;event(0,1,NULL);assert(!hid.cid[0]); /* Deadline applies even before the service tick. */
     connected();memset(core,0,sizeof core);runtime_hid_service(1);
-    assert(!hid.status.enabled && !hid.active); /* Reused stack address. */
+    assert(!hid_context && !allocated); /* Reused stack address. */
     modes();
     connected();
     assert(!runtime_hid_preserve_link(0x170a8));
@@ -227,6 +237,25 @@ int main(void) {
     access_rc=0;runtime_hid_service(1);assert(!core[0x792]);
     runtime_hid_command(HID_MODE,1,NULL,1,0);
     assert(!hogp_enabled && !hid.le_access_owned && access_mode==3);
+    runtime_hid_command(HID_MODE,0,NULL,1,0);runtime_hid_service(1);
+    assert(!hid_context && !allocated);
+    fail_alloc=1;runtime_hid_command(HID_CONNECT,0,address,1,0);
+    struct hid_status snapshot;runtime_hid_status(&snapshot);
+    assert(!allocated && !hid_context && snapshot.error==7);fail_alloc=0;
+    for(unsigned i=0;i<12;++i) {
+        connected();key(HID_KEY,44);
+        runtime_hid_command(HID_DISCONNECT,0,address,1,hid.status.generation);
+        runtime_hid_service(1);assert(hid_context && allocated==1);
+        event(0,4,NULL);runtime_hid_service(1);assert(hid_context);
+        event(1,4,NULL);unregister_busy=5;runtime_hid_service(1);assert(hid_context);
+        unregister_busy=0;security_busy=1;runtime_hid_service(1);assert(hid_context && hid.status.enabled==2);
+        runtime_hid_service(1);assert(hid_context); /* Partial unregister keeps native pointers alive. */
+        security_busy=0;runtime_hid_service(1);assert(!hid_context && !allocated);
+        for(unsigned j=0;j<8;++j) assert(!registered_psms()[j]);
+        assert(sdp_head()->next==sdp_head() && !*(unsigned *)(core+0x9a8));
+        struct l2_event late={.event=6};l2_event(65,&late);link_event(NULL,1,0);
+        runtime_hid_status(&snapshot);assert(!snapshot.enabled && !snapshot.state);
+    }
     puts("HID report, ownership, stale command, timeout, LE visibility restoration and control tests passed");
 }
 

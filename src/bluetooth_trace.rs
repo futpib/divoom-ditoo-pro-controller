@@ -253,7 +253,7 @@ fn decode(reply: Response) -> Result<Page> {
   }
   let oldest = number(&d[8..]);
   let latest = number(&d[12..]);
-  if oldest != latest.saturating_sub(32).saturating_add(1) && !(latest < 32 && oldest == 1) {
+  if oldest == 0 || oldest > latest.saturating_add(1) || latest.saturating_sub(oldest) >= 32 {
     return Err("Invalid Bluetooth trace retention window".into());
   }
   let mut events = Vec::new();
@@ -282,6 +282,7 @@ async fn session(
   conn: &mut DeviceConnection,
   duration: Duration,
   interval: Duration,
+  leased: &mut bool,
 ) -> Result<()> {
   let reply = conn
     .send_and_receive(&Packet {
@@ -292,13 +293,14 @@ async fn session(
   if !reply.ack
     || reply.data.len() != 5
     || reply.data[0] != 1
-    || !matches!(number(&reply.data[1..]), 306024..=306035)
+    || !matches!(number(&reply.data[1..]), 306024..=306036)
   {
     return Err(
-      "Bluetooth trace requires firmware 306024 through 306035; no diagnostic sent".into(),
+      "Bluetooth trace requires firmware 306024 through 306036; no diagnostic sent".into(),
     );
   }
   let firmware = number(&reply.data[1..]);
+  *leased = firmware >= 306036;
   let deadline = Instant::now() + duration;
   let mut after = 0;
   let mut first = true;
@@ -353,10 +355,27 @@ pub async fn watch(address: Address, duration: Duration, interval: Duration) -> 
     return Err("Bluetooth trace interval must be 50..5000 ms; duration 0..86400 seconds".into());
   }
   let mut conn = DeviceConnection::connect(address).await?;
+  let mut leased = false;
   let result = tokio::select! {
-    result=session(&mut conn,duration,interval)=>result,
+    result=session(&mut conn,duration,interval,&mut leased)=>result,
     signal=tokio::signal::ctrl_c()=>signal.map_err(Into::into),
   };
+  if leased {
+    let mut payload = b"\x7fDLUA\x0d".to_vec();
+    payload.extend_from_slice(&[0; 5]); // Cursor followed by release flag.
+    let packet = Packet {
+      command: Command::Raw(0x37),
+      payload,
+    };
+    let released =
+      match tokio::time::timeout(Duration::from_secs(2), conn.send_and_receive(&packet)).await {
+        Ok(Ok(reply)) => decode(reply).is_ok(),
+        _ => false,
+      };
+    if !released {
+      log::warn!("Bluetooth trace release failed; device lease expires after 15 seconds");
+    }
+  }
   if let Err(e) = conn.disconnect().await {
     log::warn!("Bluetooth trace cleanup: {e}");
   }
@@ -439,6 +458,21 @@ mod tests {
     row[10] = 3;
     assert!(event(&row).is_err());
     Ok(())
+  }
+  #[test]
+  fn leased_retention_can_be_empty_or_partial() {
+    for (oldest, latest, valid) in [
+      (105u32, 104u32, true),
+      (100, 104, true),
+      (0, 104, false),
+      (106, 104, false),
+      (72, 104, false),
+    ] {
+      let mut data = b"DBTR\x01\x00\x00\x20".to_vec();
+      data.extend_from_slice(&oldest.to_le_bytes());
+      data.extend_from_slice(&latest.to_le_bytes());
+      assert_eq!(decode(response(data)).is_ok(), valid);
+    }
   }
   #[test]
   fn framing_and_retention() {

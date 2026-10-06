@@ -368,6 +368,13 @@ static void save_keyboard_bond(void) {
 }
 
 void runtime_native_service(void) {
+    worker_reap();
+    runtime_bt_trace_service();
+    unsigned irq=runtime_irq_save();struct source *expired=NULL;
+    if(app.state==UPLOADING && (unsigned)(stock_ticks()-app.upload_seen)>=30000) {
+        expired=app.source;app.source=NULL;app.state=IDLE;result("upload expired");
+    }
+    runtime_irq_restore(irq);source_free(expired);
     runtime_boot_service();
     save_keyboard_bond();
     if (peripheral.recording && stock_memo_context) {
@@ -390,6 +397,7 @@ void runtime_native_service(void) {
     if (peripheral.recording && (!stock_memo_context || native_priority() ||
             (unsigned)(stock_ticks()-peripheral.record_started) >= 60000)) stop_recording();
     menu_service();
+    if(!app.L && app.state!=RUNNING && !menu_visible()) frame_release();
     if (peripheral.state != JOB_QUEUED) return;
     if (peripheral.job_epoch == peripheral.epoch && peripheral.had_job &&
             (unsigned)(stock_ticks()-peripheral.last_job)<100) return;

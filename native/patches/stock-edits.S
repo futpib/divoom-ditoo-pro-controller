@@ -8,7 +8,11 @@
 
 #if defined(PROFILE_APP) || defined(PROFILE_RUNTIME)
 .section .patch_heap_limit,"ax"
+#ifdef PROFILE_APP
+    sethi $r0, 0x2004b
+#else
     sethi $r0, 0x2004a
+#endif
 #endif
 
 #ifdef PROFILE_APP

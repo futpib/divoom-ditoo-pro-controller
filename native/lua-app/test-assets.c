@@ -71,7 +71,7 @@ static void test_assets(void) {
     for (unsigned i=0;i<600;++i) { tick();assert(app.state==ACTIVE); }
     snprintf(message,sizeof message,"images 598 %d",(int32_t)expected_hash);
     assert(!strcmp(app.result,message));
-    memcpy(app.message,"65",2);app.message_size=2;tick();
+    memcpy(app.work->message,"65",2);app.message_size=2;tick();
     assert(app.state==ACTIVE && !strncmp(app.result,"glyph 65 ",9));
     app.cancel=1;service();runtime_native_service();assert(!allocations);
     file=fopen("examples/lua/stock-assets.lua","rb");assert(file);
@@ -79,9 +79,9 @@ static void test_assets(void) {
     load(source,1);assert(app.state==ACTIVE && !strcmp(app.result,"image 1/598"));
     runtime_adc_result(1U<<16 | 2);tick();runtime_adc_result(2U<<16 | 2);tick();
     assert(!strcmp(app.result,"image 2/598") && stock_alarm_state==0);
-    memcpy(app.message,"glyph 0416",10);app.message_size=10;tick();
+    memcpy(app.work->message,"glyph 0416",10);app.message_size=10;tick();
     assert(!strcmp(app.result,"glyph U+0416") && app.state==ACTIVE);
-    memcpy(app.message,"sound 6",7);app.message_size=7;tick();runtime_native_service();
+    memcpy(app.work->message,"sound 6",7);app.message_size=7;tick();runtime_native_service();
     assert(stock_alarm_state==4);
     for (unsigned i=0;i<60;++i) { tick();runtime_native_service(); }
     assert(app.state==ACTIVE && stock_alarm_state==0 && !strcmp(app.result,"sound stopped"));

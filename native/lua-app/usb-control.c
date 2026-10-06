@@ -7,6 +7,7 @@
 #define USB_CHUNK (USB_REPORT-USB_HEADER)
 #define USB_FRAME 4100
 #define USB_RING 8192
+#define USB_CONTEXT 0x178
 #define USB_REPORT_ID 0x7d
 
 extern void *stock_alloc(unsigned);
@@ -27,7 +28,7 @@ extern unsigned stock_response_original(unsigned, unsigned, unsigned, const void
 enum { USB_OK, USB_INVALID, USB_BUSY, USB_MEMORY_ERROR, USB_OVERFLOW,
        USB_SESSION_ERROR, USB_FRAME_ERROR };
 static struct {
-    uint32_t context[0x178/4];
+    uint32_t *context;
     unsigned char inbox[USB_REPORT], report[USB_REPORT];
     volatile unsigned pending, seen;
     unsigned char *memory, *frame;
@@ -80,7 +81,7 @@ static void usb_close(void) {
     usb.memory=NULL; usb.session=usb.sequence=usb.read=usb.written=0;
     usb.received=usb.total=usb.status=0;
     runtime_irq_restore(irq);
-    stock_free(memory);
+    stock_free(memory);usb.context=NULL;
     stock_free(usb.frame);usb.frame=NULL;
 }
 
@@ -108,11 +109,11 @@ void runtime_usb_service(void) {
     if (op==1 && session && seq==1 && session!=usb.session) {
         usb_close();
         unsigned char *memory=NULL;
-        if (stock_free_heap()<USB_RING+8+24576 || !(memory=stock_alloc(USB_RING))) {
+        if (stock_free_heap()<USB_RING+USB_CONTEXT+8+24576 || !(memory=stock_alloc(USB_RING+USB_CONTEXT))) {
             usb.status=USB_MEMORY_ERROR;
         } else {
-            memset(memory,0,USB_RING);
-            memset(usb.context,0,sizeof usb.context);
+            memset(memory,0,USB_RING+USB_CONTEXT);
+            usb.context=(uint32_t *)(memory+USB_RING);
             unsigned irq=runtime_irq_save();
             usb.memory=memory;
             usb.session=session; usb.sequence=seq;

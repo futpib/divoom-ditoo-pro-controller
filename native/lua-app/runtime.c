@@ -34,6 +34,9 @@ extern void stock_free(void *);
 extern unsigned stock_free_heap(void);
 extern void *stock_task(void (*)(void *), const char *, void *, unsigned, unsigned, unsigned);
 extern void stock_delay(unsigned);
+extern void stock_task_delete(void *);
+extern unsigned runtime_irq_save(void);
+extern void runtime_irq_restore(unsigned);
 extern unsigned stock_ticks(void);
 extern unsigned stock_volume(unsigned);
 extern unsigned stock_event(void *);
@@ -55,30 +58,36 @@ struct key_event { unsigned char key, event, kind, pad; };
 struct timer { int ref; unsigned deadline, interval; };
 struct block { unsigned size, free; };
 struct source { unsigned size; unsigned char *pages[SOURCE_PAGES]; };
+struct workspace {
+    unsigned held_since[KEY_COUNT];
+    struct key_event keys[QUEUE_SIZE];
+    char message[MESSAGE_LIMIT];
+    unsigned char *arena[ARENA_PAGES];
+    struct timer timers[TIMER_COUNT];
+    jmp_buf escape;
+    void *arena_base[ARENA_PAGES];
+    unsigned capacity[ARENA_PAGES];
+};
 static struct {
     volatile unsigned state, cancel, action, owner, key_read, key_write, dropped;
     volatile unsigned held, suppressed;
-    unsigned held_since[KEY_COUNT];
-    struct key_event keys[QUEUE_SIZE];
     volatile unsigned message_size;
-    char message[MESSAGE_LIMIT];
     char outbox[MESSAGE_LIMIT];
     unsigned outbox_size;
-    void *task, *arena_base[ARENA_PAGES];
-    unsigned char *arena[ARENA_PAGES];
-    unsigned capacity[ARENA_PAGES], reserved;
+    void *task;
+    struct workspace *work;
+    volatile unsigned retiring, starting, upload_seen;
+    unsigned reserved;
     lua_State *L;
     int app_ref;
     unsigned resident, install, source_size, received, used, peak, steps, started, guarded, budget_ms;
     unsigned last_tick, frames, callbacks, dirty, native_calls, generation, native_alarm;
     struct source *source;
     char result[RESULT_LIMIT];
-    unsigned char frame[768];
+    unsigned char *frame;
     unsigned char leds[LED_COUNT * 3], led_buffers[2][LED_COUNT * 3];
     volatile unsigned led_owner, led_active;
     unsigned led_enabled, led_dirty;
-    struct timer timers[TIMER_COUNT];
-    jmp_buf escape;
 } app;
 struct system_preferences { unsigned char version,autostart_off,bt_mode,lights,indicator_off,usb_noaudio,reserved[2]; };
 static struct system_preferences preferences;
@@ -87,6 +96,48 @@ static void runtime_boot_service(void);
 static unsigned menu_key(unsigned,unsigned),menu_visible(void);
 static void menu_service(void),menu_request(unsigned);
 static const char *runtime_load_saved(void);
+
+/* A retired worker never enters Lua again. Another task detaches it, then the
+ * native idle task reclaims its stack and TCB through vTaskDelete. */
+static void worker_reap(void) {
+    void *task=NULL;unsigned irq=runtime_irq_save();
+    if(app.retiring && !app.starting) {
+        task=app.task;app.task=NULL;app.retiring=0;
+    }
+    runtime_irq_restore(irq);
+    if(task) stock_task_delete(task);
+}
+static unsigned worker_start(void) {
+    void *task=NULL;unsigned irq=runtime_irq_save();
+    app.starting=1;
+    if(app.retiring) { task=app.task;app.task=NULL;app.retiring=0; }
+    runtime_irq_restore(irq);
+    if(task) stock_task_delete(task);
+    if(!app.task) {
+        if(stock_free_heap()<4096*4+128+STOCK_HEAP_RESERVE) { app.starting=0;return 0; }
+        app.task=stock_task(runtime_worker_entry,"lua_app",NULL,4096,1,0);
+    }
+    if(app.task) app.state=RUNNING;
+    app.starting=0;return app.task!=NULL;
+}
+
+static unsigned workspace_acquire(void) {
+    if(app.work) return 1;
+    if(stock_free_heap()<sizeof *app.work+8+STOCK_HEAP_RESERVE) return 0;
+    struct workspace *p=stock_alloc(sizeof *p);if(!p) return 0;
+    memset(p,0,sizeof *p);app.work=p;return 1;
+}
+#define FRAME_BYTES 768
+static unsigned frame_acquire(void) {
+    if(app.frame) return 1;
+    if(stock_free_heap()<FRAME_BYTES+8+STOCK_HEAP_RESERVE) return 0;
+    unsigned char *p=stock_alloc(FRAME_BYTES);if(!p) return 0;
+    memset(p,0,FRAME_BYTES);app.frame=p;return 1;
+}
+static void frame_release(void) {
+    unsigned irq=runtime_irq_save();void *p=app.frame;app.frame=NULL;
+    runtime_irq_restore(irq);stock_free(p);
+}
 
 static void source_free(struct source *s) {
     if(!s) return;
@@ -150,7 +201,7 @@ static void result(const char *s) {
  * An aborted VM is discarded as an arena; no finalizer is run during teardown. */
 static void abort_script(const char *why) {
     result(why);
-    longjmp(app.escape, 1);
+    longjmp(app.work->escape, 1);
 }
 
 void runtime_poll(void) {
@@ -168,16 +219,16 @@ static void arena_free(void *ptr) {
     struct block *b = (struct block *)ptr - 1;
     b->free = 1; app.used -= b->size;
     for (unsigned i=0;i<ARENA_PAGES;++i) {
-        uintptr_t address = (uintptr_t)ptr, base = (uintptr_t)app.arena[i];
-        if (!base || address<base || address>=base+app.capacity[i]) continue;
+        uintptr_t address = (uintptr_t)ptr, base = (uintptr_t)app.work->arena[i];
+        if (!base || address<base || address>=base+app.work->capacity[i]) continue;
         unsigned offset = 0;
-        while (offset<app.capacity[i]) {
-            struct block *p = (struct block *)(app.arena[i]+offset);
+        while (offset<app.work->capacity[i]) {
+            struct block *p = (struct block *)(app.work->arena[i]+offset);
             if (!p->free) return;
             offset += p->size;
         }
-        stock_free(app.arena_base[i]); app.reserved -= app.capacity[i];
-        app.arena_base[i] = NULL; app.arena[i] = NULL; app.capacity[i] = 0;
+        stock_free(app.work->arena_base[i]); app.reserved -= app.work->capacity[i];
+        app.work->arena_base[i] = NULL; app.work->arena[i] = NULL; app.work->capacity[i] = 0;
         return;
     }
 }
@@ -197,10 +248,10 @@ static void *allocate(void *ud, void *ptr, size_t old, size_t size) {
         struct block *b=(struct block *)ptr-1;
         if (needed<=b->size) { arena_trim(b,needed);return ptr; }
         for (unsigned i=0;i<ARENA_PAGES;++i) {
-            uintptr_t address=(uintptr_t)b,base=(uintptr_t)app.arena[i];
-            if (!base || address<base || address>=base+app.capacity[i]) continue;
+            uintptr_t address=(uintptr_t)b,base=(uintptr_t)app.work->arena[i];
+            if (!base || address<base || address>=base+app.work->capacity[i]) continue;
             unsigned available=b->size;
-            while (address+available<base+app.capacity[i]) {
+            while (address+available<base+app.work->capacity[i]) {
                 struct block *next=(struct block *)(address+available);
                 if (!next->free) break;
                 available+=next->size;
@@ -215,11 +266,11 @@ static void *allocate(void *ud, void *ptr, size_t old, size_t size) {
     }
     struct block *chosen = NULL; unsigned empty = ARENA_PAGES;
     for (unsigned i=0;i<ARENA_PAGES && !chosen;++i) {
-        if (!app.arena[i]) { empty=i; continue; }
-        for (unsigned offset=0;offset<app.capacity[i];) {
-            struct block *b=(struct block *)(app.arena[i]+offset);
+        if (!app.work->arena[i]) { empty=i; continue; }
+        for (unsigned offset=0;offset<app.work->capacity[i];) {
+            struct block *b=(struct block *)(app.work->arena[i]+offset);
             if (b->free) {
-                while (offset+b->size<app.capacity[i]) {
+                while (offset+b->size<app.work->capacity[i]) {
                     struct block *next=(struct block *)((unsigned char *)b+b->size);
                     if (!next->free) break;
                     b->size+=next->size;
@@ -234,10 +285,10 @@ static void *allocate(void *ud, void *ptr, size_t old, size_t size) {
         if (capacity>MEMORY_LIMIT-app.reserved || stock_free_heap()<capacity+8+STOCK_HEAP_RESERVE) return NULL;
         void *base=stock_alloc(capacity+8);
         if (!base) return NULL;
-        app.arena_base[empty]=base;
-        app.arena[empty]=(void *)(((uintptr_t)base+7)&~(uintptr_t)7);
-        app.capacity[empty]=capacity;app.reserved+=capacity;
-        chosen=(struct block *)app.arena[empty];*chosen=(struct block){capacity,1};
+        app.work->arena_base[empty]=base;
+        app.work->arena[empty]=(void *)(((uintptr_t)base+7)&~(uintptr_t)7);
+        app.work->capacity[empty]=capacity;app.reserved+=capacity;
+        chosen=(struct block *)app.work->arena[empty];*chosen=(struct block){capacity,1};
     }
     if (!chosen) return NULL;
     if (chosen->size>=needed+sizeof(struct block)+8) {
@@ -266,12 +317,13 @@ static void discard(unsigned state) {
     app.L = NULL; app.used = 0; app.held = 0;
     source_free(app.source); app.source = NULL;
     peripherals_release();
-    for (unsigned i=0;i<ARENA_PAGES;++i) {
-        stock_free(app.arena_base[i]); app.arena_base[i] = NULL; app.arena[i] = NULL; app.capacity[i] = 0;
+    if(app.work) for (unsigned i=0;i<ARENA_PAGES;++i) {
+        stock_free(app.work->arena_base[i]); app.work->arena_base[i] = NULL; app.work->arena[i] = NULL; app.work->capacity[i] = 0;
     }
     app.reserved = 0;
     app.key_read = app.key_write; app.message_size = 0;
-    memset(app.timers, 0, sizeof app.timers);
+    unsigned irq=runtime_irq_save();struct workspace *work=app.work;app.work=NULL;
+    runtime_irq_restore(irq);stock_free(work);frame_release();
     __asm__ volatile ("" ::: "memory");
     app.state = state;
 }
@@ -287,19 +339,20 @@ unsigned runtime_key(const unsigned char *raw) {
         return 1;
     }
     if(menu_key(key,event)) return 1;
-    if (app.state != RUNNING && app.state != ACTIVE && app.state != PAUSED) return 0;
+    unsigned irq=runtime_irq_save();
+    if (!app.work || (app.state != RUNNING && app.state != ACTIVE && app.state != PAUSED)) { runtime_irq_restore(irq);return 0; }
     if (event == 1 || event == 3 || event == 4) {
-        if (!(app.held & mask)) app.held_since[key] = stock_ticks();
+        if (!(app.held & mask)) app.work->held_since[key] = stock_ticks();
         app.held |= mask;
     } else if (event == 2 || event == 5) app.held &= ~mask;
-    if (!app.owner) return 0;
+    if (!app.owner) { runtime_irq_restore(irq);return 0; }
     unsigned w = app.key_write;
     if ((unsigned)(w - app.key_read) < QUEUE_SIZE) {
-        app.keys[w % QUEUE_SIZE] = (struct key_event){key, event, raw[1], 0};
+        app.work->keys[w % QUEUE_SIZE] = (struct key_event){key, event, raw[1], 0};
         __asm__ volatile ("" ::: "memory");
         app.key_write = w + 1;
     } else ++app.dropped;
-    return 1;
+    runtime_irq_restore(irq);return 1;
 }
 
 /* KeyScan drops presses whose stock action is zero. Intercept the packed ADC
@@ -337,6 +390,7 @@ static unsigned color(lua_State *L, int arg) {
 }
 
 static void pixel(int x, int y, unsigned rgb) {
+    if(!frame_acquire()) abort_script("display allocation failed");
     if ((unsigned)x >= 16 || (unsigned)y >= 16) return;
     unsigned char *p = app.frame + (y * 16 + x) * 3;
     p[0] = rgb >> 16; p[1] = rgb >> 8; p[2] = rgb;
@@ -354,6 +408,7 @@ static int setpixel(lua_State *L) {
 }
 
 static int getpixel(lua_State *L) {
+    if(!frame_acquire()) abort_script("display allocation failed");
     int x = integer(L, 1, 0, 15), y = integer(L, 2, 0, 15);
     unsigned char *p = app.frame + (y * 16 + x) * 3;
     lua_pushinteger(L, (p[0] << 16) | (p[1] << 8) | p[2]); return 1;
@@ -397,7 +452,7 @@ static int blit(lua_State *L) {
 }
 
 static int present(lua_State *L) { (void)L; app.dirty = 1; return 0; }
-static int frame(lua_State *L) { lua_pushlstring(L, (char *)app.frame, sizeof app.frame); return 1; }
+static int frame(lua_State *L) { if(!frame_acquire()) abort_script("display allocation failed");lua_pushlstring(L, (char *)app.frame, FRAME_BYTES); return 1; }
 
 /* Compact 3x5 font, rows in low-to-high groups of three bits. */
 static const unsigned short font[] = {
@@ -506,6 +561,7 @@ static int stats(lua_State *L) {
 
 static void present_outputs(void) {
     if (app.dirty) {
+        if(!frame_acquire()) abort_script("display allocation failed");
         if (runtime_screen(app.frame) == 1) ++app.frames;
         app.dirty = 0;
     }
@@ -525,9 +581,9 @@ static void present_outputs(void) {
 
 static int newtimer(lua_State *L, unsigned repeating) {
     unsigned ms = integer(L,1,10,86400000); luaL_checktype(L,2,LUA_TFUNCTION);
-    for (unsigned i = 0; i < TIMER_COUNT; ++i) if (!app.timers[i].ref) {
+    for (unsigned i = 0; i < TIMER_COUNT; ++i) if (!app.work->timers[i].ref) {
         lua_pushvalue(L,2); int ref = luaL_ref(L,LUA_REGISTRYINDEX);
-        app.timers[i] = (struct timer){ref,stock_ticks()+ms,repeating ? ms : 0};
+        app.work->timers[i] = (struct timer){ref,stock_ticks()+ms,repeating ? ms : 0};
         lua_pushinteger(L,i+1); return 1;
     }
     return luaL_error(L,"timer limit reached");
@@ -536,8 +592,8 @@ static int after(lua_State *L) { return newtimer(L,0); }
 static int every(lua_State *L) { return newtimer(L,1); }
 static int untimer(lua_State *L) {
     unsigned i = integer(L,1,1,TIMER_COUNT)-1;
-    if (app.timers[i].ref) luaL_unref(L,LUA_REGISTRYINDEX,app.timers[i].ref);
-    app.timers[i].ref = 0; return 0;
+    if (app.work->timers[i].ref) luaL_unref(L,LUA_REGISTRYINDEX,app.work->timers[i].ref);
+    app.work->timers[i].ref = 0; return 0;
 }
 
 static int panic(lua_State *L) { (void)L; abort_script("Lua panic"); return 0; }
@@ -585,7 +641,8 @@ static void runtime_boot_service(void) {
         if (changed) { ++peripheral.writes;peripheral.last_write=stock_ticks(); }
         if (error) { result(error);source_free(app.source);app.source=NULL;app.state=ERROR;return; }
         if (!app.source_size) { app.state=DONE;result("autostart removed");return; }
-        app.state=RUNNING;return;
+        if(!worker_start()) { result("APP WORKER UNAVAILABLE");source_free(app.source);app.source=NULL;app.state=ERROR; }
+        return;
     }
     if (saved.boot_done || (unsigned)(stock_ticks()-saved.boot_started)<3000) return;
     saved.boot_done=1;
@@ -601,9 +658,8 @@ static const char *runtime_load_saved(void) {
     if (app.source) { app.source_size=r->length;source_copy(app.source,0,r->data,r->length,1); }
     stock_free(r);
     if (!app.source) { app.state=ERROR;return "APP ALLOCATION FAILED"; }
-    if (!app.task) app.task=stock_task(runtime_worker_entry,"lua_app",NULL,4096,1,0);
-    if (!app.task) { source_free(app.source);app.source=NULL;app.state=ERROR;return "APP WORKER UNAVAILABLE"; }
-    app.cancel=app.action=0;app.resident=1;app.install=0;app.state=RUNNING;
+    app.cancel=app.action=0;app.resident=1;app.install=0;
+    if (!worker_start()) { source_free(app.source);app.source=NULL;app.state=ERROR;return "APP WORKER UNAVAILABLE"; }
     return NULL;
 }
 
@@ -679,7 +735,8 @@ static void launch(void) {
     if (stock_free_heap()+app.source_size < STARTUP_HEAP_BUDGET + 8 + STOCK_HEAP_RESERVE) {
         result("insufficient stock heap headroom"); discard(ERROR); return;
     }
-    if (setjmp(app.escape)) { discard(app.cancel ? DONE : ERROR); return; }
+    if(!workspace_acquire()) { result("Lua allocation failed");discard(ERROR);return; }
+    if (setjmp(app.work->escape)) { discard(app.cancel ? DONE : ERROR); return; }
     begin_budget();app.budget_ms=LOAD_TIME_LIMIT;
     app.L = lua_newstate(allocate,NULL);
     if (!app.L) abort_script("Lua allocation failed");
@@ -717,7 +774,7 @@ static void service(void) {
         led_refresh();
     }
     for (unsigned k = 0; k < KEY_COUNT; ++k)
-        if ((app.held & (1U << k)) && (unsigned)(now-app.held_since[k]) >= 5000) menu_request(1);
+        if ((app.held & (1U << k)) && (unsigned)(now-app.work->held_since[k]) >= 5000) menu_request(1);
     if (app.cancel) { result("stopped"); discard(DONE); return; }
     if (app.action) {
         unsigned action = app.action; app.action = 0;
@@ -729,23 +786,23 @@ static void service(void) {
     }
     if (app.state != ACTIVE || (unsigned)(now-app.last_tick) < FRAME_MS) return;
     unsigned dt = now-app.last_tick; app.last_tick = now;
-    if (setjmp(app.escape)) { discard(app.cancel ? DONE : ERROR); return; }
+    if (setjmp(app.work->escape)) { discard(app.cancel ? DONE : ERROR); return; }
     begin_budget();
     lua_State *L = app.L;
     /* One aggregate budget bounds the entire tick, including queued callbacks. */
     for (unsigned count = 0; count < 4 && app.key_read != app.key_write; ++count) {
-        struct key_event key = app.keys[app.key_read % QUEUE_SIZE]; ++app.key_read;
+        struct key_event key = app.work->keys[app.key_read % QUEUE_SIZE]; ++app.key_read;
         if (callback("key")) {
             lua_pushinteger(L,key.key); lua_pushinteger(L,key.event); check_call(L,2,0);
         }
     }
     if (app.message_size) {
         if (callback("message")) {
-            lua_pushlstring(L,app.message,app.message_size); app.message_size = 0; check_call(L,1,0);
+            lua_pushlstring(L,app.work->message,app.message_size); app.message_size = 0; check_call(L,1,0);
         } else app.message_size = 0;
     }
     for (unsigned i = 0, count = 0; i < TIMER_COUNT && count < 4; ++i) {
-        struct timer *t = &app.timers[i];
+        struct timer *t = &app.work->timers[i];
         if (t->ref && (int32_t)(now-t->deadline) >= 0) {
             lua_rawgeti(L,LUA_REGISTRYINDEX,t->ref);
             if (t->interval) t->deadline = now+t->interval;
@@ -758,11 +815,19 @@ static void service(void) {
     present_outputs();
 }
 
+static unsigned worker_step(void) {
+    if(app.starting) return 0;
+    if (app.state == RUNNING) launch();
+    else if (app.state == ACTIVE || app.state == PAUSED) service();
+    unsigned irq=runtime_irq_save();
+    unsigned retire=!app.starting && app.state!=RUNNING && app.state!=ACTIVE && app.state!=PAUSED;
+    if(retire) app.retiring=1;
+    runtime_irq_restore(irq);return retire;
+}
 void runtime_worker(void *unused) {
     (void)unused;
     for (;;) {
-        if (app.state == RUNNING) launch();
-        else if (app.state == ACTIVE || app.state == PAUSED) service();
+        if(worker_step()) { for(;;) stock_delay(1000); }
         stock_delay(10);
     }
 }
@@ -777,7 +842,8 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
     if(op==14) { menu_command(context,data,length);return; }
     if (op == 13) { runtime_bt_trace_read(context,data,length); return; }
     if (op == 10 || op == 12) { runtime_storage_diagnostic(context,data,length); return; }
-    unsigned busy = app.state == RUNNING || app.state == ACTIVE || app.state == PAUSED || app.state==SAVING || menu.operation;
+    worker_reap();
+    unsigned busy = app.starting || app.state == RUNNING || app.state == ACTIVE || app.state == PAUSED || app.state==SAVING || menu.operation;
     if (op == 1 || op == 3) {
         if (busy) error = 2;
         else if (length < 11) error = 1;
@@ -785,9 +851,7 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
             unsigned n = data[7] | ((unsigned)data[8] << 8);
             if (!n || n > SOURCE_LIMIT || (op == 1 && length != n+11) || (op == 3 && length != 12)) error = 1;
             else {
-                if (!app.task) app.task = stock_task(runtime_worker_entry,"lua_app",NULL,4096,1,0);
-                if (!app.task) error = 3;
-                else {
+                {
                     saved.boot_done=1;
                     struct source *source = source_new(n);
                     if (!source) { error = 3; goto reply; }
@@ -798,7 +862,8 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
                     app.install=op==3 && data[9]==2;
                     if (op == 1) source_copy(app.source,0,(void *)(data+9),n,1);
                     __asm__ volatile ("" ::: "memory");
-                    app.state = op == 1 ? RUNNING : UPLOADING;
+                    app.upload_seen=stock_ticks();app.state = UPLOADING;
+                    if(op==1 && !worker_start()) { source_free(app.source);app.source=NULL;app.state=ERROR;error=3; }
                 }
             }
         }
@@ -814,11 +879,15 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         else {
             unsigned offset = data[7] | ((unsigned)data[8] << 8), n = length-11;
             if (offset != app.received || n > 512 || n > app.source_size-app.received) error = 1;
-            else { source_copy(app.source,offset,(void *)(data+9),n,1); app.received += n; }
+            else { source_copy(app.source,offset,(void *)(data+9),n,1); app.received += n;app.upload_seen=stock_ticks(); }
         }
     } else if (op == 5) {
         if (app.state != UPLOADING || app.received != app.source_size) error = 2;
-        else { __asm__ volatile ("" ::: "memory"); app.state = app.install ? SAVING : RUNNING; }
+        else {
+            __asm__ volatile ("" ::: "memory");
+            if(app.install) app.state=SAVING;
+            else if(!worker_start()) { source_free(app.source);app.source=NULL;app.state=ERROR;error=3; }
+        }
     } else if (op == 11) {
         if (busy || app.state==UPLOADING) error=2;
         else { saved.boot_done=1;app.cancel=0;app.source_size=0;app.state=SAVING; }
@@ -827,9 +896,11 @@ void runtime_command(unsigned context, const unsigned char *data, unsigned lengt
         else app.action = op == 6 ? 1 : 2;
     } else if (op == 8) {
         unsigned n = length-9;
+        unsigned irq=runtime_irq_save();
         if (app.state != ACTIVE || app.message_size) error = 2;
         else if (!n || n > MESSAGE_LIMIT) error = 1;
-        else { memcpy(app.message,data+7,n); __asm__ volatile ("" ::: "memory"); app.message_size = n; }
+        else { memcpy(app.work->message,data+7,n); __asm__ volatile ("" ::: "memory"); app.message_size = n; }
+        runtime_irq_restore(irq);
     } else if (op != 0 && op != 9) error = 4;
 reply:;
     unsigned char reply[RESULT_LIMIT+40] = {'D','L','U','A',2};

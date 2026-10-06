@@ -28,7 +28,7 @@ patches = [
 ]
 
 [profiles.app]
-version = 306035
+version = 306036
 source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch", "lua/0003-binary32-parser.patch"]
 patches = [
     "command_dispatch",
@@ -295,7 +295,7 @@ section = ".patch_heap_limit"
 site = "stock_patch_heap"
 max_size = 4
 original_size = 4
-purpose = "Reserve 8 KiB of RAM for the runtime globals."
+purpose = "Reserve profile-specific RAM for runtime globals (app 4 KiB, legacy runtime 8 KiB)."
 original = '''
     sethi $r0, 0x2004c
 '''

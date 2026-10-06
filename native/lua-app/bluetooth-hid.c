@@ -10,6 +10,10 @@ extern void *volatile stock_bt_context;
 extern unsigned char *volatile stock_bt_core;
 extern volatile unsigned char stock_bt_manager[];
 extern unsigned stock_ticks(void), stock_free_heap(void);
+extern void *stock_alloc(unsigned);
+extern void stock_free(void *);
+extern unsigned runtime_irq_save(void);
+extern void runtime_irq_restore(unsigned);
 struct l2_event {
     uint8_t event, reserved; uint16_t status;
     unsigned char *remote;
@@ -40,6 +44,8 @@ extern unsigned stock_l2_send(unsigned,struct packet *);
 extern unsigned stock_sdp_add(struct record *);
 extern unsigned stock_sdp_remove(struct record *);
 extern unsigned stock_bt_class(unsigned);
+extern unsigned stock_cmgr_unregister(void *);
+extern unsigned stock_sec_unregister(struct security *);
 extern unsigned stock_cmgr_register(void *,void (*)(void *,unsigned,unsigned));
 extern unsigned stock_cmgr_connect(void *,const unsigned char *);
 extern unsigned stock_cmgr_remove(void *);
@@ -78,15 +84,17 @@ ATTR(no,0x28,0);
 ATTR(hid_language,0x35,8,0x35,6,0x09,4,9,0x09,1,0);
 ATTR(timeout,0x09,0x0c,0x80);
 #define A(id,v) {id,sizeof(v),v,0}
-static struct attribute attributes[]={
+static const struct attribute attributes[]={
     A(1,classes),A(4,protocols),A(5,browse),A(6,language),A(9,profile),
     A(13,additional),A(0x100,name),A(0x201,version),A(0x202,subclass),
     A(0x203,country),A(0x204,yes),A(0x205,yes),A(0x206,descriptor_list),
     A(0x207,hid_language),A(0x209,yes),A(0x20a,no),A(0x20c,timeout),
     A(0x20d,yes),A(0x20e,no)
 };
-static struct {
+static struct hid_context {
     struct hid_status status;
+    struct attribute attributes[sizeof attributes/sizeof *attributes];
+    unsigned registrations,registered_class;
     void *context,*core;
     struct record record;
     uint32_t manager[25];
@@ -101,7 +109,22 @@ static struct {
     unsigned previous_class;
     unsigned char report[10];
     struct { struct packet packet; unsigned char bytes[12]; unsigned busy,started; } tx[2];
-} hid;
+} *hid_context;
+#define hid (*hid_context)
+static struct hid_status idle_status;
+static void release(void) {
+    unsigned irq=runtime_irq_save();
+    struct hid_context *old=hid_context;
+    idle_status=hid.status;idle_status.enabled=0;hid_context=NULL;
+    runtime_irq_restore(irq);stock_free(old);
+}
+static unsigned acquire(void) {
+    if(hid_context) return 1;
+    if(stock_free_heap()<sizeof hid+8+24576) return 0;
+    struct hid_context *p=stock_alloc(sizeof *p);if(!p) return 0;
+    memset(p,0,sizeof *p);p->status=idle_status;
+    memcpy(p->attributes,attributes,sizeof attributes);hid_context=p;return 1;
+}
 
 static void error(unsigned code) {
     hid.status.error=code; ++hid.status.errors;
@@ -231,6 +254,7 @@ static void connect_channel(unsigned i) {
     if (rc!=2) { hid.pending[i]=0; error(0x200+rc); disconnect(); }
 }
 static void link_event(void *manager,unsigned event,unsigned status) {
+    if(!hid_context) return;
     (void)manager;
     runtime_bt_trace(4,event,&status,sizeof status);
     if (event==1 && !status) connect_channel(0);
@@ -260,6 +284,7 @@ static void control(const unsigned char *p,unsigned n) {
     if (!send(0,reply,size)) { error(4);disconnect(); }
 }
 static void l2_event(unsigned cid,struct l2_event *p) {
+    if(!hid_context) return;
     if (!p || !p->psm) return;
     if (p->remote) {
         hid.status.authentication_state=p->remote[0xb1];
@@ -313,12 +338,13 @@ static void l2_event(unsigned cid,struct l2_event *p) {
 }
 static unsigned enable(void) {
     if (hid.status.enabled) return hid.status.enabled==1;
-    if (!stock_bt_context || stock_free_heap()<16384) { error(7);return 0; }
+    if (!stock_bt_context || !stock_bt_core || stock_free_heap()<16384) { error(7);return 0; }
     hid.context=stock_bt_context;hid.core=stock_bt_core;
+    memcpy(&hid.registered_class,stock_bt_core+0x9a8,4);
     hid.psm[0]=(struct psm){l2_event,0x11,672,48,0};
     hid.psm[1]=(struct psm){l2_event,0x13,672,48,0};
     hid.record.count=sizeof attributes/sizeof *attributes;
-    hid.record.attributes=attributes;
+    hid.record.attributes=hid.attributes;
     /* Partial setup stays allocated and cannot be registered a second time. */
     hid.status.enabled=2;
     /* SSP level 2 permits the stock NoInputNoOutput pairing method. Level 3
@@ -326,15 +352,44 @@ static unsigned enable(void) {
     for (unsigned i=0;i<2;++i) {
         hid.security[i]=(struct security){.callback=stock_l2_security,.psm=hid.psm[i].id,.level=0x22};
         if (stock_sec_register(&hid.security[i])) { error(16);return 0; }
+        hid.registrations|=1U<<i;
     }
-    if (stock_cmgr_register(hid.manager,link_event) || stock_l2_register(&hid.psm[0]) ||
-            stock_l2_register(&hid.psm[1]) || stock_sdp_add(&hid.record)) { error(8);return 0; }
+    if(stock_cmgr_register(hid.manager,link_event)) { error(8);return 0; }
+    hid.registrations|=4;
+    if(stock_l2_register(&hid.psm[0]) || stock_l2_register(&hid.psm[1])) { error(8);return 0; }
+    if(stock_sdp_add(&hid.record)) { error(8);return 0; }
+    hid.registrations|=8;
     stock_bt_class(0x2c0540); /* Preserve audio services, advertise a keyboard. */
     hid.status.enabled=1;return 1;
 }
+/* Only the Bluetooth task unregisters. Closed channels and completed packets
+ * must precede freeing pointers retained by the native registries. */
+static void release_idle(void) {
+    if(hid.status.keyboard_only || runtime_hogp_enabled() || hid.active || hid.listening ||
+            hid.cid[0] || hid.cid[1] || hid.pending[0] || hid.pending[1] ||
+            hid.tx[0].busy || hid.tx[1].busy || hid.access_owned || hid.le_access_owned) return;
+    for(unsigned i=0;i<8;++i) {
+        const unsigned char *channel=stock_bt_core+0x291c+i*0x7c;
+        struct psm *p;uint16_t cid;memcpy(&p,channel+0x28,sizeof p);memcpy(&cid,channel+0x2c,2);
+        if(cid && (p==&hid.psm[0] || p==&hid.psm[1])) return;
+    }
+    if((hid.registrations&4) && stock_cmgr_unregister(hid.manager)) return;
+    hid.registrations&=~4U;hid.status.enabled=2;
+    for(unsigned i=0;i<8;++i) {
+        struct psm **p=registered_psms()+i;
+        if(*p==&hid.psm[0] || *p==&hid.psm[1]) *p=NULL;
+    }
+    for(unsigned i=0;i<2;++i) if(hid.registrations&(1U<<i)) {
+        if(stock_sec_unregister(&hid.security[i])) return;
+        hid.registrations&=~(1U<<i);
+    }
+    if(hid.registrations&8) stock_sdp_remove(&hid.record);
+    stock_bt_class(hid.registered_class);release();
+}
 void runtime_hid_service(unsigned epoch) {
     runtime_hogp_service(epoch);
-    if (!hid.status.enabled) return;
+    if (!hid_context) return;
+    if (!hid.status.enabled) { release();return; }
     unsigned registered=0;
     if (stock_bt_core && hid.core==stock_bt_core)
         for (unsigned i=0;i<8;++i) {
@@ -344,7 +399,7 @@ void runtime_hid_service(unsigned epoch) {
     /* Source changes can destroy and recreate the stack at the same address. */
     if (hid.context!=stock_bt_context || hid.core!=stock_bt_core ||
             (hid.status.enabled==1 && registered!=2)) {
-        memset(&hid,0,sizeof hid);return;
+        memset(&hid.status,0,sizeof hid.status);release();return;
     }
     if (hid.status.keyboard_only) audio_channels();
     le_access();
@@ -371,9 +426,12 @@ void runtime_hid_service(unsigned epoch) {
         } else { error(11);disconnect(); }
     }
     hid.status.busy=hid.phase || hid.tx[1].busy;
+    release_idle();
 }
 void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,
                          unsigned epoch,unsigned generation) {
+    if(!hid_context && (op==HID_DISCONNECT || (op==HID_MODE && !value))) return;
+    if(!acquire()) { idle_status.error=7;++idle_status.errors;return; }
     if (op==HID_MODE) {
         if (value>2) return;
         if (value==2) {
@@ -438,17 +496,21 @@ void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,
     } else { error(15);disconnect(); }
 }
 void runtime_hid_status(struct hid_status *s) {
-    *s=hid.status;
+    unsigned irq=runtime_irq_save();
+    *s=hid_context ? hid.status : idle_status;
     if (runtime_hogp_enabled()) {
-        runtime_hogp_status(s);s->hidden_services=hid.status.hidden_services;
-        s->blocked_psms=hid.status.blocked_psms;s->audio_channels=hid.status.audio_channels;
-        s->access_mode=hid.status.access_mode;
+        runtime_hogp_status(s);
+        if(hid_context) {
+            s->hidden_services=hid.status.hidden_services;s->blocked_psms=hid.status.blocked_psms;
+            s->audio_channels=hid.status.audio_channels;s->access_mode=hid.status.access_mode;
+        }
     }
+    runtime_irq_restore(irq);
 }
 unsigned runtime_hid_preserve_link(unsigned caller) {
     /* These pinned speaker/UAC policy callers disconnect the entire ACL even
      * when only HID uses it. Explicit HID OFF and stock power-off use other
      * paths. Keyboard-only policy also applies while awaiting the saved TV. */
-    return (caller==0x170a8 || caller==0x1759c) && hid.status.enabled==1 &&
+    return hid_context && (caller==0x170a8 || caller==0x1759c) && hid.status.enabled==1 &&
         hid.status.keyboard_only && hid.context==stock_bt_context && hid.core==stock_bt_core;
 }

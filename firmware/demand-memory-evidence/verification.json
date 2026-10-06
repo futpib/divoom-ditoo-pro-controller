@@ -1,0 +1,92 @@
+{
+  "firmware": 306036,
+  "sha256": "2d5dcda7cc326a7a8f4d85c558d58598d5029bfcd18d8ee09a8ccc29963690ee",
+  "bytes": 2026763,
+  "hardware_verified": false,
+  "device_modified": false,
+  "static_ram": {
+    "previous_used": 7964,
+    "used": 2724,
+    "previous_reserved": 8192,
+    "reserved": 4096,
+    "returned_to_native_heap": 4096
+  },
+  "lua_arena_limit": 49152,
+  "native_heap_reserve": 24576,
+  "worker_stack_bytes": 16384,
+  "checks": {
+    "native_32bit_asan_ubsan": "passed; lifecycle/OOM, allocator, menus, USB, Classic HID, HOGP, trace, assets and TV app",
+    "rust_all_features": {
+      "passed": 77,
+      "failed": 0
+    },
+    "firmware_python_tests": {
+      "passed": 20,
+      "failed": 0
+    },
+    "manifest": "no drift",
+    "isolated_rebuilds": [
+      {
+        "run": "first",
+        "profile": "reflash",
+        "version": 306008,
+        "sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "probe",
+        "version": 306009,
+        "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "runtime",
+        "version": 306012,
+        "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "app",
+        "version": 306036,
+        "sha256": "2d5dcda7cc326a7a8f4d85c558d58598d5029bfcd18d8ee09a8ccc29963690ee",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "reflash",
+        "version": 306008,
+        "sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "probe",
+        "version": 306009,
+        "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "runtime",
+        "version": 306012,
+        "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "app",
+        "version": 306036,
+        "sha256": "2d5dcda7cc326a7a8f4d85c558d58598d5029bfcd18d8ee09a8ccc29963690ee",
+        "identical": true
+      }
+    ]
+  },
+  "hardware_pending": [
+    "Measure native heap over repeated Lua start/stop and idle-task cleanup.",
+    "Exercise profile teardown/re-enable and persistent TV connection on the physical device.",
+    "Verify USB session close and diagnostic expiry with the active native stacks."
+  ]
+}

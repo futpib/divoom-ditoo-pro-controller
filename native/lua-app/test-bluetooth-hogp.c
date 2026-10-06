@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "bluetooth-hogp.c"
+static unsigned allocated,fail_alloc;
 static unsigned clock_ms,confirmations,disconnects,notifications,notify_rc,encrypted,paired,adv,forgotten;
 static unsigned char connection[0x500],second[0x500],last_report;
 static unsigned last_attribute,last_connection,forwarded;
@@ -55,7 +56,10 @@ unsigned stock_att_send(unsigned handle,unsigned cid,const void *p,unsigned n) {
 volatile unsigned stock_battery_level=6;
 unsigned stock_ticks(void) { return clock_ms; }
 unsigned stock_free_heap(void) { return 100000; }
-void *stock_alloc(unsigned n) { return calloc(1,n); }
+void *stock_alloc(unsigned n) { if(fail_alloc)return NULL;void *p=calloc(1,n);if(p)++allocated;return p; }
+void stock_free(void *p) { if(p){--allocated;free(p);} }
+unsigned runtime_irq_save(void) { return 1; }
+void runtime_irq_restore(unsigned x) { (void)x; }
 void stock_att_init(const unsigned char *db,read_fn read,write_fn write) {
     assert(db!=hogp_database && read==read_value && write==write_value);
 }
@@ -243,6 +247,14 @@ int main(void) {
     runtime_hogp_control_notify(4,0xf,on,1);assert(last_connection==4);
     assert(runtime_hogp_mode(1));stock_hci_stack=NULL;runtime_hogp_service(1);
     assert(!runtime_hogp_enabled() && !runtime_hogp_mode(1));
-    free(ble);ble=NULL;
+    assert(!ble && !allocated);stock_hci_stack=hci_context;
+    fail_alloc=1;assert(!runtime_hogp_mode(1) && !allocated);fail_alloc=0;
+    unsigned generation=next_generation;
+    for(unsigned i=0;i<12;++i) {
+        assert(runtime_hogp_mode(1));assert(ble->status.generation==generation+i);runtime_hogp_service(1);assert(allocated==1 && ble);
+        assert(runtime_hogp_mode(0));hci_context[0x4e5]=1;
+        runtime_hogp_service(1);assert(allocated==1 && ble); /* Address restoration still owns it. */
+        hci_context[0x4e5]=0;runtime_hogp_service(1);assert(!ble && !allocated);
+    }
     puts("HOGP: bounded attributes, peer/security gates, all remote reports, bond reuse, timeout/abort releases, stale jobs and control routing passed");
 }

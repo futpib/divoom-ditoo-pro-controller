@@ -1,12 +1,16 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "bluetooth-trace.c"
-static unsigned irq_disabled;
+static unsigned irq_disabled,clock_ms=1234,allocated,fail_alloc;
+void *stock_alloc(unsigned n) { if(fail_alloc)return NULL;void *p=malloc(n);if(p)++allocated;return p; }
+void stock_free(void *p) { if(p) { --allocated;free(p); } }
+unsigned stock_free_heap(void) { return 100000; }
 static unsigned char response[160];
 static unsigned response_size;
 static unsigned preserve;
 unsigned runtime_hid_preserve_link(unsigned caller) { (void)caller;return preserve; }
-unsigned stock_ticks(void) { return 1234; }
+unsigned stock_ticks(void) { return clock_ms; }
 unsigned runtime_irq_save(void) { unsigned was=irq_disabled;irq_disabled=1;return !was; }
 void runtime_irq_restore(unsigned enabled) { if(enabled) irq_disabled=0; }
 void stock_reply(unsigned context,unsigned command,const void *p,unsigned size) {
@@ -55,7 +59,7 @@ int main(void) {
     for(unsigned i=4;i<12;++i) assert(!history[9].data[i]);
     preserve=1;assert(runtime_bt_trace_app_disconnect(0x170a8));
     assert(history[10].event==4 && history[10].length==4);preserve=0;
-    sequence=4;
+    sequence=4;retained=4;
     for(unsigned i=0;i<100;++i) runtime_bt_trace(5,0,&i,4);
     read_after(1);assert(response[6]==6);
     uint32_t oldest,latest;memcpy(&oldest,response+8,4);memcpy(&latest,response+12,4);
@@ -69,5 +73,13 @@ int main(void) {
     assert(response_size==16 && response[5]==1);
     unsigned before=sequence;runtime_bt_trace(1,1,NULL,1);runtime_bt_trace(1,1,bad,13);
     assert(sequence==before && !irq_disabled);
+    assert(allocated==1);clock_ms+=TRACE_LEASE_MS;runtime_bt_trace_service();
+    assert(!history && !allocated);
+    before=sequence;runtime_bt_trace(1,1,NULL,0);assert(sequence==before);
+    fail_alloc=1;unsigned char start[13]={0};runtime_bt_trace_read(7,start,sizeof start);
+    assert(response[5]==2 && !history && !allocated);fail_alloc=0;
+    read_after(0);assert(!response[6] && history && allocated==1);
+    unsigned char stop[14]={0};runtime_bt_trace_read(7,stop,sizeof stop);
+    assert(!response[5] && !history && !allocated);
     puts("Bluetooth trace framing, redaction, overwrite and cursor tests passed");
 }

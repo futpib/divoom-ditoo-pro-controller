@@ -1,4 +1,4 @@
-/* Bounded metadata only: no link keys, PINs, passkeys, ACL payloads or allocation. */
+/* Bounded metadata only. Event/IRQ hooks never allocate; a reader leases the ring. */
 #include <stdint.h>
 #include <string.h>
 #include "bluetooth-trace.h"
@@ -12,17 +12,30 @@ struct trace_event {
     uint8_t kind, event, length, reserved, data[12];
 };
 _Static_assert(sizeof(struct trace_event)==24,"Bluetooth trace wire ABI");
-static struct trace_event history[CAPACITY];
-static uint32_t sequence;
+extern void *stock_alloc(unsigned);
+extern void stock_free(void *);
+extern unsigned stock_free_heap(void);
+static struct trace_event *history;
+static uint32_t sequence,retained,seen;
+#define TRACE_LEASE_MS 15000
+void runtime_bt_trace_service(void) {
+    struct trace_event *old=NULL;unsigned irq=runtime_irq_save();
+    if(history && (unsigned)(stock_ticks()-seen)>=TRACE_LEASE_MS) {
+        old=history;history=NULL;retained=0;
+    }
+    runtime_irq_restore(irq);stock_free(old);
+}
 
 void runtime_bt_trace(unsigned kind,unsigned event,const void *data,unsigned length) {
     if (length>12 || (length && !data)) return;
     struct trace_event row={.ms=stock_ticks(),.kind=kind,.event=event,.length=length};
     if (length) memcpy(row.data,data,length);
     unsigned irq=runtime_irq_save();
+    if(!history) { runtime_irq_restore(irq);return; }
     /* Restart the cursor at the practically unreachable 2^32-event boundary. */
-    if (++sequence==0) { memset(history,0,sizeof history);sequence=1; }
+    if (++sequence==0) { retained=0;sequence=1; }
     row.sequence=sequence;history[(sequence-1)%CAPACITY]=row;
+    if(retained<CAPACITY) ++retained;
     runtime_irq_restore(irq);
 }
 void runtime_bt_trace_hci(const unsigned char *packet) {
@@ -63,10 +76,24 @@ void runtime_bt_trace_stack(unsigned event,const unsigned char *params) {
 void runtime_bt_trace_read(unsigned context,const unsigned char *data,unsigned length) {
     unsigned char reply[16+6*sizeof(struct trace_event)]={'D','B','T','R',1,0,0,CAPACITY};
     uint32_t after=0,latest,oldest;unsigned count=0;
-    if(length!=13) reply[5]=1;
+    if(length!=13 && (length!=14 || data[11]>1)) reply[5]=1;
     else memcpy(&after,data+7,4);
+    unsigned stop=length==14 && !data[11];
+    struct trace_event *allocated=NULL;
+    if(!reply[5] && !stop && !history) {
+        if(stock_free_heap()<CAPACITY*sizeof *history+8+24576 ||
+                !(allocated=stock_alloc(CAPACITY*sizeof *history))) reply[5]=2;
+    }
     unsigned irq=runtime_irq_save();
-    latest=sequence;oldest=latest>CAPACITY ? latest-CAPACITY+1 : 1;
+    if(!reply[5]) {
+        if(stop) { allocated=history;history=NULL;retained=0; }
+        else {
+            if(!history) { history=allocated;allocated=NULL;retained=0; }
+            seen=stock_ticks();
+        }
+    }
+    if(!retained && sequence==UINT32_MAX) sequence=0;
+    latest=sequence;oldest=latest-retained+1;
     if (!reply[5]) {
         uint32_t next=after>=latest ? latest+1 : after+1;
         if(next<oldest) next=oldest;
@@ -76,6 +103,7 @@ void runtime_bt_trace_read(unsigned context,const unsigned char *data,unsigned l
         }
     }
     runtime_irq_restore(irq);
+    stock_free(allocated);
     reply[6]=count;memcpy(reply+8,&oldest,4);memcpy(reply+12,&latest,4);
     stock_reply(context,0x37,reply,16+count*sizeof(struct trace_event));
 }

@@ -18,7 +18,7 @@ static unsigned free_heap = 100000, led_writes;
 static unsigned char led_context[0x50], last_leds[36];
 static int fail_alloc, track_heap;
 static unsigned fail_allocation_at;
-static unsigned allocated_bytes;
+static unsigned allocated_bytes, tasks_created, tasks_deleted, fail_task;
 void *stock_alloc(unsigned n) {
     if (app.guarded && app.budget_ms==LOAD_TIME_LIMIT) { clock_ms+=load_delay_ms;load_delay_ms=0; }
     if (fail_alloc || (fail_allocation_at && !--fail_allocation_at)) return NULL;
@@ -34,8 +34,10 @@ void stock_led_write(const void *p, unsigned n) {
 }
 void stock_heap_init(void) {}
 void *stock_task(void (*f)(void *),const char *n,void *a,unsigned w,unsigned p,unsigned i) {
-    (void)f;(void)n;(void)a;(void)w;(void)p;(void)i;return (void *)1;
+    assert(f==runtime_worker_entry && !strcmp(n,"lua_app") && !a && w==4096 && p==1 && !i);
+    if(fail_task) return NULL;++tasks_created;return (void *)1;
 }
+void stock_task_delete(void *task) { assert(task==(void *)1 && app.task!=task);++tasks_deleted; }
 void runtime_worker_entry(void *p) { (void)p; }
 void stock_delay(unsigned n) { clock_ms += n; }
 unsigned stock_ticks(void) { return clock_ms; }
@@ -123,7 +125,7 @@ static void check(const char *source, unsigned state, const char *value) {
     if (app.state != state || (value && strcmp(app.result,value))) {
         fprintf(stderr,"source: %s\nstate %u result %s\n",source,app.state,app.result); abort();
     }
-    assert(!app.owner && !app.L && !app.arena[0] && !app.arena[1] && !app.arena[2] && !allocations);
+    assert(!app.owner && !app.L && !app.work && !allocations);
 }
 static void tick(void) { clock_ms += FRAME_MS; service(); }
 
@@ -133,8 +135,10 @@ static void tick(void) { clock_ms += FRAME_MS; service(); }
 #include "test-allocator.c"
 #include "test-source.c"
 #include "test-assets.c"
+#include "test-lifecycle.c"
 
 int main(void) {
+    test_lifecycle();
     test_assets();
     test_allocator();
     test_source();
@@ -230,7 +234,7 @@ int main(void) {
     load("return {init=function() lights.fill(0x080008); lights.present() end,"
          "message=function() while true do end end}",1);
     tick();assert(runtime_led_override());
-    memcpy(app.message,"crash",5);app.message_size=5;
+    memcpy(app.work->message,"crash",5);app.message_size=5;
     tick();assert(app.state==ERROR && !allocations && !runtime_led_override());
     assert(led_context[0x48]);
     /* Cancellation remains independent of callback dispatch. */

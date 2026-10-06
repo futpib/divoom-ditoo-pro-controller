@@ -1,7 +1,9 @@
 # Ditoo-side Bluetooth diagnostics
 
-Firmware 306024 and later record selected Bluetooth events independently of the Lua app.
-Read the retained history or watch while the Ditoo connects to a TV:
+Bluetooth tracing runs independently of the Lua app. Firmware 306036 allocates
+its history only while requested: start the watcher before reproducing a problem.
+Earlier firmware (306024–306035) records continuously. Read an existing capture or
+watch while the Ditoo connects to a TV:
 
 ```sh
 divoom-ditoo-pro-controller --transport usb bluetooth trace --seconds 0
@@ -46,9 +48,12 @@ responses describe the remote device. Pairing success does not imply open HID
 channels or keys accepted by the remote application. No HID events alone cannot
 establish whether pairing or SDP failed.
 
-The latest 32 events occupy 768 bytes plus a four-byte cursor inside the existing
-8 KiB static reservation. Recording allocates no heap, writes no flash and uses
-none of the 48 KiB Lua arena. Short interrupt-protected sections serialize records
+From 306036, the latest 32 events use a 768-byte native heap ring allocated by
+the first read. Each read renews a 15-second lease. The updated CLI releases the
+ring on completion or Ctrl-C; the lease handles a killed/disconnected reader.
+No events are retained while tracing is off, so a fresh `--seconds 0` normally
+returns an empty history. Older firmware keeps the ring in static RAM.
+Recording itself allocates no heap, writes no flash and uses none of the Lua arena. Short interrupt-protected sections serialize records
 and snapshot copies; USB replies happen after interrupts are restored. Reads are
 non-destructive, with independent reader cursors and at most six records per
 160-byte reply. The CLI reports overwritten events, polls every 200 ms by default,
@@ -56,7 +61,7 @@ and cleans up on completion or Ctrl-C. USB permits one host command connection
 at a time: stop the watcher before running another USB CLI command. The app
 and its physical buttons continue running while watching. `--interval-ms` accepts 50 through 5000.
 
-Records disappear on reboot. A backwards cursor produces a reset notice; a
+Records disappear when the lease ends or on reboot. A backwards cursor produces a reset notice; a
 reboot cannot always be identified if new events have already overtaken the old
 cursor. Reopen the command after a USB disconnection.
 
@@ -103,8 +108,11 @@ Command 0x37 payload: `7f 44 4c 55 41 0d` followed by a little-endian u32 last-s
 sequence. Reply: `DBTR`, ABI 1, error byte, record count, capacity, oldest retained
 and latest sequence (u32 each). Each 24-byte record contains u32 sequence, u32
 milliseconds, u8 layer, u8 event, u8 length, a reserved zero byte, and 12 padded
-metadata bytes. Wrong request length returns error 1. There is no raw address,
-buffer resize, clear operation or Lua dependency.
+metadata bytes. Wrong request length returns error 1; 306036 returns error 2 if the ring cannot
+be allocated while preserving native headroom. An optional byte after the cursor
+is 1 to acquire/renew, or 0 to release the lease. The original read packet also
+acquires/renews. Oldest may be latest+1 for an empty newly acquired/released ring.
+There is no raw address, buffer resize or Lua dependency.
 
 ## Hardware verification
 

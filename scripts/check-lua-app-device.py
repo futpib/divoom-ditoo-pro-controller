@@ -12,7 +12,7 @@ p.add_argument('--transport', choices=['ble','usb'], default='ble')
 p.add_argument('--usb-port')
 p.add_argument('--binary', type=Path, default=ROOT/'target/release/divoom-ditoo-pro-controller')
 p.add_argument('--output', type=Path, required=True)
-p.add_argument('--firmware', type=int, choices=[306013,306014,306015,306016,306017,306018,306019,306020,306021,306022,306023,306024,306025,306026,306027,306028,306029,306030,306031,306032,306033,306034,306035], default=306035)
+p.add_argument('--firmware', type=int, choices=[306013,306014,306015,306016,306017,306018,306019,306020,306021,306022,306023,306024,306025,306026,306027,306028,306029,306030,306031,306032,306033,306034,306035,306036], default=306036)
 a = p.parse_args()
 connection = ['--transport',a.transport]
 if a.transport == 'ble':

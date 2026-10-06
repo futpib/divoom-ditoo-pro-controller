@@ -54,7 +54,7 @@ static void test_tv_remote(void) {
     load(source,1);
     if (app.state!=ACTIVE) { fprintf(stderr,"TV app failed: %s (peak %u)\n",app.result,app.peak);abort(); }
     tick();tick();
-    memcpy(app.message,"connect 0C:CD:B4:D0:0C:26",25);app.message_size=25;
+    memcpy(app.work->message,"connect 0C:CD:B4:D0:0C:26",25);app.message_size=25;
     for (unsigned i=0;i<12;++i) { tick();runtime_native_service(); }
     assert(app.state==ACTIVE);
     clock_ms+=21000;tick();
@@ -67,7 +67,7 @@ static void test_tv_remote(void) {
         runtime_adc_result(2U<<16 | 2);
         for (unsigned i=0;i<8;++i) { tick();runtime_native_service(); }
         assert(app.state==ACTIVE && bt_last_action==expected);
-        unsigned lit=0;for (unsigned i=0;i<sizeof app.frame;++i) lit|=app.frame[i];
+        unsigned lit=0;for (unsigned i=0;i<FRAME_BYTES;++i) lit|=app.frame[i];
         assert(lit);
     }
     assert(bt_commands==commands+2);
@@ -226,7 +226,7 @@ static void tv_frame(unsigned stage) {
     const char *directory=getenv("DITOO_UI_FRAMES");if(!directory) return;
     char path[512];snprintf(path,sizeof path,"%s/%u.ppm",directory,stage);
     FILE *f=fopen(path,"wb");assert(f);fputs("P6\n16 16\n255\n",f);
-    assert(fwrite(app.frame,1,sizeof app.frame,f)==sizeof app.frame);fclose(f);
+    assert(fwrite(app.frame,1,FRAME_BYTES,f)==FRAME_BYTES);fclose(f);
 }
 static unsigned tv_ops[32],tv_value,tv_last;
 static void tv_ticks(unsigned n) {
@@ -253,7 +253,7 @@ static void tv_key(unsigned key) {
     runtime_adc_result(1U<<16|key);tv_ticks(1);runtime_adc_result(2U<<16|key);tv_ticks(8);
 }
 static void tv_message(const char *message) {
-    strcpy(app.message,message);app.message_size=strlen(message);tv_ticks(100);
+    strcpy(app.work->message,message);app.message_size=strlen(message);tv_ticks(100);
 }
 static void tv_stop(void) {
     app.cancel=1;service();runtime_native_service();assert(!allocations);
@@ -268,7 +268,8 @@ static void test_tv_keyboard(void) {
     saved.initialized=saved.boot_done=1;stock_config_context=config_context;
     const char *setting="TV5|01:01:01:01:01:01|public|";
     memcpy(saved.settings,setting,strlen(setting));saved.settings_size=strlen(setting);
-    track_heap=1;free_heap=76000;bt_queued.op=0;memset(tv_ops,0,sizeof tv_ops);
+    /* The 4 KiB smaller static reservation returns this space to the native heap. */
+    track_heap=1;free_heap=76000+(8192-4096);bt_queued.op=0;memset(tv_ops,0,sizeof tv_ops);
     load(source,1);tv_ticks(100);tv_frame(0);
     assert(strstr(app.result,"CONNECTED: 01:01:01:01:01:01 PUBLIC"));
     assert(!memcmp(saved.settings,"TV6|01:01:01:01:01:01|public|1",saved.settings_size));

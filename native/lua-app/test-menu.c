@@ -107,7 +107,8 @@ static void test_menu(void) {
     unsigned char request[12]={0x37,0x7f,'D','L','U','A',14};
     runtime_command(0,request,9);assert(reply[5]==1);
     request[7]=2;request[8]=255;runtime_command(0,request,12);assert(reply[5]==1 && !menu.injected);
-    stock_menu_close(0);memset(&menu,0,sizeof menu);memset(&preferences,0,sizeof preferences);
+    stock_menu_close(0);menu_tick();assert(!app.frame && !allocations);
+    memset(&menu,0,sizeof menu);memset(&preferences,0,sizeof preferences);
     memset(&app,0,sizeof app);memset(&saved,0,sizeof saved);memset(&peripheral,0,sizeof peripheral);
     memset(persisted_size,0,sizeof persisted_size);stock_config_context=NULL;persist_writes=0;
     fake_hid_status=(struct hid_status){0};bt_queued.op=0;

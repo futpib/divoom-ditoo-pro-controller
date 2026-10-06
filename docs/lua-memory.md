@@ -4,6 +4,53 @@ Firmware 306030 accepts up to 16,384 source bytes with a 49,152-byte Lua arena.
 It retains the allocator and streaming-parser improvements introduced in
 306023. UI helpers remain ordinary Lua modules bundled on the host.
 
+## Allocate only while used (306036)
+
+The app profile now reserves 4,096 bytes of globals instead of 8,192. The current
+link map uses 2,724 bytes of that reservation. The other 4 KiB returns to the
+native allocator; the 48 KiB Lua limit and 24 KiB native safety reserve stay the same.
+
+| # | Resource | Allocate | Release |
+| --- | --- | --- | --- |
+| 1 | 16 KiB Lua worker stack and native task record | When execution starts, after upload/save | After completion, stop or error; a retired worker is deleted by another task and the stock idle task reclaims its stack/record. Paused apps still own their VM and worker. |
+| 2 | Lua arena directory, timers, key queue, input message and recovery context | At VM launch | On every completion, stop, OOM or other abort. Arena pages retain their existing incremental reclamation. |
+| 3 | 768-byte framebuffer | First drawing/readback operation, or while an extension menu draws | App teardown or leaving the extension menu. A script that never draws needs no framebuffer. |
+| 4 | Classic HID context and writable SDP attributes | First keyboard/profile request | After leaving remote-only mode and disconnecting; wait for closed channels/returned packets, unregister the manager/security/SDP/PSMs, then free. Stack recreation also drops the stale context. |
+| 5 | BLE HID context | Enabling the BLE remote profile | Disabling it, after restoring its advertising identity; also on stack reset. A listening or connected remote still uses this context. |
+| 6 | Bluetooth trace ring, 768 bytes | First diagnostic read | Explicit reader release or 15 seconds without a read. Event/IRQ hooks never allocate. |
+| 7 | USB dispatcher context and 8 KiB reply ring | Opening a USB control session | Session close/replacement or the existing 15-second idle timeout. Input frames are sized to each command and freed after dispatch. |
+| 8 | Storage diagnostic scratch, 432 bytes | Each diagnostic request | Before that request returns, including failure. |
+| 9 | Uploaded source | Upload starts | Consumed by compilation, canceled/replaced, or abandoned for 30 seconds. Uploading and saving no longer require a worker stack. |
+
+Math tables now live in flash except for eight bytes (`sqrtf`'s `one` and `tiny`)
+that the toolchain addresses relative to the RAM global pointer. Moving the other
+1,068 bytes does not require loading a math library when a script starts.
+
+Small routing/status records, settings, USB interrupt mailboxes, LED output buffers
+and C-library bookkeeping remain permanent. Interrupt handlers still have storage
+before any app/session exists; native LED I/O may retain its published buffer.
+A Bluetooth connection/listener or selected remote-only policy remains in use even
+when Lua stops. This change does not disconnect a TV just to reclaim its profile.
+
+The native bindings added here are `vTaskDelete` at `0x84c20`, connection-manager
+unregister at `0x11dd76`, and security-record unregister at `0x1285ac`, checked
+against stock 306007 disassembly. Unregister failures retain the context for retry;
+no callback-owned object is freed while a channel/packet still references it.
+
+Validation: the 32-bit ASan/UBSan suite exercises repeated worker/profile lifetimes,
+failed allocation, partial unregister, deferred identity restoration, abandoned
+uploads, trace expiry/release, storage scratch, native menus and the TV app with
+16 simulated bonds. The TV fixture includes the 4 KiB returned by the smaller
+static reservation when comparing native heap budgets. These are host tests;
+306036 has not yet been flashed or verified on hardware. Reproduce with:
+
+```sh
+python3 scripts/build-lua-app-runtime.py
+python3 scripts/test-lua-app-runtime.py
+python3 scripts/firmware-manifest.py firmware/306036-lua.MVA --check
+python3 scripts/check-firmware-repro.py
+```
+
 ## 16 KiB source limit (306030)
 
 The upload and saved-app ceiling is now 16,384 bytes. The 48 KiB Lua arena,

@@ -15,6 +15,9 @@ extern unsigned stock_att_can_send(unsigned);
 extern unsigned stock_att_send(unsigned,unsigned,const void *,unsigned);
 extern void stock_ble_event(unsigned,unsigned,unsigned char *,unsigned);
 extern void *stock_alloc(unsigned);
+extern void stock_free(void *);
+extern unsigned runtime_irq_save(void);
+extern void runtime_irq_restore(unsigned);
 extern unsigned stock_ticks(void),stock_free_heap(void);
 extern unsigned char *stock_hci_connection(unsigned);
 extern void stock_hci_run(void);
@@ -45,7 +48,7 @@ extern volatile unsigned stock_battery_level;
 static const unsigned char *original_db;
 static read_fn original_read;
 static write_fn original_write;
-static unsigned initialized;
+static unsigned initialized,next_generation;
 static uint16_t control_handle=0xffff;
 static struct hogp {
     struct hid_status status;
@@ -59,6 +62,10 @@ static struct hogp {
     const unsigned char *scan_data;
     struct { uint8_t address[6],type,valid,subscriptions; } bonds[16];
 } *ble;
+static void release(void) {
+    struct hogp *old=ble;next_generation=old->status.generation+1;
+    ble=NULL;stock_free(old);
+}
 static const unsigned char remote_adv[]={2,1,6,3,3,0x12,0x18,3,0x19,0x80,1};
 static const unsigned char control_adv[]={2,1,6,3,3,0,0xab};
 static const unsigned char remote_name[]={17,9,'D','i','t','o','o',' ','B','L','E',' ','R','e','m','o','t','e'};
@@ -114,8 +121,10 @@ static unsigned save_subscriptions(unsigned handle,unsigned mask) {
     ble->bonds[i].subscriptions=mask;return 1;
 }
 unsigned runtime_hogp_bond(unsigned i,unsigned char *a,unsigned *type) {
-    if (!ble || i>=16 || !ble->bonds[i].valid) return 0;
-    memcpy(a,ble->bonds[i].address,6);*type=ble->bonds[i].type;return 1;
+    unsigned irq=runtime_irq_save();
+    unsigned valid=ble && i<16 && ble->bonds[i].valid;
+    if(valid) { memcpy(a,ble->bonds[i].address,6);*type=ble->bonds[i].type; }
+    runtime_irq_restore(irq);return valid;
 }
 static unsigned peer(unsigned handle,unsigned char *a,unsigned *type) {
     unsigned char *c=stock_hci_stack ? stock_hci_connection(handle) : NULL;
@@ -224,7 +233,7 @@ static int write_value(uint16_t connection,uint16_t attribute,uint16_t transacti
 }
 void runtime_hogp_init(const unsigned char *db,read_fn read,write_fn write) {
     original_db=db;control_handle=0xffff;original_read=read;original_write=write;
-    if (ble) { memset(ble,0,sizeof *ble);ble->handle=0xffff; }
+    if (ble) release();
     initialized=1;stock_att_init(db,read_value,write_value);
 }
 void runtime_hogp_event(unsigned type,unsigned channel,unsigned char *p,unsigned n) {
@@ -284,7 +293,7 @@ unsigned runtime_hogp_mode(unsigned enabled) {
     if (!ble) {
         if (!enabled) return 1;
         if (stock_free_heap()<16384 || !(ble=stock_alloc(sizeof *ble))) return 0;
-        memset(ble,0,sizeof *ble);ble->handle=0xffff;
+        memset(ble,0,sizeof *ble);ble->handle=0xffff;ble->status.generation=next_generation;
     }
     if (!!enabled==!!ble->status.enabled) return 1;
     if (ble->handle!=0xffff || ble->identity_pending) { error(20);return 0; }
@@ -356,11 +365,12 @@ void runtime_hogp_command(unsigned op,unsigned value,const unsigned char *data,u
     ble->release_at=stock_ticks();ble->status.busy=1;
 }
 void runtime_hogp_service(unsigned epoch) {
-    if (!ble || (!ble->status.enabled && !ble->identity_pending)) return;
+    if (!ble) return;
     if (!stock_hci_stack) {
-        memset(ble,0,sizeof *ble);ble->handle=0xffff;return;
+        release();return;
     }
     identity_service();
+    if (!ble->status.enabled && !ble->identity_pending) { release();return; }
     if (!ble->status.enabled || ble->identity_pending) return;
     /* Give the host's pairing UI time to attach its input-device listener.
      * Keep the ATT response pending without blocking the Bluetooth task. */

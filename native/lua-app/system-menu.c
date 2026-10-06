@@ -258,7 +258,7 @@ static void menu_address(char *out,const unsigned char *a) {
     for(unsigned i=0;i<6;++i) { unsigned v=a[5-i];out[i*3]=hex[v>>4];out[i*3+1]=hex[v&15];out[i*3+2]=':'; }out[17]=0;
 }
 static void menu_draw(void) {
-    if(!menu_visible() || app.owner || stock_ticks()-menu.rendered<80) return;
+    if(!menu_visible() || app.L || app.state==RUNNING || stock_ticks()-menu.rendered<80) return;
     menu.rendered=stock_ticks();
     const char *label="",*title="SET";char address[25];
     unsigned p=menu.page,n=menu.index,count=menu_count(),color=0x30b0ff;
@@ -281,7 +281,8 @@ static void menu_draw(void) {
         if(p==MENU_FORGET) { memcpy(address,"FORGET ",7);menu_address(address+7,menu.peer);label=address; }
     }
     if(menu.notice) label=menu.notice;
-    memset(app.frame,0,sizeof app.frame);
+    if(!frame_acquire()) return;
+    memset(app.frame,0,FRAME_BYTES);
     menu_text(title,1,color);menu_text(label,9,0xffffff);
     if(count) for(unsigned i=0;i<count;++i) pixel((16-(int)count*2)/2+i*2,15,i==n ? color : 0x102028);
     runtime_screen(app.frame);
@@ -364,6 +365,8 @@ static void menu_command(unsigned context,const unsigned char *data,unsigned len
     reply[13]=menu.request;reply[14]=app.state;reply[15]=saved.initialized;
     memcpy(reply+16,&preferences,sizeof preferences);
     reply[24]=stock_usb_descriptor[10];reply[25]=stock_usb_descriptor[11];reply[26]=chunk;
-    if(chunk<6) memcpy(reply+32,app.frame+chunk*128,128);
+    unsigned irq=runtime_irq_save();
+    if(chunk<6 && app.frame) memcpy(reply+32,app.frame+chunk*128,128);
+    runtime_irq_restore(irq);
     stock_reply(context,0x37,reply,sizeof reply);
 }

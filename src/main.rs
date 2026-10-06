@@ -236,7 +236,7 @@ enum Command {
 enum BluetoothCommand {
   /// Read a bounded event history without stopping the Lua app; output JSONL
   Trace {
-    /// Watch duration; zero reads the retained history once
+    /// Watch duration; zero reads existing history (306036+ records only while watching)
     #[arg(long, default_value_t=30, value_parser=clap::value_parser!(u64).range(0..=86400))]
     seconds: u64,
     #[arg(long, default_value_t=200, value_parser=clap::value_parser!(u64).range(50..=5000))]

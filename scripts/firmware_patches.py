@@ -203,7 +203,7 @@ class PatchSet:
         memory = {name: header for name, header in self.headers.items() if name in ('.text','.data','.bss')}
         if '__bss_end' in self.symbols:
             memory['globals'] = dict(used=self.symbols['__bss_end']-self.symbols['__data_start'],
-                                     limit=8192, remaining=0x2004c000-self.symbols['__bss_end'])
+                                     limit=0x2004c000-self.symbols['__data_start'], remaining=0x2004c000-self.symbols['__bss_end'])
         if '.text' in self.headers:
             h = self.headers['.text']
             limit = self.headers.get('.data',{}).get('lma') if self.profile in ('app','runtime') else 0x1d0000
