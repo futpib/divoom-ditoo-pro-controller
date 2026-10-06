@@ -462,7 +462,7 @@ impl BleConnection {
       now.timestamp(),
       now.format("%Y-%m-%d %H:%M:%S")
     );
-    if let Err(error) = connection.write_payload(init.as_bytes(), 1, false).await {
+    if let Err(error) = connection.write_payload(init.as_bytes(), 1, None).await {
       let not_connected = error
         .downcast_ref::<bluer::Error>()
         .is_some_and(|e| e.kind == bluer::ErrorKind::Failed && e.message == "Not connected");
@@ -471,7 +471,7 @@ impl BleConnection {
       }
       // Cached notifications can also succeed with only the classic bearer active.
       connect_ble_bearer(&adapter, &connection.device.device).await?;
-      connection.write_payload(init.as_bytes(), 1, false).await?;
+      connection.write_payload(init.as_bytes(), 1, None).await?;
     }
     tokio::time::sleep(Duration::from_secs(1)).await;
     connection.refresh_stream_capacity().await;
@@ -511,13 +511,14 @@ impl BleConnection {
     &mut self,
     payload: &[u8],
     sequence: u16,
-    streaming: bool,
+    stream_limit: Option<usize>,
   ) -> Result<(), Box<dyn Error>> {
+    let streaming = stream_limit.is_some();
     if streaming && self.stream_write_size <= 20 {
       self.refresh_stream_capacity().await;
     }
-    let capacity = if streaming {
-      self.stream_write_size
+    let capacity = if let Some(limit) = stream_limit {
+      self.stream_write_size.min(limit)
     } else {
       20
     };
@@ -532,7 +533,7 @@ impl BleConnection {
           },
         )
         .await?;
-      // Acknowledged GATT writes provide backpressure for firmware streaming.
+      // Acknowledged GATT writes provide backpressure for source/firmware data.
       if !streaming {
         tokio::time::sleep(Duration::from_millis(50)).await;
       }
@@ -566,7 +567,17 @@ impl BleConnection {
     };
     let mut payload = vec![packet.command.value()];
     payload.extend(&packet.payload);
-    self.write_payload(&payload, sequence, preserve).await?;
+    // Source uploads can span hundreds of fragments. Pace them with ATT write
+    // responses, like firmware data, instead of a fixed delay per 20 bytes.
+    // Bound each source-data write to 256 bytes even when the peer offers more.
+    let stream_limit = if preserve {
+      Some(512)
+    } else if packet.command.value() == 0x37 && packet.payload.starts_with(b"\x7fDLUA\x04") {
+      Some(256)
+    } else {
+      None
+    };
+    self.write_payload(&payload, sequence, stream_limit).await?;
     let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
     let mut acknowledged = false;
     let mut command_response = None;
