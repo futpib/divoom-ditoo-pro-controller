@@ -16,7 +16,7 @@ public class Control extends BroadcastReceiver {
     final Handler h = new Handler(Looper.getMainLooper());
     BluetoothGatt g;
     BluetoothGattCharacteristic write;
-    boolean done;
+    boolean done, discovering, subscribing;
     int stage, sequence, offset, maintenanceStep;
     byte[] wire, buffer = new byte[0];
     Session(Context c, PendingResult p, String m) {
@@ -55,10 +55,14 @@ public class Control extends BroadcastReceiver {
         g.requestMtu(247);
     }
     public void onMtuChanged(BluetoothGatt g, int mtu, int status) {
+      if (done || discovering) return;
+      discovering = true;
       if (status == 0 && mtu >= 247) g.discoverServices();
       else finish("mtu=" + mtu + " status=" + status);
     }
     public void onServicesDiscovered(BluetoothGatt g, int status) {
+      if (done || subscribing) return;
+      subscribing = true;
       try {
         if (status != 0)
           throw new Exception("services=" + status);
@@ -212,13 +216,14 @@ public class Control extends BroadcastReceiver {
         else {final int next=cursor;h.postDelayed(() -> trace(next),80);}
         return;
       }
-      if (stage == 1 && cmd == 0x33 && f[6] == 1) {
+      if (stage == 1 && cmd == 0x33) {
         stage = 2;
         h.postDelayed(() -> send(new byte[] {0x37, 0}, 0x0102), 80);
       } else if (stage == 2 && cmd == 0x37 && f.length == 14 && f[6] == 1) {
         int version = (f[7] & 255) | ((f[8] & 255) << 8) |
                       ((f[9] & 255) << 16) | ((f[10] & 255) << 24);
-        if (version != 306035) {
+        Log.i("DitooTVControl", "firmware=" + version);
+        if (version != 306035 && version != 306036) {
           finish("wrong firmware=" + version);
           return;
         }

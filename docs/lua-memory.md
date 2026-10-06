@@ -41,15 +41,41 @@ Validation: the 32-bit ASan/UBSan suite exercises repeated worker/profile lifeti
 failed allocation, partial unregister, deferred identity restoration, abandoned
 uploads, trace expiry/release, storage scratch, native menus and the TV app with
 16 simulated bonds. The TV fixture includes the 4 KiB returned by the smaller
-static reservation when comparing native heap budgets. These are host tests;
-306036 has not yet been flashed or verified on hardware. Reproduce with:
+static reservation when comparing native heap budgets.
+
+306036 was flashed over BLE and its running version confirmed. All 43
+guard/recovery checks and 60 demand-memory checks passed. Twelve repeated
+worker cycles and cleanup after drawing, an abandoned upload, twenty storage
+diagnostic reads, trace release and trace expiry returned to the same native
+heap baseline. The fixed one-shot probe observed 71,368 native free bytes with
+16,384 Lua bytes reserved; these readings include the probe's running worker.
+They do not measure the idle worker-stack saving directly.
+
+Fresh instances of the same resident app had identical Lua reservations;
+the first draw consumed 788 native bytes including allocator overhead. Trace
+activation consumed 800 bytes. Both allocations were fully reclaimed. Comparing
+repeated telemetry calls inside one VM is insufficient: a new Lua arena page
+also adds native allocation overhead not counted in `lua_reserved`.
+See the [device memory checks](../firmware/demand-memory-evidence/device-memory.json)
+and [guard results](../firmware/demand-memory-evidence/device-guards.json).
+USB buffer lifetimes and Classic HID unregister still need physical checks;
+their host sanitizer coverage is unchanged. Reproduce with:
 
 ```sh
 python3 scripts/build-lua-app-runtime.py
 python3 scripts/test-lua-app-runtime.py
 python3 scripts/firmware-manifest.py firmware/306036-lua.MVA --check
 python3 scripts/check-firmware-repro.py
+python3 scripts/check-lua-app-device.py CONTROL_ADDRESS --firmware 306036 \
+  --output firmware/runs/306036-guards
+python3 scripts/check-demand-memory-device.py --device CONTROL_ADDRESS \
+  --output firmware/runs/306036-memory
 ```
+
+The two device scripts replace the running app in RAM without saving it. Restore
+the installed app through the native Saved app launcher after testing. For a TV
+that holds the BLE link, the [maintenance fixture](../firmware/ble-pairing-evidence/README.md)
+can temporarily restore the public control identity without deleting its bond.
 
 ## 16 KiB source limit (306030)
 

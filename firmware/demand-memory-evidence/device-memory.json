@@ -1,0 +1,492 @@
+{
+  "firmware": 306036,
+  "transport": "ble",
+  "exit_code": 0,
+  "checks": [
+    {
+      "name": "warmup",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "baseline",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-0-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-0-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-1-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-1-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-2-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-2-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-3-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-3-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-4-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-4-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-5-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-5-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-6-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-6-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-7-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-7-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-8-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-8-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-9-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-9-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-10-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-10-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "worker-11-result",
+      "passed": true,
+      "state": 2,
+      "result": "42",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-11-heap",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "resident-without-frame",
+      "passed": true,
+      "state": 4,
+      "result": "71368,15792,16384",
+      "lua_memory_bytes": 15936,
+      "free_native_heap": 71368,
+      "lua_used": 15792,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "resident-with-frame",
+      "passed": true,
+      "state": 4,
+      "result": "70580,15760,16384",
+      "lua_memory_bytes": 15904,
+      "free_native_heap": 70580,
+      "lua_used": 15760,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 86964
+    },
+    {
+      "name": "paused-owns-vm",
+      "passed": true,
+      "state": 5,
+      "result": "70580,15760,16384",
+      "lua_memory_bytes": 15904
+    },
+    {
+      "name": "resumed",
+      "passed": true,
+      "state": 4,
+      "result": "70580,15760,16384",
+      "lua_memory_bytes": 15904
+    },
+    {
+      "name": "resident-stopped",
+      "passed": true,
+      "state": 2,
+      "result": "stopped",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "after-frame-stop",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "abandoned-upload",
+      "passed": true,
+      "state": 6,
+      "result": "",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "upload-expired",
+      "passed": true,
+      "state": 0,
+      "result": "upload expired",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "after-upload-expiry",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "after-storage-diagnostics",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "trace-live",
+      "passed": true,
+      "state": 2,
+      "result": "70568,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 70568,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 86952
+    },
+    {
+      "name": "after-trace-release",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "after-trace-expiry",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0,
+      "free_native_heap": 71368,
+      "lua_used": 15176,
+      "lua_reserved": 16384,
+      "free_plus_lua_reserved": 87752
+    },
+    {
+      "name": "final-stop",
+      "passed": true,
+      "state": 2,
+      "result": "71368,15176,16384",
+      "lua_memory_bytes": 0
+    },
+    {
+      "name": "worker-0-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-1-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-2-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-3-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-4-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-5-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-6-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-7-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-8-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-9-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-10-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "worker-11-heap-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "after-frame-stop-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "after-upload-expiry-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "after-storage-diagnostics-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "after-trace-release-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "after-trace-expiry-fully-reclaimed",
+      "passed": true,
+      "baseline": 87752,
+      "observed": 87752
+    },
+    {
+      "name": "frame-allocated-on-first-draw",
+      "passed": true,
+      "native_bytes": 788,
+      "same_lua_reservation": true
+    },
+    {
+      "name": "trace-allocated-on-demand",
+      "passed": true,
+      "native_bytes": 800
+    },
+    {
+      "name": "stock-version-afterwards",
+      "passed": true
+    }
+  ]
+}

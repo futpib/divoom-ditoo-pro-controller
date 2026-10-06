@@ -26,7 +26,9 @@ through the TV's existing BLE link. It has no activity and no pairing API.
 The Ditoo's saved app turns these messages into actual HID reports. The receiver
 requests MTU 247 before using the stock control service and validates framing,
 checksum and firmware version. This fixture is pinned to the tested Ditoo's
-BLE address and firmware; edit those two literals for another device/version.
+BLE address and firmware (306035/306036); edit those literals for another device/version.
+It ignores repeated Android MTU/service-discovery callbacks so a second
+diagnostic connection does not start two competing notification subscriptions.
 
 ```sh
 bash firmware/ble-pairing-evidence/build-probe.sh "$HOME/Android/Sdk"

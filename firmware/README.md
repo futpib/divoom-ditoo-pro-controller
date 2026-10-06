@@ -153,5 +153,14 @@ and Bluetooth stack are unchanged. See [pairing evidence](ble-pairing-evidence/R
 The retained 306031–306034 images are diagnostic stages, not recommended
 installations. 306031 still shares the Classic identity; 306032 exposes the
 picker's input-listener race; 306033 fixes pairing but has stale subscription
-reads; 306034 adds verification that rejects those stale reads. Use 306035.
+reads; 306034 adds verification that rejects those stale reads. Use 306036.
 Only the current app profile is rebuilt by the reproducibility checker.
+
+`306036-lua.MVA` makes extension memory follow its resource lifetime: completed
+Lua workers, VM workspace, framebuffers, upload buffers, inactive Bluetooth
+profiles, trace storage and USB sessions can release their allocations. It also
+returns 4 KiB of fixed reservation to the native heap. Build it from `a6ded83`
+with `scripts/build-lua-app-runtime.py`. The image was flashed over BLE; all
+43 device guard/recovery checks and 60 demand-memory checks passed. See
+[memory behavior](../docs/lua-memory.md) and
+[hardware evidence and remaining coverage](demand-memory-evidence/README.md).

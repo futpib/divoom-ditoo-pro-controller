@@ -2,8 +2,8 @@
   "firmware": 306036,
   "sha256": "2d5dcda7cc326a7a8f4d85c558d58598d5029bfcd18d8ee09a8ccc29963690ee",
   "bytes": 2026763,
-  "hardware_verified": false,
-  "device_modified": false,
+  "hardware_verified": true,
+  "device_modified": true,
   "static_ram": {
     "previous_used": 7964,
     "used": 2724,
@@ -85,8 +85,69 @@
     ]
   },
   "hardware_pending": [
-    "Measure native heap over repeated Lua start/stop and idle-task cleanup.",
-    "Exercise profile teardown/re-enable and persistent TV connection on the physical device.",
-    "Verify USB session close and diagnostic expiry with the active native stacks."
-  ]
+    "USB session close/replacement/idle expiry: no Ditoo USB cable was attached; host sanitizer tests passed.",
+    "Classic HID unregister/re-enable on physical stack: host sanitizer tests passed; TV uses BLE HID.",
+    "Physical key actuation, optical display comparison and mains power cycling were not performed; input delivery used real BLE HID reports from Lua messages."
+  ],
+  "hardware": {
+    "date_utc": "2026-10-06",
+    "transport": "ble",
+    "source_version": 306035,
+    "running_version": 306036,
+    "flash": {
+      "device_completed": true,
+      "updater_exit_code": 0,
+      "post_update_version_verified": true,
+      "chunks_sent": 7918,
+      "chunks_total": 7918,
+      "transfer_seconds": 292.273363366,
+      "connection_interval_ms": 7.5
+    },
+    "device_guard_checks": {
+      "passed": 43,
+      "failed": 0,
+      "report": "device-guards.json"
+    },
+    "demand_memory_checks": {
+      "passed": 60,
+      "failed": 0,
+      "report": "device-memory.json"
+    },
+    "memory_baseline": {
+      "probe_free_native_bytes": 71368,
+      "probe_lua_reserved_bytes": 16384,
+      "normalized_free_bytes": 87752,
+      "worker_cycles": 12,
+      "all_cleanup_baselines_equal": true,
+      "first_frame_native_bytes": 788,
+      "trace_native_bytes": 800,
+      "note": "Measurements include the active probe worker; no direct idle-stack measurement."
+    },
+    "saved_remote": {
+      "autostart_after_flash": true,
+      "native_menu_reload": true,
+      "lua_state": "active",
+      "lua_error": 0,
+      "ble_profile_disable_and_reenable": true,
+      "bond_reused": true,
+      "new_pairing_required": false,
+      "smarttube_play_pause_and_resume": true,
+      "real_key_down_events": 2,
+      "real_key_up_events": 2,
+      "report": "tv-input.json",
+      "laptop_link_released": "BlueZ retained the public control link after CLI exit; explicit disconnect let the TV reconnect.",
+      "final_connected_after_tests": true,
+      "audio_route": "TV speaker; no A2DP active device"
+    },
+    "preserved": {
+      "app_settings": true,
+      "system_preferences": true,
+      "volume": 8,
+      "brightness": 20,
+      "usb_pid": "171e",
+      "tv_music_volume": 12
+    },
+    "diagnostic_fixture": "Repeated Android MTU/discovery callbacks are guarded before CCCD writes; actual repeated TV requests passed.",
+    "temporary_tv_probe_removed": true
+  }
 }

@@ -1,0 +1,21 @@
+{
+  "firmware": 306036,
+  "path": "Lua message -> Ditoo BLE HID -> Android input -> SmartTube",
+  "input_node": "/dev/input/event7",
+  "key_down": 2,
+  "key_up": 2,
+  "playback_states": [
+    "PLAYING",
+    "PAUSED",
+    "PLAYING"
+  ],
+  "playback_restored": true,
+  "passed": true,
+  "input_name": "Ditoo BLE Remote Keyboard",
+  "events": [
+    "[  138958.376132] EV_KEY       KEY_PLAYPAUSE        DOWN                ",
+    "[  138958.463627] EV_KEY       KEY_PLAYPAUSE        UP                  ",
+    "[  138960.926050] EV_KEY       KEY_PLAYPAUSE        DOWN                ",
+    "[  138961.013602] EV_KEY       KEY_PLAYPAUSE        UP                  "
+  ]
+}
