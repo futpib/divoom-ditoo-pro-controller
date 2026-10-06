@@ -24,6 +24,8 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--device', required=True)
 p.add_argument('--after-reboot', action='store_true', help='read-only check of autostart and saved settings')
 a = p.parse_args()
+if "keyboard.mode, 'ble-remote'" in (ROOT/'examples/lua/tv-keyboard.lua').read_text():
+    raise SystemExit('This historical harness requires the Classic remote app. Use scripts/check-bluetooth-hogp.py for the current BLE app; no device changes made.')
 bus = dbus.SystemBus()
 path = '/org/bluez/hci0/dev_'+a.device.upper().replace(':', '_')
 adapter = bus.get_object('org.bluez', '/org/bluez/hci0')

@@ -128,3 +128,17 @@ flash space without reducing the Lua API. Build the current image with
 See [menu verification](menu-evidence/verification.json) for hardware checks,
 memory measurements, reproducibility and test limitations.
 Private configuration backups and raw execution logs remain ignored.
+
+`306029-lua.MVA` adds [BLE HID over GATT](../docs/lua-keyboard.md#ble-remote-api-306029)
+with explicit remote-only key usages, native report release, encrypted pairing
+windows and the stock persistent LE bond store. The existing control GATT
+handles remain unchanged. Lua selects it with `keyboard.mode('ble-remote')`;
+Classic HID and AVRCP are retained. The TV example now uses BLE and keeps its
+BLE identity/type in TV5 settings, separately from older Classic targets.
+Build with `scripts/build-lua-app-runtime.py`. Native ASan/UBSan tests cover
+pairing/subscription gates, bond reuse, report release after Lua abort and
+backpressure, stale jobs, attribute bounds and control reply routing.
+[Laptop hardware verification](ble-remote-evidence/verification.json) records
+real input events, bonded reconnect, Lua-abort release, app callbacks and the
+native BLE bond menu, along with a post-flash connection recovery and remaining
+limits. The TV was not used. Firmware build reports remain deterministic.

@@ -35,7 +35,7 @@ static struct {
     unsigned page,index,parent,changed,rendered,notice_at,operation,operation_at;
     unsigned usb_at,usb_stage,bt_at;
     const char *notice;
-    unsigned char peer[6],bonds[8][6],bond_count;
+    unsigned char peer[7],bonds[16][7],bond_count;
 } menu;
 
 static unsigned menu_id(void) {
@@ -118,8 +118,16 @@ static void menu_setting(void) {
 }
 static void menu_bonds(void) {
     menu.bond_count=0;
-    for(unsigned i=0;i<8;++i) if(stock_bt_manager[7+i*26+25]) {
+    struct hid_status s;runtime_hid_status(&s);
+    if(s.transport) {
+        for(unsigned i=0;i<16;++i) {
+            unsigned type;
+            if(runtime_hogp_bond(i,menu.bonds[menu.bond_count],&type))
+                menu.bonds[menu.bond_count++][6]=type;
+        }
+    } else for(unsigned i=0;i<8;++i) if(stock_bt_manager[7+i*26+25]) {
         for(unsigned j=0;j<6;++j) menu.bonds[menu.bond_count][j]=stock_bt_manager[7+i*26+j];
+        menu.bonds[menu.bond_count][6]=0;
         ++menu.bond_count;
     }
     menu_page(MENU_DEVICES,0);
@@ -128,7 +136,7 @@ static unsigned menu_job(unsigned op,unsigned slot,const unsigned char *data) {
     if(peripheral.cleanup || peripheral.state==JOB_QUEUED || peripheral.state==JOB_RUNNING) return 0;
     peripheral.op=op;peripheral.slot=slot;peripheral.value=0;
     memset(peripheral.data,0,sizeof peripheral.data);
-    if(data) memcpy(peripheral.data,data,6);
+    if(data) memcpy(peripheral.data,data,7);
     peripheral.job_epoch=peripheral.epoch;
     peripheral.state=JOB_QUEUED;menu.operation=op;menu.operation_at=stock_ticks();return 1;
 }
@@ -151,7 +159,8 @@ static void menu_confirm(void) {
         struct hid_status s;runtime_hid_status(&s);
         if(s.state || stock_avrcp_state() || stock_a2dp_state()) {
             /* Disconnecting an unrelated peer is not part of forgetting this bond. */
-            if((s.state && memcmp(s.peer,menu.peer,6)) || stock_avrcp_state() || stock_a2dp_state()) {
+            if((s.state && (memcmp(s.peer,menu.peer,6) || (s.transport && s.address_type!=menu.peer[6]))) ||
+                    stock_avrcp_state() || stock_a2dp_state()) {
                 menu_notice("DISCONNECT AUDIO FIRST");return;
             }
             if(menu_job(BT_HID,HID_DISCONNECT,NULL)) menu_notice("DISCONNECTING");
@@ -172,7 +181,7 @@ static void menu_select(void) {
         menu_page(p,index);
     } else if(menu.page==MENU_DEVICES) {
         if(!menu.bond_count) return;
-        memcpy(menu.peer,menu.bonds[menu.index],6);menu_page(MENU_FORGET,0);
+        memcpy(menu.peer,menu.bonds[menu.index],7);menu_page(MENU_FORGET,0);
     } else if(menu.page==MENU_REMOVE || menu.page==MENU_DELETE || menu.page==MENU_FORGET) menu_confirm();
     else if(menu.page==MENU_MEMO) {
         if(menu.index==2) { menu.parent=2;menu_page(MENU_DELETE,0); }
@@ -331,7 +340,7 @@ static void menu_service(void) {
         if(stock_ticks()-menu.operation_at>5000) { menu.operation=0;menu_notice("WAIT THEN RETRY"); }
         else if(menu.operation==100 && !s.state) {
             menu.operation=0;if(!menu_job(BT_HID,HID_FORGET,menu.peer)) menu_notice("BUSY");
-        } else if(menu.operation==101 && !keyboard_bonded(menu.peer) && s.forgotten==peripheral.bt_forget_saved) {
+        } else if(menu.operation==101 && !keyboard_bonded(menu.peer,menu.peer[6]) && s.forgotten==peripheral.bt_forget_saved) {
             menu.operation=0;menu_bonds();menu_notice("FORGOTTEN");
         }
     }

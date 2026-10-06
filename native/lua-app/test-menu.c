@@ -86,6 +86,23 @@ static void test_menu(void) {
     for(unsigned j=0;j<6;++j) assert(bt_payload[16+j]==2);
     assert(menu.operation==101);stock_bt_manager[7+25]=0;
     menu_tick();assert(!menu.operation && menu.page==MENU_DEVICES && menu.bond_count==1);
+    /* BLE mode lists its own bonds and retains the address type through the
+     * confirmation. The same address with a different type is another peer. */
+    fake_hid_status.transport=1;
+    for(unsigned i=0;i<16;++i) {
+        memset(fake_le_bonds[i],i+1,6);fake_le_bonds[i][6]=i%2;fake_le_bonds[i][7]=1;
+    }
+    menu_bonds();assert(menu.bond_count==16);
+    menu.index=15;menu_press(4);assert(menu.peer[0]==16 && menu.peer[6]==1);
+    fake_hid_status.state=2;memcpy(fake_hid_status.peer,menu.peer,6);
+    fake_hid_status.address_type=0;menu_press(3);menu_press(4);assert(!menu.operation);
+    fake_hid_status.state=0;menu_press(4);menu_tick();
+    memcpy(values,bt_payload,16);assert(values[2]==HID_FORGET);
+    assert(bt_payload[16]==16 && bt_payload[22]==1 && menu.operation==101);
+    menu_tick();assert(menu.operation==101);
+    fake_le_bonds[15][7]=0;menu_tick();
+    assert(!menu.operation && menu.page==MENU_DEVICES && menu.bond_count==15);
+    memset(fake_le_bonds,0,sizeof fake_le_bonds);
     /* Malformed diagnostics are bounded and do not enqueue input. */
     unsigned char request[12]={0x37,0x7f,'D','L','U','A',14};
     runtime_command(0,request,9);assert(reply[5]==1);

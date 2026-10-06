@@ -278,10 +278,10 @@ async fn session(
   if !reply.ack
     || reply.data.len() != 5
     || reply.data[0] != 1
-    || !matches!(number(&reply.data[1..]), 306024..=306028)
+    || !matches!(number(&reply.data[1..]), 306024..=306029)
   {
     return Err(
-      "Bluetooth trace requires firmware 306024 through 306028; no diagnostic sent".into(),
+      "Bluetooth trace requires firmware 306024 through 306029; no diagnostic sent".into(),
     );
   }
   let firmware = number(&reply.data[1..]);

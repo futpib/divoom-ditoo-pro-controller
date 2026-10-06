@@ -28,7 +28,7 @@ patches = [
 ]
 
 [profiles.app]
-version = 306028
+version = 306029
 source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch", "lua/0003-binary32-parser.patch"]
 patches = [
     "command_dispatch",
@@ -47,6 +47,11 @@ patches = [
     "usb_response",
     "usb_connected",
     "bluetooth_commands",
+    "ble_att",
+    "ble_callback",
+    "ble_reply",
+    "att_request",
+    "att_write",
     "bluetooth_stack_trace",
     "bluetooth_hci_trace",
     "bluetooth_app_disconnect_trace",
@@ -554,4 +559,72 @@ original_size = 4
 purpose = "Keep disabled USB audio out of source selection."
 original = '''
     smw.adm $sp, [$sp], $sp, 2
+'''
+
+[[patches]]
+name = "ble_att"
+section = ".ble_att_hook"
+site = "stock_patch_ble_att"
+max_size = 4
+original_size = 4
+purpose = "Add the fixed HID over GATT database while preserving stock control handles."
+original = '''
+    jal stock_att_init
+'''
+
+[[patches]]
+name = "ble_callback"
+section = ".ble_callback_hook"
+site = "stock_patch_ble_callback"
+max_size = 8
+original_size = 8
+purpose = "Gate new BLE HID pairing and observe disconnects on the Bluetooth task."
+original = '''
+    sethi $r7, 0x133
+    ori $r7, $r7, 0xc00
+'''
+
+[[patches]]
+name = "ble_reply"
+section = ".ble_reply_hook"
+site = "stock_patch_ble_reply"
+max_size = 4
+original_size = 4
+purpose = "Reply to the BLE control writer rather than the latest HID connection."
+original = '''
+    jal stock_att_notify
+'''
+
+[[guards]]
+site = "stock_hci_disconnect_guard"
+profiles = ["app"]
+original_size = 10
+purpose = "Validate the BLE connection state offset and SEND_DISCONNECT transition."
+original = '''
+    bnec $r0, 8, stock_hci_disconnect_guard_branch
+    movi55 $r0, 9
+    swi333 $r0, [$r1 + 0x14]
+    lhi333 $r0, [$r1 + 0xa]
+'''
+
+[[patches]]
+name = "att_request"
+section = ".att_request_hook"
+site = "stock_patch_att_request"
+max_size = 4
+original_size = 4
+purpose = "Keep HID discovery scoped to a pairing candidate or the selected bonded BLE host."
+original = '''
+    jal stock_att_request
+'''
+
+[[patches]]
+name = "att_write"
+section = ".att_write_hook"
+site = "stock_patch_att_write"
+max_size = 4
+original_size = 4
+purpose = "Keep HID discovery scoped to a pairing candidate or the selected bonded BLE host."
+original = '''
+    jal stock_att_request
 '''

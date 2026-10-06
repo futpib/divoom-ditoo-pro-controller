@@ -2,8 +2,9 @@
 
 For pairing failures, firmware 306024 adds [device-side Bluetooth tracing](bluetooth-trace.md) over USB without stopping this app.
 
-Firmware **306028** runs the remote directly on the Ditoo with its speaker
-profiles disabled and prevents stock audio policy from disconnecting the keyboard.
+Firmware **306029** adds BLE HID over GATT (HOGP). The remote now uses this
+standard BLE peripheral profile with a restricted, non-alphabetic remote
+descriptor. Native speaker profiles stay disabled in this mode.
 After one installation,
 setup, pairing, reconnection and ordinary use need only the Ditoo and TV.
 Bluetooth HID sends Play/Pause, Mute, Volume Up/Down, Space and Left/Right reports. AVRCP and the
@@ -11,7 +12,7 @@ older `tv-remote.lua` remain available separately.
 
 ```sh
 # One-time setup from a computer.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306028-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306029-lua.MVA
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
 ```
 
@@ -19,12 +20,12 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
 
 1. Power on the Ditoo. It starts the saved remote automatically.
 2. Controls already match the printed keys; there is no button setup.
-3. For a **new pairing**, forget the old **DitooPro-Audio** accessory on the TV
-   if it exists, then open **Pair accessory**. Keep an existing working bond
-   when upgrading this app.
+3. For the first BLE pairing, disconnect the old **DitooPro-Audio** accessory
+   and open **Pair accessory**. Classic and BLE bonds are separate; switching
+   profiles requires one new pairing. Later BLE app upgrades reuse that bond.
 4. On the Ditoo, press the lever to confirm **PAIR / RESET SAVED TV?**.
    If a target is already saved, use M → Pair → lever, then lever to confirm.
-   Choose **DitooPro-Audio** on the TV and accept the request. No MAC address is
+   Choose **Ditoo BLE Remote** on the TV and accept the request. No MAC address is
    needed. A blue bar shows the two-minute pairing window.
 5. **TV / READY** with a green dot means the keyboard connection is established.
 
@@ -44,20 +45,15 @@ Left/Right send ordinary keyboard arrows (HID usages 80/79), so the TV app
 and focus determine whether they seek or navigate. Volume sends Consumer
 Volume Increment/Decrement (233/234), not Ditoo speaker volume. A sent report
 does not prove that every TV app handles it. SmartTube Play/Pause is
-owner-confirmed; see the verification notes below for other coverage.
+owner-confirmed for the earlier Classic profile; that does not verify the
+new BLE profile on the TV. See the verification notes below.
 
-The remote remembers the connected TV. Later boots try the saved TV up to
-three times, then listen for it. If necessary use LINK in the menu or the
-TV's Connect action. After a connected TV disconnects, the remote automatically
-resumes listening for that saved TV. This also works when the Ditoo initiated
-the previous connection. Listening does not consume outgoing connection
-attempts. A remote-action key pressed while disconnected also initiates a
-connection to the saved TV. The latest action is retained for at most five
-seconds and sent once if the connection opens in time; stale actions expire.
-This reuses the bond and obeys the native connection-attempt limits. Opening
-the local menu cancels a pending action. OFF stays offline until LINK or PAIR
-is selected; ordinary keys do not override it. Reconnection reuses
-the saved bond; PAIR deliberately resets the selected bond after confirmation.
+The remote saves the host identity and BLE address type. Later boots advertise
+and wait for that bonded host to reconnect. A BLE peripheral cannot initiate a
+connection to a TV; LINK and action keys resume listening. The latest action is
+retained for at most five seconds and sent once if the connection opens in
+time. Opening the local menu cancels it. OFF stays offline until LINK or PAIR
+is selected. PAIR resets only the selected BLE bond after confirmation.
 
 ## Menu and recovery
 
@@ -82,12 +78,11 @@ TV playback or volume state. The screen shows menu items, connection state,
 pairing instructions for the TV, and save progress. It has no keybinding
 prompts or persistent button guide.
 
-The app selects keyboard-only mode automatically, including when reusing an
-existing connection, unless Settings has a saved Bluetooth-mode override.
-Keyboard-only mode closes native audio connections and prevents new ones.
-If a link is still closing, wait briefly before retrying Pair. A TV may retain
-the old speaker services in its accessory cache; forgetting the accessory and
-pairing again refreshes that cache. The advertised name remains DitooPro-Audio.
+The app selects `keyboard.mode('ble-remote')` automatically, disconnecting an
+old Classic keyboard connection first. Settings → Bluetooth must allow App or
+Remote mode. The Audio override blocks switching, and the screen explains the
+required setting. The BLE advertised name is **Ditoo BLE Remote**. The Classic
+HID and AVRCP Lua APIs remain available to other scripts.
 
 Hold any keyboard key for five seconds to stop the app and return to stock
 controls and the native menu. Hold a key during power-on to skip the app for
@@ -100,20 +95,83 @@ The developer messages `toggle`/`play_pause`, `mute`, `space`, `volume_up`,
 `pair`, `connect`, `listen`, `disconnect`, `status`, and
 `target XX:XX:XX:XX:XX:XX` remain available.
 `status` reports HID state and peer; `target` saves a peer without connecting.
-`connect` initiates a connection to the saved TV; `listen` waits for that TV to
-connect. These reuse its bond. Control commands also work with
-`--transport ble --device DEVICE_MAC`; the TV remains the classic HID peer.
+`connect` and `listen` both advertise for the saved BLE host. USB control and
+the existing Divoom BLE control service remain available. Concurrent control
+and HID on one laptop connection are covered by the HOGP test; two simultaneous
+BLE hosts require separate hardware validation.
 `menu` opens/closes the local menu. Ordinary use does not require these messages.
-Settings use `TV4|peer|`. Loading TV2 or TV3 preserves the saved TV address
-and discards the old chosen bindings. Controls are immediately usable even
-when the old binding list was incomplete or malformed. Upgrading the app does
-not reset the Bluetooth bond.
+Settings use `TV5|peer|public|` or `TV5|peer|random|`. TV2/TV3/TV4 Classic targets
+are not treated as BLE bonds. An already connected BLE peer may be adopted;
+otherwise the app asks for pairing. Existing Classic bond records are preserved.
 
 There is one resident Lua app. Replacing it preserves the Bluetooth profile
-and connection; native code releases any outstanding key independently of Lua.
-Connection attempts are limited to 32 per boot and one every 10 seconds.
-Listening and pairing windows do not consume outgoing attempts. Pairing
-approval on the TV is still performed on the TV itself.
+and connection; native code releases outstanding keys independently of Lua.
+BLE listening does not consume the Classic outgoing connection-attempt quota.
+
+The laptop hardware test uses `scripts/check-bluetooth-hogp.py --device MAC`
+(run with `sudo` for an exclusive input grab). It requires the BLE app to
+target that laptop already; it refuses a different saved target. It checks all
+14 usages, actual app key callbacks, bonded reconnect and key release after a
+Lua infinite loop. Input is grabbed so the tests do not control the desktop.
+It restores the ordinary remote app afterward. This is host input verification,
+not a physical button or TV compatibility test.
+The [306029 hardware record](../firmware/ble-remote-evidence/verification.json)
+contains the exact image hash and all 27 checks. A first control request after
+the final flash failed with ATT `0x0e`; disconnecting and reconnecting only the
+Ditoo LE bearer recovered it without resetting Bluetooth or deleting a bond.
+TV compatibility, cold-boot TV reconnection and two simultaneous BLE hosts
+remain untested.
+
+## BLE remote API (306029+)
+
+```lua
+keyboard.mode('ble-remote')                  -- queued native operation
+keyboard.pair(nil, 120)                     -- accept one host for up to two minutes
+keyboard.pair('84:5C:F3:EF:87:78', 120, 'public') -- restrict a pairing window
+keyboard.listen('84:5C:F3:EF:87:78', 'public') -- accept this saved identity
+keyboard.connect('84:5C:F3:EF:87:78', 'public') -- same peripheral listening behavior
+keyboard.disconnect()
+keyboard.forget('84:5C:F3:EF:87:78', 'public') -- disconnected only; one LE bond
+keyboard.bonds(true)                        -- {address=..., address_type=...} records
+keyboard.status()                          -- transport='ble', address_type, paired, encrypted
+```
+
+Use `device.result(ticket)` to await queued operations, then `keyboard.status()`
+to observe pairing/connection completion. `connected` requires encryption and
+subscriptions to both input reports. `keyboard.bonds()` retains the simple list
+of address strings; use `bonds(true)` to preserve public/random address types.
+Resolved identities are saved rather than temporary private radio addresses.
+
+`keyboard.tap` supports Enter (40), Escape (41), Space (44), Right (79), Left
+(80), Down (81), and Up (82), with no modifiers. All existing `keyboard.media`
+actions work: play_pause, mute, volume_up/down, next, previous, stop. Other keys
+are rejected in this mode. The descriptor enumerates these usages explicitly,
+so it advertises no alphabetic keys, pointer, joystick or stylus.
+
+New pairing uses the stock Security Manager's encrypted, bonded Just Works
+procedure, restricted to the Lua pairing window and selected host. This stock
+stack does not implement Secure Connections or MITM-protected numeric entry.
+LE bonds use the existing native flash TLV store; Classic bonds are untouched.
+CCCD state belongs to one selected connection and is reset on disconnect.
+
+A single native slot queues a press while the BLE buffer is busy, for at most
+one second. Cancellation drops an unsent press. A native timer releases each
+sent report after 80 ms, including after Lua abort or replacement. If a release remains blocked for one second, the native code
+requests a link disconnect. Unencrypted or unsubscribed connections cannot
+send reports. Stock alarm/key-hold recovery and Lua instruction/time limits
+remain in effect.
+
+Both ATT views preserve all original Divoom handles. The selected bonded host
+or an active pairing candidate also sees HIDS,
+Battery, Device Information and GATT services. Battery percentage is an estimate
+from the stock seven-step level. Regenerate it with
+`scripts/build-hogp-database.py`; the firmware builder checks it for drift.
+The ABI mapping and hooks are recorded in `native/patches/manifest.toml`
+and `stock-306007.ld`. Design references: [HOGP 1.0](https://www.bluetooth.com/specifications/specs/hid-over-gatt-profile-1-0/)
+and [BTstack v1.3.2 ATT server](https://github.com/bluekitchen/btstack/blob/v1.3.2/src/ble/att_server.c).
+The stock binary uses earlier SM event numbers; it is not replaced with that source.
+
+## Earlier Classic HID behavior and verification
 
 ## Idle links and reconnecting
 
@@ -366,18 +424,19 @@ contains HID setup code omitted from the Ditoo link. This implementation supplie
 that profile in C, using function and structure layouts checked against the
 pinned stock binary; it does not link SDK binary objects.
 
-The standalone test additionally drives the actual app's key callbacks through
+The earlier Classic standalone test additionally drives the app's key callbacks through
 a temporary message wrapper, uses the fixed physical key IDs and local menu to
 pair a fresh Linux host, checks real input press/release events, and disconnects
 and reconnects. This replaces shared app settings and forgets only the laptop
 bond. It requires an active scoped pairing agent and permission to grab the
 Ditoo event node. Physical ADC routing is tested by the native sanitizer suite.
-The current harness includes Volume Up/Down and Left/Right as well as the
+That harness includes Volume Up/Down and Left/Right as well as the
 original Play/Pause, Mute and Space; older committed Linux evidence covers the
 original three actions. The TV can be tested directly using BLE control without
 pairing the laptop as an input host.
 
 ```sh
+# Historical Classic app only (the script refuses the current BLE app):
 sudo python3 scripts/check-standalone-remote.py --device DEVICE_MAC
 # Reboot the Ditoo with the original app installed, then observe without uploading:
 python3 scripts/check-standalone-remote.py --device DEVICE_MAC --after-reboot

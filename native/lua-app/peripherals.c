@@ -1,3 +1,4 @@
+#include "bluetooth-hogp.h"
 /* Included by runtime.c: Lua publishes values, never pointers into its arena.
  * Only the stock main-task hook enters configuration, recorder and audio code. */
 extern volatile unsigned stock_battery_level;
@@ -70,7 +71,8 @@ void runtime_bt_peek(struct bt_command *command) {
     stock_bt_peek(command);
     if (command->op==BT_HID_COMMAND && command->length==32 && command->data) {
         unsigned values[4]; memcpy(values,command->data,16);
-        if(values[2]==HID_MODE && preferences.bt_mode) values[3]=preferences.bt_mode==1;
+        if(values[2]==HID_MODE && preferences.bt_mode && !(preferences.bt_mode==1 && values[3]==2))
+            values[3]=preferences.bt_mode==1;
         if (values[0]==peripheral.epoch)
             runtime_hid_command(values[2],values[3],command->data+16,values[0],values[1]);
         return;
@@ -204,7 +206,8 @@ static const char *perform_job(void) {
         if (!stock_bt_context) return "Bluetooth unavailable";
         struct hid_status status; runtime_hid_status(&status);
         if (peripheral.slot==HID_CONNECT || peripheral.slot==HID_LISTEN || peripheral.slot==HID_PAIR) {
-            if ((status.state==1 || status.state==2) && !memcmp(status.peer,peripheral.data,6)) return NULL;
+            if ((status.state==1 || status.state==2) && !memcmp(status.peer,peripheral.data,6) &&
+                    (!status.transport || status.address_type==peripheral.data[6])) return NULL;
             if (status.state && (status.state!=4 || memcmp(status.peer,peripheral.data,6)))
                 return "disconnect the previous keyboard peer first";
             if (stock_avrcp_state() || stock_a2dp_state())
@@ -213,7 +216,7 @@ static const char *perform_job(void) {
                         return "disconnect the previous Bluetooth peer first";
             if (stock_free_heap()<16384) return "insufficient native heap";
             unsigned now=stock_ticks();
-            if (peripheral.slot==HID_CONNECT) {
+            if (peripheral.slot==HID_CONNECT && !status.transport) {
                 if (peripheral.bt_attempts>=32) return "32 connection attempts per boot exceeded";
                 if (peripheral.bt_attempts && (unsigned)(now-peripheral.bt_last_attempt)<10000)
                     return "Bluetooth connection rate limited";
@@ -338,6 +341,13 @@ static const char *perform_job(void) {
  * need the same dirty-record flush; never rewrite an unchanged bond. */
 static void save_keyboard_bond(void) {
     struct hid_status s;runtime_hid_status(&s);
+    if (s.transport) {
+        if (s.forgotten!=peripheral.bt_forget_saved) {
+            ++peripheral.writes;peripheral.last_write=stock_ticks();
+            peripheral.bt_forget_saved=s.forgotten;
+        }
+        return; /* Native LE TLV already persists bonds on the Bluetooth task. */
+    }
     unsigned forgotten=s.forgotten!=peripheral.bt_forget_saved;
     if ((!forgotten && s.state!=2) || !stock_bt_context || !stock_bt_manager[0] || stock_bt_manager[0x125]) {
         peripheral.bt_bond_pending=0;return;
@@ -563,6 +573,10 @@ static int bt_address_connect(lua_State *L,unsigned hid) {
     luaL_argcheck(L,any && all!=255,1,"invalid Bluetooth address");
     unsigned duration=hid==HID_PAIR ? (unsigned)luaL_optinteger(L,2,120) : 0;
     if (hid==HID_PAIR) luaL_argcheck(L,duration>=1 && duration<=120,2,"pairing window must be 1..120 seconds");
+    if (hid) {
+        const char *types[]={"public","random",NULL};
+        address[6]=luaL_checkoption(L,hid==HID_PAIR ? 3 : 2,"public",types);
+    }
     return submit(L,hid ? BT_HID : BT_CONNECT,hid,duration*1000,address,0);
 }
 static int bt_connect(lua_State *L) { return bt_address_connect(L,0); }
@@ -570,7 +584,15 @@ static int keyboard_connect(lua_State *L) { return bt_address_connect(L,HID_CONN
 static int keyboard_listen(lua_State *L) { return bt_address_connect(L,HID_LISTEN); }
 static int keyboard_pair(lua_State *L) { return bt_address_connect(L,HID_PAIR); }
 static int keyboard_forget(lua_State *L) { return bt_address_connect(L,HID_FORGET); }
-static unsigned keyboard_bonded(const unsigned char *address) {
+static unsigned keyboard_bonded(const unsigned char *address,unsigned address_type) {
+    struct hid_status status;runtime_hid_status(&status);
+    if (status.transport) {
+        for (unsigned i=0;i<16;++i) {
+            unsigned char a[6];unsigned type;
+            if (runtime_hogp_bond(i,a,&type) && type==address_type && !memcmp(a,address,6)) return 1;
+        }
+        return 0;
+    }
     for (unsigned i=0;i<8;++i) {
         volatile unsigned char *r=stock_bt_manager+7+i*26;
         unsigned match=r[25]!=0;
@@ -586,7 +608,21 @@ static void push_bt_address(lua_State *L,const unsigned char *a) {
     address[17]=0;lua_pushstring(L,address);
 }
 static int keyboard_bonds(lua_State *L) {
+    unsigned details=lua_toboolean(L,1);
+    struct hid_status status;runtime_hid_status(&status);
     lua_createtable(L,8,0);unsigned n=0;
+    if (status.transport) {
+        for (unsigned i=0;i<16;++i) {
+            unsigned char a[6];unsigned type;
+            if (!runtime_hogp_bond(i,a,&type)) continue;
+            if (details) {
+                lua_createtable(L,0,2);push_bt_address(L,a);lua_setfield(L,-2,"address");
+                lua_pushstring(L,type ? "random" : "public");lua_setfield(L,-2,"address_type");
+            } else push_bt_address(L,a);
+            lua_rawseti(L,-2,++n);
+        }
+        return 1;
+    }
     for (unsigned i=0;i<8;++i) if (stock_bt_manager[7+i*26+25]) {
         unsigned char a[6];for (unsigned j=0;j<6;++j) a[j]=stock_bt_manager[7+i*26+j];
         push_bt_address(L,a);lua_rawseti(L,-2,++n);
@@ -595,7 +631,7 @@ static int keyboard_bonds(lua_State *L) {
 }
 static int keyboard_disconnect(lua_State *L) { return submit(L,BT_HID,HID_DISCONNECT,0,NULL,0); }
 static int keyboard_mode(lua_State *L) {
-    const char *names[]={"combined","keyboard",NULL};
+    const char *names[]={"combined","keyboard","ble-remote",NULL};
     return submit(L,BT_HID,HID_MODE,luaL_checkoption(L,1,NULL,names),NULL,0);
 }
 static int settings_get(lua_State *L) {
@@ -613,6 +649,8 @@ static int keyboard_tap(lua_State *L) {
     unsigned key=luaL_checkinteger(L,1),modifiers=luaL_optinteger(L,2,0);
     luaL_argcheck(L,key>=4 && key<=0xe7,1,"keyboard usage must be 4..231");
     luaL_argcheck(L,modifiers<=255,2,"modifiers must be 0..255");
+    struct hid_status status;runtime_hid_status(&status);
+    luaL_argcheck(L,!status.transport || runtime_hogp_key(HID_KEY,key,modifiers),1,"unsupported BLE remote key or modifier");
     unsigned char data[16]={0};data[0]=modifiers;
     return submit(L,BT_HID,HID_KEY,key,data,0);
 }
@@ -628,10 +666,12 @@ static int keyboard_status(lua_State *L) {
     field(L,"state",s.state);flag(L,"connected",s.state==2);
     flag(L,"enabled",s.enabled==1);flag(L,"busy",s.busy);field(L,"sent",s.sent);
     flag(L,"keyboard_only",s.keyboard_only);
-    flag(L,"mode_locked",preferences.bt_mode!=0);
+    flag(L,"mode_locked",preferences.bt_mode==2);
+    lua_pushstring(L,s.transport ? "ble" : "classic");lua_setfield(L,-2,"transport");
+    lua_pushstring(L,s.address_type ? "random" : "public");lua_setfield(L,-2,"address_type");
     field(L,"released",s.released);field(L,"errors",s.errors);field(L,"error",s.error);
     field(L,"bonds_saved",peripheral.bt_bonds_saved);
-    flag(L,"paired",s.enabled && keyboard_bonded(s.peer));flag(L,"encrypted",s.state==2 && s.encryption_state==2);
+    flag(L,"paired",s.enabled && keyboard_bonded(s.peer,s.address_type));flag(L,"encrypted",s.state==2 && s.encryption_state==2);
     flag(L,"pairing",s.pairing);field(L,"pair_remaining_ms",s.pair_remaining_ms);
     field(L,"access_mode",s.access_mode);field(L,"forgotten",s.forgotten);
     if (diagnostics) {

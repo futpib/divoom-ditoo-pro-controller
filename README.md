@@ -351,7 +351,10 @@ including shared scrolling text and screen helpers. Unused helper exports are
 removed; `lua bundle FILE` previews the generated source without a device.
 
 Firmware 306020 also provides [Bluetooth keyboard and media keys from Lua](docs/lua-keyboard.md).
-Install `examples/lua/tv-keyboard.lua` with `lua install` for a standalone remote.
+Firmware 306029 adds `keyboard.mode("ble-remote")`: standard BLE HID over GATT
+with a restricted non-alphabetic remote descriptor and persistent LE bonds.
+Install `examples/lua/tv-keyboard.lua` with `lua install` for the BLE remote.
+Classic HID and AVRCP remain available to other scripts.
 It starts after power-on and remembers the TV. Fixed controls follow the printed
 keys: lever for Play/Pause, +/− for TV volume, arrows for seeking/navigation,
 M for menus, source for Mute, and the ☀ sun key for Space. There is no button setup

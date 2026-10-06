@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "bluetooth-hid.h"
+#include "bluetooth-hogp.h"
 #include "bluetooth-trace.h"
 extern void *volatile stock_bt_context;
 extern unsigned char *volatile stock_bt_core;
@@ -318,6 +319,7 @@ static unsigned enable(void) {
     hid.status.enabled=1;return 1;
 }
 void runtime_hid_service(unsigned epoch) {
+    runtime_hogp_service(epoch);
     if (!hid.status.enabled) return;
     unsigned registered=0;
     if (stock_bt_core && hid.core==stock_bt_core)
@@ -357,7 +359,15 @@ void runtime_hid_service(unsigned epoch) {
 }
 void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,
                          unsigned epoch,unsigned generation) {
-    if (op==HID_MODE) { if (value<=1 && enable()) mode(value);return; }
+    if (op==HID_MODE) {
+        if (value>2) return;
+        if (value==2) {
+            if (hid.status.state || hid.tx[0].busy || hid.tx[1].busy) { error(20);return; }
+            if (enable() && runtime_hogp_mode(1)) mode(1);
+        } else if (runtime_hogp_mode(0) && enable()) mode(value);
+        return;
+    }
+    if (runtime_hogp_enabled()) { runtime_hogp_command(op,value,data,epoch,generation);return; }
     if (op==HID_FORGET) {
         if (hid.status.state) { error(17);return; }
         unsigned char *entry=stock_bt_find_device(data),*remote=NULL;
@@ -411,7 +421,13 @@ void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,
         hid.phase=1;hid.down=1;hid.status.busy=1;++hid.status.sent;
     } else { error(15);disconnect(); }
 }
-void runtime_hid_status(struct hid_status *s) { *s=hid.status; }
+void runtime_hid_status(struct hid_status *s) {
+    *s=hid.status;
+    if (runtime_hogp_enabled()) {
+        runtime_hogp_status(s);s->hidden_services=hid.status.hidden_services;
+        s->blocked_psms=hid.status.blocked_psms;s->audio_channels=hid.status.audio_channels;
+    }
+}
 unsigned runtime_hid_preserve_link(unsigned caller) {
     /* These pinned speaker/UAC policy callers disconnect the entire ACL even
      * when only HID uses it. Explicit HID OFF and stock power-off use other

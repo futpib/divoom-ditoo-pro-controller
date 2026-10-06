@@ -9,6 +9,7 @@ struct hid_status {
     unsigned authentication_state, encryption_state, key_type, security_mode, ssp;
     unsigned access_mode, pairing, pair_remaining_ms, forgotten;
     unsigned keyboard_only, hidden_services, blocked_psms, audio_channels;
+    unsigned transport, address_type;
 };
 void runtime_hid_service(unsigned epoch);
 void runtime_hid_command(unsigned op, unsigned value, const unsigned char *data,

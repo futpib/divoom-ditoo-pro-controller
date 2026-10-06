@@ -57,8 +57,8 @@ loop. The native launcher does not depend on a functioning Lua script.
 
 | # | Setting | Behavior |
 | --- | --- | --- |
-| 1 | Bluetooth | Remote only hides the native audio services and retains HID. Speaker and remote restores them. App control (the default) lets apps choose this policy. A saved choice overrides `keyboard.mode()`; `keyboard.status().mode_locked` tells an app to respect it. |
-| 2 | Saved devices | Shows stored Bluetooth addresses without exposing link keys. Forgetting defaults to No and targets the captured address, not a shifting list index. A selected active keyboard is disconnected first. Active audio profiles must be disconnected before forgetting. |
+| 1 | Bluetooth | Remote only hides native audio services and allows Classic or BLE HID. Speaker and remote restores the Classic audio profiles; disconnect BLE HID before switching. App control (the default) lets apps choose this policy. `keyboard.status().mode_locked` reports the Speaker override. |
+| 2 | Saved devices | Shows stored addresses for the active HID transport: up to eight Classic or sixteen BLE bonds (306029+), without exposing link keys. Forgetting defaults to No and targets the captured address and BLE address type, not a shifting list index. A selected active keyboard is disconnected first. Active audio profiles must be disconnected before forgetting. |
 | 3 | Key lights | App and stock retains existing behavior. Stock lights enables native lighting and ignores Lua LED ownership. Off suppresses both. |
 | 4 | Battery indicator | Auto retains native/Lua indicator behavior; Off overrides it. Battery sensing and charging are unchanged. |
 | 5 | USB mode | Charge and control selects the existing `8888:171e` vendor-HID-only descriptor set. There are no USB audio interfaces; normal control and bootloader flashing remain available. Audio and control enables USB audio and selects it when a cable is attached. |

@@ -4,10 +4,11 @@ local screen, age = view.set, ui.elapsed
 -- Stock ADC IDs: lever, source, sun, M, +, -, left, right.
 local keys = { [4] = 1, [10] = 2, [7] = 3, [0] = 4, [1] = 5, [9] = 6, [2] = 7, [3] = 8 }
 local target, pending, pending_at
+local addr_type = 'public'
 local b = {}
 local job, flow
 local stage, stage_at = 0, 0
-local save_at, retries, retry_at = 0, 0, 0
+local save_at, retry_at = 0, 0
 local dirty, saving
 local shown = 0
 local menu, confirm, notice
@@ -25,7 +26,7 @@ local function changed()
   save_at = now()
 end
 local function config()
-  return 'TV4|' .. (target or '-') .. '|'
+  return 'TV5|' .. (target or '-') .. '|' .. addr_type .. '|'
 end
 local function hint(s)
   notice = s
@@ -54,15 +55,18 @@ local function begin(kind)
   flow = kind
   online = kind ~= 'off'
   stage = 1
-  retries = 0
 end
 local function press(role)
   keyboard.status(b)
+  if b.transport ~= 'ble' then
+    hint('SETTING UP')
+    return
+  end
   if not b.connected then
     if online and target then
       if not flow and not job and (b.state == 0 or b.state == 4) then
-        if queue('done', keyboard.connect, target) then
-          retry_at, retries = now(), 1
+        if queue('done', keyboard.connect, target, addr_type) then
+          retry_at = now()
           pending, pending_at = role, now()
           hint('CONNECTING')
         end
@@ -103,13 +107,16 @@ local function select()
   end
 end
 local function connect()
-  if
-    not b.keyboard_only
-    and not b.mode_locked
-    and not job
-    and (b.enabled or not flow or stage > 1)
-  then
-    queue('mode', keyboard.mode, 'keyboard')
+  if b.transport ~= 'ble' then
+    if not job then
+      if b.state ~= 0 then
+        queue('mode', keyboard.disconnect)
+      elseif not b.mode_locked then
+        queue('mode', keyboard.mode, 'ble-remote')
+      else
+        hint('SYSTEM BT SET APP OR REMOTE')
+      end
+    end
     return
   end
   if flow and not job then
@@ -133,7 +140,7 @@ local function connect()
       end
     elseif stage == 4 and age(stage_at) > 2000 then
       if flow == 'pair' and target then
-        queue('step', keyboard.forget, target)
+        queue('step', keyboard.forget, target, addr_type)
       else
         stage = 5
       end
@@ -143,9 +150,10 @@ local function connect()
           flow = nil
         end
       elseif target then
-        if queue('done', keyboard[flow == 'listen' and 'listen' or 'connect'], target) then
+        if
+          queue('done', keyboard[flow == 'listen' and 'listen' or 'connect'], target, addr_type)
+        then
           retry_at = now()
-          retries = flow == 'connect' and 1 or 0
           flow = nil
         end
       else
@@ -162,40 +170,34 @@ local function connect()
     and b.state == 0
     and online
     and target
-    and age(retry_at) > (retries > 0 and 15000 or 1000)
+    and age(retry_at) > 1000
   then
-    if retries > 0 and retries < 3 then
-      if queue('done', keyboard.connect, target) then
-        retries = retries + 1
-      end
-    else
-      retries = 0
-      queue('done', keyboard.listen, target)
-    end
+    queue('done', keyboard.listen, target, addr_type)
     retry_at = now()
   end
 end
 
 return {
   init = function()
-    assert(keyboard.mode, 'firmware 306025 required')
+    assert(keyboard.status().transport, 'firmware 306029 required')
     brightness(20)
     lights.fill(0)
     lights.present()
     local s = storage.get()
     if s then
-      local peer = s:match('^TV[234]|([^|]+)|')
-      if peer and peer:match('^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$') then
-        target = peer
-        if s ~= config() then
-          changed()
-        end
+      local peer, kind = s:match('^TV5|([^|]+)|([^|]+)|')
+      if
+        (kind == 'public' or kind == 'random')
+        and peer
+        and peer:match('^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$')
+      then
+        target, addr_type = peer, kind
       end
     end
     keyboard.status(b)
     errors = b.errors
-    if b.connected then
-      target = b.peer
+    if b.connected and b.transport == 'ble' then
+      target, addr_type = b.peer, b.address_type
       changed()
     end
     begin(target and 'connect' or 'listen')
@@ -250,7 +252,7 @@ return {
     else
       local peer = s:match('^target (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x)$')
       if peer then
-        target = peer:upper()
+        target, addr_type = peer:upper(), 'public'
         changed()
       else
         for i, name in ipairs(actions) do
@@ -270,7 +272,7 @@ return {
         job = nil
         if not ok then
           flow = nil
-          hint(kind == 'save' and 'SAVE FAILED RETRY' or 'DISCONNECT OTHER AUDIO')
+          hint(kind == 'save' and 'SAVE FAILED RETRY' or 'LINK SETUP FAILED')
         elseif kind == 'save' then
           dirty = config() ~= saving
         elseif kind == 'step' then
@@ -279,16 +281,15 @@ return {
         end
       end
     end
-    if b.connected then
+    if b.connected and b.transport == 'ble' then
       if not linked then
-        target = b.peer
+        target, addr_type = b.peer, b.address_type
         changed()
         notice = nil
       end
-      retries = 0
       retry_at = now()
     end
-    linked = b.connected
+    linked = b.connected and b.transport == 'ble'
     if pending and age(pending_at) > 5000 then
       pending = nil
     end
@@ -319,13 +320,13 @@ return {
       screen('WAIT', 'SETTING UP')
     elseif dirty then
       screen('SAVE', 'KEEP POWER ON')
-    elseif b.connected then
+    elseif linked then
       screen('TV', 'READY', 0x20ff40)
     elseif b.pairing then
       screen(
         'PAIR',
-        (120000 - b.pair_remaining_ms) // 20000 % 2 == 0 and 'TV FORGET DITOO THEN PAIR ACCESSORY'
-          or 'PICK DITOOPRO AUDIO ACCEPT'
+        (120000 - b.pair_remaining_ms) // 20000 % 2 == 0 and 'TV OPEN PAIR ACCESSORY'
+          or 'PICK DITOO BLE REMOTE ACCEPT'
       )
     elseif b.state == 1 then
       screen('LINK', 'ACCEPT ON TV')

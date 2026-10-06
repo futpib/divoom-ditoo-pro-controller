@@ -260,3 +260,15 @@ bt_link_disconnect_trace:
     push25 $r6, 0
     addi.gp $fp, -35356
     j stock_bt_link_disconnect_resume
+
+.section .ble_att_hook,"ax"
+    jal runtime_hogp_init
+.section .ble_callback_hook,"ax"
+    la $r7, runtime_hogp_event
+.section .ble_reply_hook,"ax"
+    jal runtime_hogp_control_notify
+
+.section .att_request_hook,"ax"
+    jal runtime_hogp_request
+.section .att_write_hook,"ax"
+    jal runtime_hogp_request

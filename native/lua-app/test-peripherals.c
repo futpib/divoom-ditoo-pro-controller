@@ -232,18 +232,17 @@ static void test_tv_keyboard(void) {
     char source[8193];
     FILE *file=fopen("target/lua-app/runtime/tv-keyboard.bundle.lua","rb");assert(file);
     size_t n=fread(source,1,sizeof source-1,file);assert(!ferror(file));fclose(file);source[n]=0;
-    fake_hid_status=(struct hid_status){.state=2,.enabled=1};memset(fake_hid_status.peer,8,6);bt_queued.op=0;
+    fake_hid_status=(struct hid_status){.state=0,.enabled=1};memset(fake_hid_status.peer,8,6);bt_queued.op=0;
     saved.initialized=saved.boot_done=1;stock_config_context=config_context;saved.settings_size=0;
     track_heap=1;free_heap=76000;load(source,1);
     if(app.state!=ACTIVE) { fprintf(stderr,"Standalone app: %s peak %u\n",app.result,app.peak);abort(); }
     printf("Standalone startup: peak %u, reserved %u, stock heap %u\n",app.peak,app.reserved,stock_free_heap());
-    for(unsigned i=0;i<8;++i) {
-        tick();runtime_native_service();
-        if(bt_queued.op) fake_hid_status.keyboard_only=1;
-    }
+    for(unsigned i=0;i<8 && !bt_queued.op;++i) { tick();runtime_native_service(); }
     unsigned policy[4];memcpy(policy,bt_payload,sizeof policy);
-    assert(bt_queued.op==BT_HID_COMMAND && policy[2]==HID_MODE && policy[3]==1);
-    fake_hid_status.keyboard_only=1;bt_queued.op=0;
+    assert(bt_queued.op==BT_HID_COMMAND && policy[2]==HID_MODE && policy[3]==2);
+    app.cancel=1;service();runtime_native_service();assert(!allocations);
+    fake_hid_status.keyboard_only=1;fake_hid_status.transport=1;fake_hid_status.state=2;bt_queued.op=0;
+    load(source,1);
     for(unsigned i=0;i<3;++i) tick();tv_frame(0);
     for(unsigned i=0;i<100;++i) { tick();runtime_native_service(); }
     assert(strstr(app.result,"TV: READY") && !bt_queued.op);
@@ -340,7 +339,7 @@ static void test_tv_keyboard(void) {
     memcpy(reconnect,bt_payload,sizeof reconnect);
     assert(bt_queued.op==BT_HID_COMMAND && reconnect[2]==HID_LISTEN);
     app.cancel=1;service();runtime_native_service();assert(!allocations);fake_hid_status.state=0;
-    fake_hid_status=(struct hid_status){.state=2,.enabled=1,.keyboard_only=1};
+    fake_hid_status=(struct hid_status){.state=2,.enabled=1,.keyboard_only=1,.transport=1};
     memset(fake_hid_status.peer,8,6);bt_queued.op=0;
     const char *legacy[]={"TV2|08:08:08:08:08:08|2,3,4,5",
                           "TV3|08:08:08:08:08:08|4,10,9,0",
@@ -350,7 +349,7 @@ static void test_tv_keyboard(void) {
         memcpy(saved.settings,legacy[i],strlen(legacy[i])+1);saved.settings_size=strlen(legacy[i]);
         load(source,1);
         for(unsigned j=0;j<100;++j) { tick();runtime_native_service(); }
-        const char *current="TV4|08:08:08:08:08:08|";
+        const char *current="TV5|08:08:08:08:08:08|public|";
         assert(saved.settings_size==strlen(current) && !memcmp(saved.settings,current,strlen(current)));
         assert(app.state==ACTIVE && !strcmp(app.result,"TV: READY") && !bt_queued.op);
         runtime_adc_result(1U<<16 | 1);tick();runtime_adc_result(2U<<16 | 1);
@@ -367,7 +366,7 @@ static void test_tv_keyboard(void) {
     runtime_adc_result(1U<<16 | 0);tick();runtime_adc_result(2U<<16 | 0);tick();
     assert(!strcmp(app.result,"TV: NOT PAIRED"));
     app.cancel=1;service();runtime_native_service();assert(!allocations);
-    puts("TV2/TV3 migrate only the peer, TV4 reloads, and fresh startup has no binding prompts");
+    puts("Legacy settings adopt an active BLE peer only; fresh startup has no binding prompts");
     stock_config_context=NULL;saved.settings_size=0;track_heap=0;free_heap=100000;
     puts("TV keyboard uses stock ADC IDs, sends seven reports, and keeps M/arrows/lever navigation local");
     puts("TV keyboard resumes listening, reconnects on input with bounded deferred action, and respects OFF");
@@ -384,6 +383,19 @@ static void test_keyboard_lifecycle(void) {
     request_test("local t;return {init=function() t=assert(keyboard.mode('combined')) end,"
         "update=function() assert(device.result(t));print('ok') end}");
     memcpy(mode_values,bt_payload,sizeof mode_values);assert(mode_values[2]==HID_MODE && !mode_values[3]);
+    request_test("local t;return {init=function() t=assert(keyboard.mode('ble-remote')) end,"
+        "update=function() assert(device.result(t));print('ok') end}");
+    memcpy(mode_values,bt_payload,sizeof mode_values);assert(mode_values[2]==HID_MODE && mode_values[3]==2);
+    fake_hid_status.transport=1;
+    check("return keyboard.status().transport",DONE,"ble");
+    check("return pcall(keyboard.tap,4)",DONE,"false");
+    check("return pcall(keyboard.tap,44,1)",DONE,"false");
+    check("return pcall(keyboard.listen,'08:08:08:08:08:08','wrong')",DONE,"false");
+    peripheral.bt_attempts=32;
+    request_test("local t;return {init=function() t=assert(keyboard.connect('08:08:08:08:08:08','random')) end,"
+        "update=function() assert(device.result(t));print('ok') end}");
+    assert(bt_payload[22]==1 && peripheral.bt_attempts==32);
+    fake_hid_status.transport=0;peripheral.bt_attempts=0;
     check("local t={peer='stale'};assert(keyboard.status(t)==t and not t.peer);return t.state",DONE,"0");
     for (unsigned i=0;i<8;++i) {
         for (unsigned j=0;j<6;++j) stock_bt_manager[7+i*26+j]=i+1;

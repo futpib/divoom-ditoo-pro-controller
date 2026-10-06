@@ -219,3 +219,11 @@ int main(void) {
     assert(!runtime_hid_preserve_link(0x170a8));
     puts("HID report, ownership, stale command, timeout and control tests passed");
 }
+
+unsigned runtime_hogp_enabled(void) { return 0; }
+unsigned runtime_hogp_mode(unsigned enabled) { return !enabled; }
+void runtime_hogp_service(unsigned epoch) { (void)epoch; }
+void runtime_hogp_status(struct hid_status *s) { memset(s,0,sizeof *s); }
+void runtime_hogp_command(unsigned op,unsigned value,const unsigned char *data,unsigned epoch,unsigned generation) {
+    (void)op;(void)value;(void)data;(void)epoch;(void)generation;assert(0);
+}

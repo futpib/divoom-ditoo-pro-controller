@@ -47,3 +47,8 @@ trace_output = output.with_name('test-bluetooth-trace')
 subprocess.run(['cc','-m32','-O1','-g','-Wall','-Wextra','-Werror','-fsanitize=address,undefined',
     str(ROOT/'native/lua-app/test-bluetooth-trace.c'),'-o',str(trace_output)],check=True)
 subprocess.run([str(trace_output)],check=True,timeout=30,cwd=ROOT)
+
+hogp_output = output.with_name('test-bluetooth-hogp')
+subprocess.run(['cc','-m32','-O1','-g','-Wall','-Wextra','-Werror','-fsanitize=address,undefined',
+    str(ROOT/'native/lua-app/test-bluetooth-hogp.c'),'-o',str(hogp_output)],check=True)
+subprocess.run([str(hogp_output)],check=True,timeout=30,cwd=ROOT)

@@ -1,0 +1,429 @@
+{
+  "date_utc": "2026-10-06",
+  "firmware": {
+    "version": 306029,
+    "sha256": "b1fae703b40fbf5704f80255167d7cb4e5f08c82ca536369cd6995ae352f66c5",
+    "bytes": 2022563
+  },
+  "build": {
+    "text_bytes": 143450,
+    "data_bytes": 1752,
+    "bss_bytes": 6200,
+    "globals_reserved": 8192,
+    "remote_bundle_bytes": 7874
+  },
+  "host": {
+    "role": "Linux laptop only",
+    "adapter": "Intel AX201",
+    "bluez": "5.87",
+    "kernel": "6.12.108-1-MANJARO"
+  },
+  "flash": {
+    "transport": "BLE",
+    "chunks": 7901,
+    "device_completed": true,
+    "reported_version": 306029,
+    "version_reconnect_attempt": 1,
+    "transfer_seconds": 341.630052468
+  },
+  "hardware_checks": [
+    {
+      "check": "peer-is-this-laptop",
+      "passed": true
+    },
+    {
+      "check": "bonded-host",
+      "passed": true,
+      "new_pair_requested": false
+    },
+    {
+      "check": "restricted-remote-descriptor",
+      "passed": true,
+      "linux_keys": [
+        1,
+        28,
+        57,
+        103,
+        105,
+        106,
+        108,
+        113,
+        114,
+        115,
+        163,
+        164,
+        165,
+        166
+      ]
+    },
+    {
+      "check": "k40",
+      "passed": true,
+      "events": [
+        [
+          28,
+          1
+        ],
+        [
+          28,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "k41",
+      "passed": true,
+      "events": [
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "k44",
+      "passed": true,
+      "events": [
+        [
+          57,
+          1
+        ],
+        [
+          57,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "k79",
+      "passed": true,
+      "events": [
+        [
+          106,
+          1
+        ],
+        [
+          106,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "k80",
+      "passed": true,
+      "events": [
+        [
+          105,
+          1
+        ],
+        [
+          105,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "k81",
+      "passed": true,
+      "events": [
+        [
+          108,
+          1
+        ],
+        [
+          108,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "k82",
+      "passed": true,
+      "events": [
+        [
+          103,
+          1
+        ],
+        [
+          103,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "play_pause",
+      "passed": true,
+      "events": [
+        [
+          164,
+          1
+        ],
+        [
+          164,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "mute",
+      "passed": true,
+      "events": [
+        [
+          113,
+          1
+        ],
+        [
+          113,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "volume_up",
+      "passed": true,
+      "events": [
+        [
+          115,
+          1
+        ],
+        [
+          115,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "volume_down",
+      "passed": true,
+      "events": [
+        [
+          114,
+          1
+        ],
+        [
+          114,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "next",
+      "passed": true,
+      "events": [
+        [
+          163,
+          1
+        ],
+        [
+          163,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "previous",
+      "passed": true,
+      "events": [
+        [
+          165,
+          1
+        ],
+        [
+          165,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "stop",
+      "passed": true,
+      "events": [
+        [
+          166,
+          1
+        ],
+        [
+          166,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "infinite-loop-release",
+      "passed": true,
+      "events": [
+        [
+          57,
+          1
+        ],
+        [
+          57,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "bonded-reconnect",
+      "passed": true,
+      "events": [
+        [
+          164,
+          1
+        ],
+        [
+          164,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "remote-app-button-4",
+      "passed": true,
+      "events": [
+        [
+          164,
+          1
+        ],
+        [
+          164,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "remote-app-button-10",
+      "passed": true,
+      "events": [
+        [
+          113,
+          1
+        ],
+        [
+          113,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "remote-app-button-7",
+      "passed": true,
+      "events": [
+        [
+          57,
+          1
+        ],
+        [
+          57,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "remote-app-button-1",
+      "passed": true,
+      "events": [
+        [
+          115,
+          1
+        ],
+        [
+          115,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "remote-app-button-9",
+      "passed": true,
+      "events": [
+        [
+          114,
+          1
+        ],
+        [
+          114,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "remote-app-button-2",
+      "passed": true,
+      "events": [
+        [
+          105,
+          1
+        ],
+        [
+          105,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "remote-app-button-3",
+      "passed": true,
+      "events": [
+        [
+          106,
+          1
+        ],
+        [
+          106,
+          0
+        ]
+      ]
+    },
+    {
+      "check": "native-ble-bonds-and-cancel",
+      "passed": true,
+      "bond_count": 4
+    }
+  ],
+  "bond_persistence": "The laptop bond was created during development and reused after two firmware updates without another Pair call. Final test also disconnected and reconnected the same bond.",
+  "input_capture": "Real Linux evdev EV_KEY events, exclusively grabbed with EVIOCGRAB to prevent desktop input. App buttons were invoked through its actual key callback; no physical button press is claimed.",
+  "ble_control": "All uploads, control messages, native menu diagnostics and HID reports shared the laptop BLE connection. No TV connection or ADB was used for these checks.",
+  "post_flash_recovery": {
+    "error": "First app upload and a status request failed with BlueZ ATT 0x0e after the final firmware restart.",
+    "recovery": "Explicitly disconnected only the Ditoo LE bearer and connected again; control recovered, with the original startup app still active. No BlueZ restart or bond removal was required. The final test begins with a fresh LE connection.",
+    "cause": "Not established; packet capture showed link timeouts and failed reads of cached HID handles before the saved test app started listening."
+  },
+  "offline_checks": {
+    "native_runtime": "32-bit ASan/UBSan runtime, menu, Classic HID, BLE HOGP, USB and Bluetooth trace suites passed",
+    "rust_tests": 75,
+    "python_tests": 30,
+    "lua_lint": "luacheck and stylua --check passed",
+    "reproducibility": "All four retained firmware profiles rebuilt twice in separate paths with identical image and metadata bytes",
+    "manifest": "No registration drift",
+    "strict_clippy": "Fails with the same 42 test-target diagnostics (including two production too_many_arguments errors) as unchanged a9e4539; error messages and source-file sequence match."
+  },
+  "limitations": [
+    "TV HOGP pairing, input and cold-boot reconnection not tested; ADB remained disconnected at user request.",
+    "Two simultaneous BLE hosts not tested.",
+    "USB transport regression covered offline; no laptop USB connection available during this change.",
+    "BLE bond deletion and pairing-window rejection covered by native tests; no existing non-laptop bond was removed.",
+    "Raw Bluetooth captures and private settings backups are not committed."
+  ],
+  "saved_app": {
+    "installed": true,
+    "target": "laptop test host",
+    "launched_from_native_saved_app_menu": true,
+    "state": {
+      "state": "active",
+      "peak_memory_bytes": 42200,
+      "instructions": 194,
+      "result": "TV: READY",
+      "abi": 2,
+      "memory_bytes": 42200,
+      "frames": 48,
+      "callbacks": 143,
+      "dropped_keys": 0,
+      "held_keys": 0,
+      "generation": 9
+    }
+  }
+}

@@ -94,7 +94,7 @@ pub async fn find_paired_ditoo_pro_devices() -> Result<Vec<Address>, Box<dyn Err
     }
 
     let name = device.name().await?.unwrap_or_default();
-    if !name.contains("DitooPro") {
+    if !name.contains("DitooPro") && name != "Ditoo BLE Remote" {
       continue;
     }
 

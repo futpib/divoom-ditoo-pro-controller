@@ -169,3 +169,31 @@ stock_keyboard_light = 0x765c8;
 stock_patch_menu_init = 0x548b8;
 stock_patch_menu_back = 0x54714;
 stock_patch_menu_select = 0x38bf8;
+
+/* BLE HID uses the stock ATT, Security Manager and persistent LE bond store. */
+stock_att_init = 0x11053e;
+stock_att_notify = 0x1105b0;
+stock_ble_event = 0x133c00;
+stock_hci_connection = 0x10d94e;
+stock_hci_run = 0x10ddf0;
+stock_hci_disconnect_guard = 0x10deea;
+stock_le_key_size = 0x10f4ce;
+stock_le_device_index = 0x112696;
+stock_le_device_info = 0x1108b2;
+stock_le_delete_bond = 0x112a50;
+stock_sm_confirm = 0x11264c;
+stock_le_adv_data = 0x10f3ca;
+stock_le_scan_data = 0x10f3ea;
+stock_le_adv_enable = 0x10f45a;
+stock_le_adv_params = 0x1129fc;
+stock_ble_control_handle = 0x2000d2f8 - 35570;
+stock_patch_ble_att = 0x133cd4;
+stock_patch_ble_callback = 0x133cae;
+stock_patch_ble_reply = 0x10d2c8;
+stock_hci_disconnect_guard_branch = 0x10defa;
+stock_hci_stack = 0x2000d2f8 - 28232;
+
+stock_att_set_db = 0x13694c;
+stock_att_request = 0x1369b4;
+stock_patch_att_request = 0x10ffa6;
+stock_patch_att_write = 0x110156;
