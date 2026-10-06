@@ -85,6 +85,9 @@ class ManifestTests(unittest.TestCase):
         self.assertIn('TEST_RUNTIME_VERSION',restore)
         self.assertIn(f'validate_target({version+1}, VERSION, false, true).is_err()', after['src/firmware.rs'])
         self.assertIn('TEST_RUNTIME_VERSION',after['src/lua.rs'].split('if !matches!',1)[1])
+        saved_error = 'Saved apps require firmware {STANDALONE_VERSION} or later; no program sent'
+        self.assertIn(saved_error, after['src/lua.rs'])
+        self.assertEqual(after['src/lua.rs'].count('{TEST_RUNTIME_VERSION}; no program sent'), 1)
         self.assertIn(f'"{version}-lua.MVA"',after['src/usb_firmware.rs'])
         self.assertIn(str(version),after['scripts/backup-lua-storage.py'].split('assert installed in',1)[1])
         manifest.apply(self.root,before,after)

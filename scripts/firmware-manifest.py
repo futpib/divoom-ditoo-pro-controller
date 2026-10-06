@@ -142,7 +142,8 @@ def plan(root, image, meta, register=None, builder=None):
     if not existing:
         lua = replace_once(lua, r'pub const APP_SOURCE_LIMIT:', f'pub const {constant}: u32 = {version};\npub const APP_SOURCE_LIMIT:')
         lua = replace_once(lua, r'(if !matches!\(\s*installed,[\s\S]*?)(\n\s*\))', lambda m:m[1]+f' | {constant}'+m[2])
-        lua = lua.replace('; no program sent', f', {{{constant}}}; no program sent')
+        lua = replace_once(lua, r'(format!\("Lua requires firmware [^"\n]*)(; no program sent)',
+            lambda m:m[1]+f', {{{constant}}}'+m[2])
     if constant not in lua[lua.index('if !matches!'):lua.index('if installed == VERSION')]:
         raise ValueError('Lua firmware allowlist is missing registered version')
     after['src/lua.rs'] = lua
