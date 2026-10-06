@@ -142,3 +142,16 @@ backpressure, stale jobs, attribute bounds and control reply routing.
 real input events, bonded reconnect, Lua-abort release, app callbacks and the
 native BLE bond menu, along with a post-flash connection recovery and remaining
 limits. The TV was not used. Firmware build reports remain deterministic.
+
+`306035-lua.MVA` fixes ordinary Android TV accessory pairing and bonded
+reconnection in the Ditoo firmware: a separate stable BLE remote identity,
+bounded report-map setup delay, persistent HID report subscriptions with flash
+cache refresh and read-back verification, and separate Lua loading/callback
+budgets. Build it with `scripts/build-lua-app-runtime.py`. Android's Settings
+and Bluetooth stack are unchanged. See [pairing evidence](ble-pairing-evidence/README.md).
+
+The retained 306031–306034 images are diagnostic stages, not recommended
+installations. 306031 still shares the Classic identity; 306032 exposes the
+picker's input-listener race; 306033 fixes pairing but has stale subscription
+reads; 306034 adds verification that rejects those stale reads. Use 306035.
+Only the current app profile is rebuilt by the reproducibility checker.

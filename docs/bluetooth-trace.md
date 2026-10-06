@@ -24,6 +24,8 @@ Each event has a sequence number and device uptime in milliseconds.
 | 4 | `hid_link` | Native HID connection-manager callbacks and raw status. |
 | 5 | `hid_error` | Extension error codes matching `keyboard.status(true).error`. |
 | 6 | `disconnect_request` (306027+) | Stock application, forced-link and link-disconnect callers; link records include the peer and requested reason. |
+| 7 | `hogp_subscription` (306031+) | Accepted CCCD writes and restoration on encrypted bonded reconnect, with connection handle and subscription bits. No encryption keys. |
+| 8 | `hogp_storage` (306034+) | Bond slot, requested subscription mask, read-back mask and verification result after a journal write. No encryption keys. |
 
 Disconnect callers are native return addresses; subtract four to locate the
 calling `jal` in stock disassembly. The three entry points are `BtDisconnectCtrl`

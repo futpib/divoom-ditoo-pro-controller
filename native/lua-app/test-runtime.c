@@ -13,13 +13,14 @@
 unsigned runtime_irq_save(void) { return 1; }
 void runtime_irq_restore(unsigned irq) { (void)irq; }
 unsigned char __data_start[1], __data_end[1], __data_load[1], __bss_start[1], __bss_end[1];
-static unsigned clock_ms, allocations, frames;
+static unsigned clock_ms, allocations, frames, event_delay_ms, load_delay_ms;
 static unsigned free_heap = 100000, led_writes;
 static unsigned char led_context[0x50], last_leds[36];
 static int fail_alloc, track_heap;
 static unsigned fail_allocation_at;
 static unsigned allocated_bytes;
 void *stock_alloc(unsigned n) {
+    if (app.guarded && app.budget_ms==LOAD_TIME_LIMIT) { clock_ms+=load_delay_ms;load_delay_ms=0; }
     if (fail_alloc || (fail_allocation_at && !--fail_allocation_at)) return NULL;
     unsigned char *p = malloc(n+4);
     if (p) { ++allocations; *(unsigned *)p=n;allocated_bytes+=n; }
@@ -40,7 +41,7 @@ void stock_delay(unsigned n) { clock_ms += n; }
 unsigned stock_ticks(void) { return clock_ms; }
 unsigned stock_volume(unsigned n) { return n == 255 ? 3 : n; }
 static void fake_menu_open(void);
-unsigned stock_event(void *p) { if(((unsigned char *)p)[2]==22) fake_menu_open();return 0; }
+unsigned stock_event(void *p) { clock_ms+=event_delay_ms;if(((unsigned char *)p)[2]==22) fake_menu_open();return 0; }
 void stock_calendar(void *p) { unsigned char t[8] = {0xea,7,9,28,12,34,56,1}; memcpy(p,t,8); }
 unsigned stock_screen_command(unsigned c,const void *p,unsigned n) { (void)c;(void)p;(void)n;return 1; }
 unsigned runtime_screen(const void *p) { assert(p == app.frame); ++frames; return 1; }
@@ -173,6 +174,17 @@ int main(void) {
     check("return function (",ERROR,NULL);
     check("\x1bLua",ERROR,NULL);
     fail_alloc=1; check("return 1",ERROR,"Lua allocation failed"); fail_alloc=0;
+    /* Launch work cannot spend init's callback budget. Both phases remain
+     * independently bounded, including malicious init callbacks. */
+    load_delay_ms=80;check("local n=0;for i=1,256 do n=n+i end;return 42",DONE,"42");
+    load_delay_ms=300;check("return 42",ERROR,"load time budget exceeded");
+    event_delay_ms=30;
+    load("brightness(20);return {init=function() brightness(20);local n=0;for i=1,256 do n=n+i end end}",1);
+    assert(app.state==ACTIVE);discard(DONE);
+    load("return {init=function() brightness(20);brightness(20);local n=0;for i=1,256 do n=n+i end end}",1);
+    assert(app.state==ERROR && !strcmp(app.result,"callback time budget exceeded"));
+    check("brightness(20);brightness(20);local n=0;for i=1,256 do n=n+i end;return n",ERROR,"callback time budget exceeded");
+    event_delay_ms=0;
     load("local n=0; return {init=function() display.clear(0); timer.every(40,function() n=n+1 end) end,"
          "update=function(dt) display.pixel(n%16,0,0xff00); display.present(); print(n) end,"
          "key=function(k,e) print(k..':'..e) end, message=function(s) comms.send(s) end}",1);

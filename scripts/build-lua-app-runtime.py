@@ -83,7 +83,7 @@ def build():
               'task_stack_words':4096,'globals_reserved':8192,'source_limit':16384,'source_chunk_bytes':512,
               'gc_pause_percent':120,'gc_step_multiplier':200,'gc_step_bytes':1024,
               'allocator_reclaims_shrunk_blocks':True,'allocator_grows_in_place':True,
-              'instruction_limit':100000,'callback_ms_limit':50,'boot_crc16':0x5f08,
+              'instruction_limit':100000,'callback_ms_limit':50,'load_ms_limit':250,'boot_crc16':0x5f08,
               'status':'offline-built; hardware-unverified'}
     (ROOT/f'firmware/{patches.version}-lua.MVA').write_bytes(image)
     (ROOT/f'firmware/{patches.version}-lua.json').write_text(json.dumps(report,indent=2)+'\n')

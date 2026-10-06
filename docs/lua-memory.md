@@ -32,6 +32,12 @@ simulated bonds peaks at 48,064 Lua bytes, under the unchanged 49,152-byte ceili
 These are source/storage and bounded-runtime checks, not a guarantee that any
 16 KiB program fits the Lua heap. See the [306030 evidence](../firmware/lua-16k-evidence/verification.json).
 
+From 306033, compilation and API setup have a separate 250 ms loading budget.
+Top-level Lua execution and the `init` callback each receive a fresh 50 ms
+budget, as later callbacks do. All phases retain the 100,000-work-unit limit;
+memory limits and native recovery remain unchanged. This prevents cold-start
+compilation from exhausting the saved app's first execution budget.
+
 ## What changed in 306023
 
 - Shrinking a Lua allocation releases its unused tail. Previously the compiler

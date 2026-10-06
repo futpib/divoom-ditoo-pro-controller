@@ -18,6 +18,7 @@
 #define STARTUP_HEAP_BUDGET 40960
 #define STEP_LIMIT 100000
 #define TIME_LIMIT 50
+#define LOAD_TIME_LIMIT 250
 #define FRAME_MS 40
 #define KEY_COUNT 32
 #define QUEUE_SIZE 16
@@ -68,7 +69,7 @@ static struct {
     unsigned capacity[ARENA_PAGES], reserved;
     lua_State *L;
     int app_ref;
-    unsigned resident, install, source_size, received, used, peak, steps, started, guarded;
+    unsigned resident, install, source_size, received, used, peak, steps, started, guarded, budget_ms;
     unsigned last_tick, frames, callbacks, dirty, native_calls, generation, native_alarm;
     struct source *source;
     char result[RESULT_LIMIT];
@@ -157,8 +158,8 @@ void runtime_poll(void) {
     ++app.steps;
     if (app.cancel) abort_script("cancelled");
     if (app.steps >= STEP_LIMIT) abort_script("instruction budget exceeded");
-    if (!(app.steps & 127) && (unsigned)(stock_ticks() - app.started) >= TIME_LIMIT)
-        abort_script("callback time budget exceeded");
+    if (!(app.steps & 127) && (unsigned)(stock_ticks() - app.started) >= app.budget_ms)
+        abort_script(app.budget_ms==TIME_LIMIT ? "callback time budget exceeded" : "load time budget exceeded");
 }
 
 /* Nonmoving pages grow in KiB units, under one 48 KiB quota including headers.
@@ -646,7 +647,7 @@ static int setup(lua_State *L) {
 }
 
 static void begin_budget(void) {
-    app.started = stock_ticks(); app.steps = 0; app.native_calls = 0; app.guarded = 1;
+    app.started = stock_ticks(); app.steps = 0; app.native_calls = 0; app.guarded = 1;app.budget_ms=TIME_LIMIT;
 }
 static void check_call(lua_State *L, int args, int results) {
     if (lua_pcall(L,args,results,0) != LUA_OK) {
@@ -679,7 +680,7 @@ static void launch(void) {
         result("insufficient stock heap headroom"); discard(ERROR); return;
     }
     if (setjmp(app.escape)) { discard(app.cancel ? DONE : ERROR); return; }
-    begin_budget();
+    begin_budget();app.budget_ms=LOAD_TIME_LIMIT;
     app.L = lua_newstate(allocate,NULL);
     if (!app.L) abort_script("Lua allocation failed");
     lua_atpanic(app.L,panic);
@@ -694,12 +695,18 @@ static void launch(void) {
      * Neither the source buffer nor parser scratch needs to coexist with them. */
     lua_gc(app.L,LUA_GCCOLLECT);
     lua_pushcfunction(app.L,setup); check_call(app.L,0,0);
+    /* Compilation and API setup have a bounded loading allowance. Executing
+     * user code always starts a fresh, shorter budget, including top-level code. */
+    if ((unsigned)(stock_ticks()-app.started)>=LOAD_TIME_LIMIT) abort_script("load time budget exceeded");
+    begin_budget();
     check_call(app.L,0,1);
     if (!app.resident) { scalar(app.L); present_outputs(); discard(DONE); return; }
     if (!lua_istable(app.L,-1)) abort_script("app must return a callback table");
     app.app_ref = luaL_ref(app.L,LUA_REGISTRYINDEX);
     app.owner = 1;
-    if (callback("init")) check_call(app.L,0,0);
+    /* init gets the same bounded callback budget as later updates; parsing
+     * and module setup have already consumed their separate launch budget. */
+    if (callback("init")) { begin_budget();check_call(app.L,0,0); }
     app.guarded = 0; app.state = ACTIVE; ++app.generation;
 }
 

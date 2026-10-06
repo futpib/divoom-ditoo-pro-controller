@@ -4,20 +4,24 @@ For pairing failures, firmware 306024 adds [device-side Bluetooth tracing](bluet
 
 Firmware **306029** adds BLE HID over GATT (HOGP). The remote now uses this
 standard BLE peripheral profile with a restricted, non-alphabetic remote
-descriptor. The current app requires 306030 for its larger source bundle. Native speaker profiles stay disabled in this mode.
+descriptor. Use firmware **306035** for the Android TV pairing and reconnect
+fixes. Native speaker profiles stay disabled in this mode.
 The app is designed for setup, pairing, reconnection and ordinary use on the
 Ditoo and host after one installation; see the TV limitations below.
 Bluetooth HID sends Play/Pause, Mute, Volume Up/Down, Space and Left/Right reports. AVRCP and the
 older `tv-remote.lua` remain available separately.
 
-**306030 TV caveat:** real MiTV_MOEU0 / Android 14 testing verified the controls
-after explicit BLE pairing, but found failures in the normal accessory picker
-and app Disconnect/Connect recovery. This version is not yet a reliable
-standalone BLE remote for that TV. See [the TV results](../firmware/ble-remote-tv-evidence/README.md).
+Real MiTV_MOEU0 / Android 14 testing on 306035 passed ordinary **Pair accessory**
+setup, saved-bond Disconnect/Connect, and actual Play/Pause input in SmartTube.
+The saved app also restarted and reconnected automatically after a firmware
+restart, with working Play/Pause and TV speaker output.
+See [the pairing results](../firmware/ble-pairing-evidence/README.md).
+The [306030 results](../firmware/ble-remote-tv-evidence/README.md) retain the
+earlier failures; Android Settings and Bluetooth services have not been patched.
 
 ```sh
 # One-time setup from a computer.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306030-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306035-lua.MVA
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
 ```
 
@@ -30,7 +34,8 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
    profiles requires one new pairing. Later BLE app upgrades reuse that bond.
 4. On the Ditoo, use **M → Pair new device → lever**. With no selected device,
    the app opens directly on Pair new device. Wait for **Ready to pair**, then
-   select **Ditoo BLE Remote** on the TV and accept its pairing request.
+   select **Ditoo BLE Remote** on the TV. Accept a confirmation if shown; the
+   tested Android TV completed pairing without a separate confirmation dialog.
    A blue bar shows the two-minute window. Pairing preserves existing bonds.
 5. **Connected**, a green dot, and the connected Bluetooth address identify the
    actual host. The firmware does not expose host names; the app does not assume
@@ -54,7 +59,8 @@ Volume Increment/Decrement (233/234), not Ditoo speaker volume. A sent report
 does not prove that every TV app handles it. On the real Android 14 TV, BLE
 Play/Pause toggled SmartTube, Left/Right sought backward/forward ten seconds,
 and volume/mute changed the TV's speaker output. Space reached Android as a
-press/release but did not toggle SmartTube in the tested player state.
+press/release; it toggled SmartTube in one player state and did nothing in
+another. App focus determines its behavior.
 
 The remote saves the selected host identity, BLE address type, and whether to
 accept reconnections. When enabled, later boots advertise for the saved host.
@@ -100,10 +106,11 @@ old Classic keyboard connection first. Settings → Bluetooth must allow App or
 Remote mode. The Audio override blocks switching, and the screen explains the
 required setting. The BLE advertised name is **Ditoo BLE Remote**. The Classic
 HID and AVRCP Lua APIs remain available to other scripts.
-The stock Classic name is still **DitooPro-Audio**, and both transports use the
-same device address. Android may continue showing that remembered name for
-the BLE accessory and its input node. The displayed name does not indicate an
-active speaker profile; the TV tests showed that name with LE HID and no A2DP.
+The stock Classic name remains **DitooPro-Audio**. From firmware 306032, BLE
+remote mode has a separate stable identity and advertises **Ditoo BLE Remote**.
+Pair this new entry once; subsequent updates keep its identity and saved bond.
+Older firmware shared the Classic address and could inherit its cached name
+and transport choice on Android.
 
 Hold any keyboard key for five seconds to stop the app and return to stock
 controls and the native menu. Hold a key during power-on to skip the app for
@@ -159,10 +166,11 @@ The normal TV accessory picker attempted Classic pairing and failed;
 explicit `createBond(TRANSPORT_LE)` succeeded with no A2DP audio connection.
 After app Disconnect/Connect, Android reconnected while the app was off and
 then reported HID connected, but the app remained Waiting for device and no
-new input arrived. A TV-menu reconnect did not resolve that state. Treat both
-paths as unresolved bugs, not as successful standalone setup/reconnection.
-Cold-boot TV reconnection and reliable simultaneous control from a second BLE
-host remain unverified; one laptop control attempt timed out while TV HID
+new input arrived. A TV-menu reconnect did not resolve that state. These are
+historical 306030 failures; the 306035 pairing/reconnection results are recorded
+[separately](../firmware/ble-pairing-evidence/verification.json).
+Reliable simultaneous control from a second BLE host remains unverified;
+one laptop control attempt timed out while TV HID
 remained connected.
 
 ## BLE remote API (306029+)
@@ -195,7 +203,63 @@ New pairing uses the stock Security Manager's encrypted, bonded Just Works
 procedure, restricted to the Lua pairing window and selected host. This stock
 stack does not implement Secure Connections or MITM-protected numeric entry.
 LE bonds use the existing native flash TLV store; Classic bonds are untouched.
-CCCD state belongs to one selected connection and is reset on disconnect.
+From 306031, report notification subscriptions (CCCDs) are saved per bonded
+identity in the stock flash TLV journal. Disconnect clears the live connection
+state; an encrypted reconnect of the selected host restores its subscriptions.
+Connect also adopts a matching encrypted link if the host returned while the
+app was disconnected. No new CCCD write is required from the host. Fresh pairing
+and Forget clear those saved subscriptions. Other identities and unencrypted
+connections cannot inherit them; failed journal writes reject the CCCD write.
+The `0x44485200 + bond slot` records contain only address, address type
+and two subscription bits. They do not replace or expose stock encryption keys.
+
+Firmware 306035 invalidates the two pinned Bluetooth flash-journal cache banks
+before reading bonds and after journal writes/deletions. The stock HAL programs
+SPI flash but reads through a memory-mapped cache; without this refresh, a
+successful write could still read as missing or return the previous mask until
+reboot. Every subscription write is read back and compared before acknowledging
+the CCCD write. The cache refresh covers only the two 4 KiB flash banks, never
+RAM. `hogp_storage` trace records expose the requested and verified masks.
+
+BLE remote mode also suppresses Classic inquiry/page scanning, including stock
+UI requests to reenable it. Leaving this mode restores the earlier Classic
+access setting. Firmware 306032 additionally gives this mode a stable
+static-random BLE identity, distinct from the Classic speaker address. Android's
+ordinary `createBond()` can otherwise keep choosing Classic for its cached
+dual-mode identity even after Classic discovery is disabled. The remote derives
+the address from the public address with `byte[0] = (byte[0] ^ 0x20) | 0xc0`;
+all remaining bytes stay the same. It is stable across boots and updates.
+Advertising stops before the stock Security Manager programs the address and
+resumes only after the controller confirms it. Leaving BLE remote mode restores
+the previous address mode. Stock Classic identity and bond records are unchanged.
+
+The Divoom control GATT service remains available at the active BLE address.
+Use `scan --transport ble` or the derivation above when migrating a controller
+from the old address. USB control is unaffected. Classic HID and AVRCP remain
+available in their respective modes.
+
+Android 14's HID host restores cached report setup on encrypted reconnect and
+does not necessarily write the CCCDs again; the peripheral must preserve them.
+See [Android's HID host implementation](https://android.googlesource.com/platform/packages/modules/Bluetooth/+/refs/heads/android14-release/system/bta/hh/bta_hh_le.cc),
+particularly `bta_hh_security_cmpl` and `bta_hh_process_cache_rpt`.
+Device Bluetooth traces expose `hogp_subscription` write/restore metadata
+without bond keys.
+
+Firmware 306033 defers the first encrypted HID report-map response for one
+second on the Bluetooth task, without sleeping or blocking that task. The
+stock Android TV picker attaches its input-device listener asynchronously;
+a fast HID connection can otherwise create the input device before that
+listener exists, leaving the picker to time out and delete a successful bond.
+The pending response uses 80 heap bytes, retries buffer backpressure for at most
+three seconds, and is discarded on disconnect. Cached reconnects skip report-map
+discovery and incur no setup delay. See Android's
+[BluetoothInputDeviceConnector](https://android.googlesource.com/platform/packages/apps/TvSettings/+/refs/heads/android14-release/Settings/src/com/android/tv/settings/accessories/BluetoothInputDeviceConnector.java).
+
+The same firmware gives compilation/API initialization a separate 250 ms
+loading allowance. Top-level Lua code and `init` each start their normal 50 ms
+execution budget; the 100,000-step and 48 KiB memory limits remain enforced.
+This prevents cold-start compilation from consuming the saved remote's first
+callback budget.
 
 A single native slot queues a press while the BLE buffer is busy, for at most
 one second. Cancellation drops an unsent press. A native timer releases each

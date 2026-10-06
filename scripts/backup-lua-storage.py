@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read the 128 KiB stock filesystem metadata through the 306015-306030 diagnostic."""
+"""Read the 128 KiB stock filesystem metadata through the 306015-306035 diagnostic."""
 import argparse
 from collections import Counter
 import hashlib
@@ -35,7 +35,7 @@ def batch(name, requests, timeout):
 version, = batch('preflight',[query(b'\0')],45)
 assert len(version)==5 and version[0]==1, 'Invalid firmware version; no diagnostic sent'
 installed=int.from_bytes(version[1:],'little')
-assert installed in (306015,306016,306017,306018,306019,306020,306021,306022,306023,306024,306025,306026,306027,306028,306029,306030), 'Unsupported Lua storage diagnostic firmware; no diagnostic sent'
+assert installed in (306015,306016,306017,306018,306019,306020,306021,306022,306023,306024,306025,306026,306027,306028,306029,306030,306031,306032,306033,306034,306035), 'Unsupported Lua storage diagnostic firmware; no diagnostic sent'
 units=list(range(8 if a.probe_only else 1024))
 requests=[query(b'\x7fDLUA\x0a'+struct.pack('<HB',unit,1)) for unit in units]
 requests.append(query(b'\0'))

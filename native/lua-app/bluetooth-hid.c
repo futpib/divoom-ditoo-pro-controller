@@ -95,6 +95,7 @@ static struct {
     uint16_t cid[2];
     unsigned up[2], pending[2], active, epoch, started, phase, down, listening, outgoing;
     unsigned access_owned, access_previous, pair_started, pair_duration, pair_epoch;
+    unsigned le_access_owned, le_access_previous;
     struct record *hidden[8];
     struct psm *blocked[8];
     unsigned previous_class;
@@ -188,6 +189,19 @@ static unsigned access_set(unsigned mode) {
     unsigned rc=stock_bt_access(mode,NULL);
     if (rc && rc!=2) { error(0x600+rc);return 0; }
     hid.access_owned=1;return 1;
+}
+static void le_access(void) {
+    if (runtime_hogp_enabled()) {
+        if (!hid.le_access_owned) {
+            hid.le_access_previous=stock_bt_core[0x792];hid.le_access_owned=1;
+        }
+        /* The stock source UI can request discoverability again. Enforce LE
+         * remote mode on its owning Bluetooth task, preserving BLE control. */
+        if (stock_bt_core[0x792]) stock_bt_access(0,NULL);
+    } else if (hid.le_access_owned) {
+        unsigned rc=stock_bt_access(hid.le_access_previous,NULL);
+        if (!rc || rc==2) hid.le_access_owned=0;
+    }
 }
 static void disconnect(void) {
     hid.active=hid.listening; hid.phase=0; hid.down=0;
@@ -333,6 +347,7 @@ void runtime_hid_service(unsigned epoch) {
         memset(&hid,0,sizeof hid);return;
     }
     if (hid.status.keyboard_only) audio_channels();
+    le_access();
     if (hid.active && hid.status.state==1 && elapsed(hid.started,120000)) { error(9);disconnect(); }
     hid.status.access_mode=stock_bt_core[0x792];
     if (hid.status.pairing) {
@@ -365,6 +380,7 @@ void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,
             if (hid.status.state || hid.tx[0].busy || hid.tx[1].busy) { error(20);return; }
             if (enable() && runtime_hogp_mode(1)) mode(1);
         } else if (runtime_hogp_mode(0) && enable()) mode(value);
+        if (hid.status.enabled) le_access();
         return;
     }
     if (runtime_hogp_enabled()) { runtime_hogp_command(op,value,data,epoch,generation);return; }
@@ -426,6 +442,7 @@ void runtime_hid_status(struct hid_status *s) {
     if (runtime_hogp_enabled()) {
         runtime_hogp_status(s);s->hidden_services=hid.status.hidden_services;
         s->blocked_psms=hid.status.blocked_psms;s->audio_channels=hid.status.audio_channels;
+        s->access_mode=hid.status.access_mode;
     }
 }
 unsigned runtime_hid_preserve_link(unsigned caller) {

@@ -1,0 +1,194 @@
+{
+  "date_utc": "2026-10-06",
+  "firmware": {
+    "version": 306035,
+    "sha256": "a4507e19b92eca8fed9e189b4107fbc159fa85ff35bea91d467e972d70b5bad9",
+    "bytes": 2024971
+  },
+  "app": {
+    "path": "examples/lua/tv-keyboard.lua",
+    "sha256": "2a049d59135114c21a5f2c85fff0008f925eda72a7de2561d4e258538f314a04",
+    "installed_bundle_bytes": 9940,
+    "source_changed": false
+  },
+  "host": {
+    "model": "MiTV_MOEU0",
+    "android": "14",
+    "application": "app.smarttube.fdroid"
+  },
+  "scope": {
+    "android_system_modified": false,
+    "pairing_api_override_used": false,
+    "physical_ditoo_buttons_tested": false,
+    "method": "Normal Android TV Settings picker selected through ADB UI input. Temporary receiver sends Lua messages over the existing Divoom control service; real Ditoo HID reports are observed with getevent and media_session. Android input injection is used only for setup/navigation, never the tested remote action."
+  },
+  "fresh_pairing": {
+    "passed": true,
+    "picker_path": "Remotes and accessories > Pair accessory > Ditoo BLE Remote",
+    "address_type": "LE static random",
+    "separate_confirmation_dialog": false,
+    "tv_log_times": {
+      "selected": "22:00:13.048",
+      "pairing": "22:00:18.054",
+      "connecting": "22:00:19.589",
+      "completed": "22:00:20.874"
+    },
+    "final_ui": "Ditoo BLE Remote - Connected",
+    "original_xiaomi_remote_retained": true,
+    "both_cccd_writes_verified": true,
+    "bond_retained_beyond_old_60_second_failure": true
+  },
+  "play_pause": {
+    "passed": true,
+    "linux_key": "KEY_PLAYPAUSE",
+    "down_and_up": true,
+    "release_after_ms": 76.45,
+    "before": "PAUSED",
+    "after": "PLAYING",
+    "paused_again": true
+  },
+  "warm_reconnect": {
+    "passed": true,
+    "trigger": "Saved app disconnect, wait approximately four seconds, then connect",
+    "new_pairing": false,
+    "rebooted": false,
+    "tv_settings_clicked": false,
+    "encrypted_cached_subscription_mask": 3,
+    "linux_down_and_up": true,
+    "release_after_ms": 75.038,
+    "media_before": "PAUSED",
+    "media_after": "PLAYING",
+    "paused_again": true,
+    "tv_log_times": {
+      "disconnected": "22:01:12.991",
+      "automatically_connected_while_app_off": "22:01:15.026",
+      "hid_connected": "22:01:15.134",
+      "app_connect_message": "22:01:17.425"
+    }
+  },
+  "subscription_trace": [
+    {
+      "sequence": 37,
+      "uptime_ms": 33718,
+      "event": 4,
+      "bond_index": 15,
+      "requested_mask": 1,
+      "read_back_mask": 1,
+      "verified": true
+    },
+    {
+      "sequence": 38,
+      "uptime_ms": 33718,
+      "event": 2,
+      "handle": 1,
+      "attribute": 41,
+      "value": 1
+    },
+    {
+      "sequence": 39,
+      "uptime_ms": 33743,
+      "event": 4,
+      "bond_index": 15,
+      "requested_mask": 3,
+      "read_back_mask": 3,
+      "verified": true
+    },
+    {
+      "sequence": 40,
+      "uptime_ms": 33743,
+      "event": 2,
+      "handle": 1,
+      "attribute": 45,
+      "value": 1
+    },
+    {
+      "sequence": 47,
+      "uptime_ms": 92410,
+      "event": 3,
+      "handle": 1,
+      "attribute": 0,
+      "value": 3
+    }
+  ],
+  "restart_test": {
+    "passed": true,
+    "method": "Reflash identical 306035 image over BLE, causing firmware restart. Maintenance app lived only in RAM; saved remote and settings were not overwritten.",
+    "saved_app_autostarted": true,
+    "automatic_tv_reconnection": true,
+    "tv_clicks": 0,
+    "new_pairing": false,
+    "passive_hid_state_before_any_probe_connection": 2,
+    "tv_hid_connected_time": "22:07:49.630",
+    "first_probe_message_time": "22:08:16.796",
+    "app_state": "active",
+    "app_error": 0,
+    "saved_subscriptions_restored": [
+      {
+        "sequence": 14,
+        "uptime_ms": 7306,
+        "subscription_mask": 3
+      }
+    ],
+    "linux_key": "KEY_PLAYPAUSE",
+    "down_and_up": true,
+    "release_after_ms": 87.528,
+    "smarttube_before": "PAUSED",
+    "smarttube_after": "PLAYING",
+    "paused_again": true,
+    "post_update_version_verification": "Initial upgrade CLI read 306035. Same-version restart flash received device success but CLI could not reconnect to old public control address after app switched identities; TV control receiver independently read and required 306035 before sending any Lua message."
+  },
+  "audio": {
+    "output": "speaker(2)",
+    "a2dp_active": null,
+    "volume": 12,
+    "muted": false,
+    "speaker_takeover_observed": false
+  },
+  "other_input_checks": {
+    "firmware": 306033,
+    "all_seven_remote_actions_observed_as_real_down_up": true,
+    "actions": [
+      "play_pause",
+      "volume_up",
+      "volume_down",
+      "mute",
+      "left",
+      "right",
+      "space"
+    ],
+    "note": "Earlier build in this investigation; final 306035 Play/Pause repeated above. Space and arrows depend on player focus. TV vendor volume-down behavior could also mute despite one ordinary DOWN/UP pair; no Android settings or code changed."
+  },
+  "offline_checks": {
+    "native": "32-bit ASan/UBSan tests passed, including cached-flash simulation, journal read-back failure, scoped bond restoration, report-map delay/backpressure/cancellation, separate launch and callback budgets, and hostile Lua recovery.",
+    "rust_tests_passed": 65,
+    "firmware_python_tests_passed": 20,
+    "production_clippy": "cargo clippy --no-default-features --lib --bins -- -D warnings passed",
+    "shellcheck": true,
+    "reproducibility": "Two isolated builds of all four maintained profiles matched images, JSON build reports and patch reports.",
+    "baseline_limitations": [
+      "Repository-wide cargo fmt check has pre-existing formatting differences.",
+      "Strict all-target Clippy has pre-existing test unwrap warnings; production lib/bins strict check passed."
+    ]
+  },
+  "cleanup": {
+    "temporary_tv_apk_removed": true,
+    "temporary_tv_ui_file_removed": true,
+    "input_and_log_capture_stopped": true,
+    "laptop_ditoo_link_disconnected": true,
+    "adb_disconnected": true,
+    "tv_volume": 12,
+    "tv_muted": false,
+    "tv_audio_output": "speaker(2)",
+    "smarttube_playback": "PAUSED",
+    "original_xiaomi_remote_bond_retained": true,
+    "ditoo_tv_bond_retained": true,
+    "ditoo_remote_state": "CONNECTED",
+    "lua_error": 0
+  },
+  "limitations": [
+    "One Android TV model tested.",
+    "Physical buttons and a mains power cycle were not actuated in this run.",
+    "Raw logs and endpoint captures remain private in ignored target/tv-pairing-fix/.",
+    "BLE updater post-restart verification still targets its original address. A saved app that switches to the remote identity can require version verification through the active remote address or USB."
+  ]
+}

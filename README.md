@@ -353,6 +353,10 @@ removed; `lua bundle FILE` previews the generated source without a device.
 Firmware 306020 also provides [Bluetooth keyboard and media keys from Lua](docs/lua-keyboard.md).
 Firmware 306029 adds `keyboard.mode("ble-remote")`: standard BLE HID over GATT
 with a restricted non-alphabetic remote descriptor and persistent LE bonds.
+Use **306035** for normal Android TV **Pair accessory** setup and bonded
+reconnection. It gives the remote a separate BLE identity and fixes HID setup,
+subscription persistence and saved-app startup in the Ditoo firmware.
+See [the TV pairing verification](firmware/ble-pairing-evidence/README.md).
 Install `examples/lua/tv-keyboard.lua` with `lua install` for the BLE remote.
 Classic HID and AVRCP remain available to other scripts.
 Firmware 306030 raises the source limit to 16 KiB without raising the 48 KiB Lua

@@ -1,0 +1,58 @@
+[
+  {
+    "run": "first",
+    "profile": "reflash",
+    "version": 306008,
+    "sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+    "identical": true
+  },
+  {
+    "run": "first",
+    "profile": "probe",
+    "version": 306009,
+    "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+    "identical": true
+  },
+  {
+    "run": "first",
+    "profile": "runtime",
+    "version": 306012,
+    "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+    "identical": true
+  },
+  {
+    "run": "first",
+    "profile": "app",
+    "version": 306035,
+    "sha256": "a4507e19b92eca8fed9e189b4107fbc159fa85ff35bea91d467e972d70b5bad9",
+    "identical": true
+  },
+  {
+    "run": "different-path-second",
+    "profile": "reflash",
+    "version": 306008,
+    "sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+    "identical": true
+  },
+  {
+    "run": "different-path-second",
+    "profile": "probe",
+    "version": 306009,
+    "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+    "identical": true
+  },
+  {
+    "run": "different-path-second",
+    "profile": "runtime",
+    "version": 306012,
+    "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+    "identical": true
+  },
+  {
+    "run": "different-path-second",
+    "profile": "app",
+    "version": 306035,
+    "sha256": "a4507e19b92eca8fed9e189b4107fbc159fa85ff35bea91d467e972d70b5bad9",
+    "identical": true
+  }
+]

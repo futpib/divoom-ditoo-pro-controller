@@ -76,6 +76,21 @@ const BLE_REMOTE_SIZE: usize = 2_022_563;
 const LARGE_APP_VERSION: u32 = 306030;
 const LARGE_APP_SHA256: &str = "26aefe7adda9bbe5fd82a22c9d340f9d8f4c4417badac621e533d4c9134de505";
 const LARGE_APP_SIZE: usize = 2_023_403;
+const BLE_PAIRING_VERSION: u32 = 306031;
+const BLE_PAIRING_SHA256: &str = "4cff64feeec8c61f2adc3c90512344c423f9819e1b5047482242ef9672f9894c";
+const BLE_PAIRING_SIZE: usize = 2024195;
+const BLE_IDENTITY_VERSION: u32 = 306032;
+const BLE_IDENTITY_SHA256: &str = "7c3e6f1b89f0e716072be531be81038f4af920e0103fef34f5b8751d768008a4";
+const BLE_IDENTITY_SIZE: usize = 2024499;
+const LUA_LOAD_BUDGET_VERSION: u32 = 306033;
+const LUA_LOAD_BUDGET_SHA256: &str = "b63d044d66b6672e13e828746fa7931ac391b76c46b2d7d2909c13567d8d13ed";
+const LUA_LOAD_BUDGET_SIZE: usize = 2_024_835;
+const BLE_SUBSCRIPTION_CHECK_VERSION: u32 = 306034;
+const BLE_SUBSCRIPTION_CHECK_SHA256: &str = "21b4cdd861ee1b2c0ec372be97f8c75fddde6dcdc6606ee83fed6c3777c2730c";
+const BLE_SUBSCRIPTION_CHECK_SIZE: usize = 2024939;
+const BLE_JOURNAL_CACHE_VERSION: u32 = 306035;
+const BLE_JOURNAL_CACHE_SHA256: &str = "a4507e19b92eca8fed9e189b4107fbc159fa85ff35bea91d467e972d70b5bad9";
+const BLE_JOURNAL_CACHE_SIZE: usize = 2024971;
 const CHUNK_SIZE: usize = 256;
 const EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -126,7 +141,12 @@ impl Image {
       MENU_SHA256 => MENU_VERSION,
       BLE_REMOTE_SHA256 => BLE_REMOTE_VERSION,
       LARGE_APP_SHA256 => LARGE_APP_VERSION,
-      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013/306014/306015/306016/306017/306018/306019/306020/306021/306022/306023/306024/306025/306026/306027/306028/306029/306030 are supported".into()),
+      BLE_PAIRING_SHA256 => BLE_PAIRING_VERSION,
+      BLE_IDENTITY_SHA256 => BLE_IDENTITY_VERSION,
+      LUA_LOAD_BUDGET_SHA256 => LUA_LOAD_BUDGET_VERSION,
+      BLE_SUBSCRIPTION_CHECK_SHA256 => BLE_SUBSCRIPTION_CHECK_VERSION,
+      BLE_JOURNAL_CACHE_SHA256 => BLE_JOURNAL_CACHE_VERSION,
+      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013/306014/306015/306016/306017/306018/306019/306020/306021/306022/306023/306024/306025/306026/306027/306028/306029/306030/306031/306032/306033/306034/306035 are supported".into()),
     };
     let expected_size = match version {
       LUA_VERSION => LUA_SIZE,
@@ -149,6 +169,11 @@ impl Image {
       MENU_VERSION => MENU_SIZE,
       BLE_REMOTE_VERSION => BLE_REMOTE_SIZE,
       LARGE_APP_VERSION => LARGE_APP_SIZE,
+      BLE_PAIRING_VERSION => BLE_PAIRING_SIZE,
+      BLE_IDENTITY_VERSION => BLE_IDENTITY_SIZE,
+      LUA_LOAD_BUDGET_VERSION => LUA_LOAD_BUDGET_SIZE,
+      BLE_SUBSCRIPTION_CHECK_VERSION => BLE_SUBSCRIPTION_CHECK_SIZE,
+      BLE_JOURNAL_CACHE_VERSION => BLE_JOURNAL_CACHE_SIZE,
       _ => IMAGE_SIZE,
     };
     if bytes.len() != expected_size {
@@ -310,10 +335,10 @@ fn validate_target(
         | DEVICE_VERSION
         | BLUETOOTH_VERSION
         | MUTE_VERSION
-        | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION | MEMORY_VERSION | BLUETOOTH_TRACE_VERSION | KEYBOARD_ONLY_VERSION | ASSETS_VERSION | PERSISTENT_HID_VERSION | MENU_VERSION | BLE_REMOTE_VERSION | LARGE_APP_VERSION
+        | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION | MEMORY_VERSION | BLUETOOTH_TRACE_VERSION | KEYBOARD_ONLY_VERSION | ASSETS_VERSION | PERSISTENT_HID_VERSION | MENU_VERSION | BLE_REMOTE_VERSION | LARGE_APP_VERSION | BLE_PAIRING_VERSION | BLE_IDENTITY_VERSION | LUA_LOAD_BUDGET_VERSION | BLE_SUBSCRIPTION_CHECK_VERSION | BLE_JOURNAL_CACHE_VERSION
     ) && version == VERSION)
   {
-    return Err("--restore-stock requires a supported probe device (306008 through 306030) and pinned stock 306007".into());
+    return Err("--restore-stock requires a supported probe device (306008 through 306035) and pinned stock 306007".into());
   }
   if installed / 1000 != version / 1000 {
     return Err(format!("Hardware mismatch: device {installed}, image {version}").into());
@@ -608,7 +633,12 @@ mod tests {
     assert!(validate_target(306028, VERSION, false, true).is_ok());
     assert!(validate_target(306029, VERSION, false, true).is_ok());
     assert!(validate_target(306030, VERSION, false, true).is_ok());
-    assert!(validate_target(306031, VERSION, false, true).is_err());
+    assert!(validate_target(306031, VERSION, false, true).is_ok());
+    assert!(validate_target(306032, VERSION, false, true).is_ok());
+    assert!(validate_target(306033, VERSION, false, true).is_ok());
+    assert!(validate_target(306034, VERSION, false, true).is_ok());
+    assert!(validate_target(306035, VERSION, false, true).is_ok());
+    assert!(validate_target(306036, VERSION, false, true).is_err());
     assert!(validate_target(306007, VERSION, false, true).is_err());
     assert!(validate_target(306008, PROBE_VERSION, false, true).is_err());
     assert!(validate_target(306006, VERSION, false, false).is_ok());

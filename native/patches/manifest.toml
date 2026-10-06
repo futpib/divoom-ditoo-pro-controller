@@ -28,7 +28,7 @@ patches = [
 ]
 
 [profiles.app]
-version = 306030
+version = 306035
 source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch", "lua/0003-binary32-parser.patch"]
 patches = [
     "command_dispatch",
@@ -607,6 +607,123 @@ original = '''
     lhi333 $r0, [$r1 + 0xa]
 '''
 
+[[guards]]
+site = "stock_le_tlv_read_guard"
+profiles = ["app"]
+original_size = 24
+purpose = "Validate the stock bond journal vtable and context used for persistent HID subscriptions."
+original = '''
+    sethi $r1, 0x42544
+    lwi450 $r4, [$r0]
+    addi $r1, $r1, 0x400
+    or33 $r1, $r2
+    movi $r3, 0x3c
+    lwi37.sp $r2, [ + 4]
+    lwi.gp $r0, [ + -28136]
+    jral5 $r4
+'''
+
+[[guards]]
+site = "stock_le_address"
+profiles = ["app"]
+original_size = 12
+purpose = "Validate the public address used to derive a stable separate BLE remote identity."
+original = '''
+    lwi.gp $r2, [ + -28232]
+    addi333 $r3, $r1, 4
+    bnez38 $r0, stock_le_address_random
+    addi $r0, $r2, 0x30
+'''
+
+[[guards]]
+site = "stock_le_random_address"
+profiles = ["app"]
+original_size = 46
+purpose = "Validate the stock static-random address setter and Security Manager scheduling."
+original = '''
+    push25 $r6, 0
+    mov55 $r6, $r0
+    movi55 $r0, 1
+    jal stock_le_random_mode
+    addi.gp $r3, -27604
+    mov55 $r2, $r6
+    lmw.bim $r16, [$r2], $r16, 0
+    mov55 $r1, $r3
+    smw.bim $r16, [$r1], $r16, 0
+    lbi333 $r0, [$r6 + 4]
+    sbi333 $r0, [$r3 + 4]
+    lbi333 $r0, [$r2 + 1]
+    sbi333 $r0, [$r1 + 1]
+    movi55 $r0, 5
+    swi.gp $r0, [ + -27596]
+    jal stock_sm_trigger_run
+    pop25 $r6, 0
+'''
+
+[[guards]]
+site = "stock_le_random_complete_guard"
+profiles = ["app"]
+original_size = 16
+purpose = "Validate the controller address-ready flag and address used before advertising resumes."
+original = '''
+    movi55 $r0, 1
+    sbi $r0, [$r1 + 0x4bf]
+    addi333 $r0, $r6, 3
+    addi $r1, $r1, 0x4b9
+    jal stock_reverse_address
+'''
+
+[[guards]]
+site = "stock_hci_list_guard"
+profiles = ["app"]
+original_size = 12
+purpose = "Validate the live BLE connection list used to resume a selected encrypted HID host."
+original = '''
+    push25 $r6, 0
+    lwi.gp $r1, [ + -28232]
+    addi45 $r1, 16
+    jal stock_hci_iterator_init
+'''
+
+[[guards]]
+site = "stock_att_can_send"
+profiles = ["app"]
+original_size = 10
+purpose = "Validate the ATT fixed-channel readiness check for a deferred HID setup response."
+original = '''
+    push25 $r6, 0
+    movi55 $r1, 4
+    jal stock_l2cap_can_send
+    pop25 $r6, 0
+'''
+
+[[guards]]
+site = "stock_att_send"
+profiles = ["app"]
+original_size = 50
+purpose = "Validate bounded ATT fixed-channel copying and transmission on the Bluetooth task."
+original = '''
+    push25 $r6, 16
+    swi37.sp $r0, [ + 4]
+    swi37.sp $r1, [ + 8]
+    swi37.sp $r2, [ + 12]
+    swi450 $r3, [$sp]
+    jal stock_packet_available
+    beqz38 $r0, stock_att_send_busy
+    jal stock_packet_reserve
+    jal stock_packet_buffer
+    addi45 $r0, 8
+    lwi37.sp $r1, [ + 12]
+    lwi450 $r2, [$sp]
+    jal stock_memory_copy
+    lwi37.sp $r0, [ + 4]
+    lwi37.sp $r1, [ + 8]
+    lwi450 $r2, [$sp]
+    jal stock_att_send_prepared
+    pop25 $r6, 16
+    movi $r0, 0x57
+'''
+
 [[patches]]
 name = "att_request"
 section = ".att_request_hook"
@@ -627,4 +744,36 @@ original_size = 4
 purpose = "Keep HID discovery scoped to a pairing candidate or the selected bonded BLE host."
 original = '''
     jal stock_att_request
+'''
+
+[[guards]]
+site = "stock_cache_invalidate"
+profiles = ["app"]
+original_size = 24
+purpose = "Validate the address/length data-cache invalidator used only on the TLV flash banks."
+original = '''
+    beqz38 $r1, stock_cache_invalidate_end
+    movi $r2, 0x4000
+    slt45 $r2, $r1
+    beqzs8 stock_cache_invalidate_small
+    smw.adm $sp, [$sp], $sp, 2
+    addi10.sp -4
+    jal stock_cache_invalidate_all
+    j8 stock_cache_invalidate_pop
+    add45 $r1, $r0
+'''
+
+[[guards]]
+site = "stock_tlv_flash_bank_guard"
+profiles = ["app"]
+original_size = 26
+purpose = "Validate the two 4 KiB memory-mapped stock TLV banks before refreshing their cache lines."
+original = '''
+    movi $r3, 0x1f1
+    sethi $r4, 0x1f0
+    sethi $r5, 0x1f1
+    mov55 $r0, $r7
+    movi $r1, 0x1000
+    movi $r2, 0x1f0
+    jal stock_tlv_hal_init
 '''

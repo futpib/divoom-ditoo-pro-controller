@@ -9,6 +9,7 @@ static unsigned char context[256],remote[256],sent[12],core[0x3200];
 volatile unsigned char stock_bt_manager[0x1c4];
 static unsigned char device_entry[0x40];
 static unsigned access_mode=3,access_rc;
+static unsigned hogp_enabled;
 unsigned stock_bt_access(unsigned mode,const void *p) {
     assert(!p && mode<=3);if (access_rc) return access_rc;
     access_mode=mode;core[0x792]=mode;return 2;
@@ -217,11 +218,20 @@ int main(void) {
     stock_bt_core=NULL;assert(!runtime_hid_preserve_link(0x170a8));stock_bt_core=core;
     memset(core,0,sizeof core);runtime_hid_service(1);
     assert(!runtime_hid_preserve_link(0x170a8));
-    puts("HID report, ownership, stale command, timeout and control tests passed");
+    connected();runtime_hid_command(HID_DISCONNECT,0,address,1,0);
+    event(0,4,NULL);event(1,4,NULL);core[0x792]=3;
+    runtime_hid_command(HID_MODE,2,NULL,1,0);
+    assert(hogp_enabled && hid.le_access_owned && !access_mode);
+    core[0x792]=3;runtime_hid_service(1);assert(!access_mode && !core[0x792]);
+    core[0x792]=3;access_rc=19;runtime_hid_service(1);assert(core[0x792]==3);
+    access_rc=0;runtime_hid_service(1);assert(!core[0x792]);
+    runtime_hid_command(HID_MODE,1,NULL,1,0);
+    assert(!hogp_enabled && !hid.le_access_owned && access_mode==3);
+    puts("HID report, ownership, stale command, timeout, LE visibility restoration and control tests passed");
 }
 
-unsigned runtime_hogp_enabled(void) { return 0; }
-unsigned runtime_hogp_mode(unsigned enabled) { return !enabled; }
+unsigned runtime_hogp_enabled(void) { return hogp_enabled; }
+unsigned runtime_hogp_mode(unsigned enabled) { hogp_enabled=enabled;return 1; }
 void runtime_hogp_service(unsigned epoch) { (void)epoch; }
 void runtime_hogp_status(struct hid_status *s) { memset(s,0,sizeof *s); }
 void runtime_hogp_command(unsigned op,unsigned value,const unsigned char *data,unsigned epoch,unsigned generation) {

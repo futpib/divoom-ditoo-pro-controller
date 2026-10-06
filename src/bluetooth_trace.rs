@@ -201,6 +201,20 @@ fn event(row: &[u8]) -> Result<Value> {
       }
       v["layer"] = json!(if kind == 4 { "hid_link" } else { "hid_error" });
       v["status"] = json!(number(p));
+      if kind == 5 && code == 4 {
+        v["layer"] = json!("hogp_storage");
+        v["bond_index"] = json!(p[0]);
+        v["requested"] = json!(p[1]);
+        v["read_back"] = json!(p[2]);
+        v["verified"] = json!(p[3] == 1);
+      }
+      if kind == 5 && matches!(code, 2 | 3) {
+        v["layer"] = json!("hogp_subscription");
+        v["name"] = json!(if code == 2 { "write" } else { "restore" });
+        v["handle"] = json!(u16::from_le_bytes([p[0], p[1]]));
+        v["attribute"] = json!(p[2]);
+        v["value"] = json!(p[3]);
+      }
     }
     6 => {
       if !matches!(code, 1..=4) || n != if code == 1 || code == 4 { 4 } else { 12 } {
@@ -278,10 +292,10 @@ async fn session(
   if !reply.ack
     || reply.data.len() != 5
     || reply.data[0] != 1
-    || !matches!(number(&reply.data[1..]), 306024..=306030)
+    || !matches!(number(&reply.data[1..]), 306024..=306035)
   {
     return Err(
-      "Bluetooth trace requires firmware 306024 through 306030; no diagnostic sent".into(),
+      "Bluetooth trace requires firmware 306024 through 306035; no diagnostic sent".into(),
     );
   }
   let firmware = number(&reply.data[1..]);
@@ -394,6 +408,35 @@ mod tests {
     row[9] = 4;
     assert_eq!(event(&row)?["name"], "application_suppressed");
     row[9] = 5;
+    assert!(event(&row).is_err());
+    Ok(())
+  }
+  #[test]
+  fn hogp_subscription_write_and_restore() -> Result<()> {
+    let mut row = [0; 24];
+    row[8] = 5;
+    row[9] = 2;
+    row[10] = 4;
+    row[12..16].copy_from_slice(&[0x34, 0x12, 0x29, 1]);
+    let v = event(&row)?;
+    assert_eq!(v["layer"], "hogp_subscription");
+    assert_eq!(v["name"], "write");
+    assert_eq!(v["handle"], 0x1234);
+    assert_eq!(v["attribute"], 0x29);
+    assert_eq!(v["value"], 1);
+    row[9] = 3;
+    row[14..16].copy_from_slice(&[0, 3]);
+    let v = event(&row)?;
+    assert_eq!(v["name"], "restore");
+    assert_eq!(v["value"], 3);
+    row[9] = 4;
+    row[12..16].copy_from_slice(&[2, 3, 1, 0]);
+    let v = event(&row)?;
+    assert_eq!(v["layer"], "hogp_storage");
+    assert_eq!(v["requested"], 3);
+    assert_eq!(v["read_back"], 1);
+    assert_eq!(v["verified"], false);
+    row[10] = 3;
     assert!(event(&row).is_err());
     Ok(())
   }
