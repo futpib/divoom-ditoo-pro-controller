@@ -5,10 +5,15 @@ For pairing failures, firmware 306024 adds [device-side Bluetooth tracing](bluet
 Firmware **306029** adds BLE HID over GATT (HOGP). The remote now uses this
 standard BLE peripheral profile with a restricted, non-alphabetic remote
 descriptor. The current app requires 306030 for its larger source bundle. Native speaker profiles stay disabled in this mode.
-After one installation,
-setup, pairing, reconnection and ordinary use need only the Ditoo and TV.
+The app is designed for setup, pairing, reconnection and ordinary use on the
+Ditoo and host after one installation; see the TV limitations below.
 Bluetooth HID sends Play/Pause, Mute, Volume Up/Down, Space and Left/Right reports. AVRCP and the
 older `tv-remote.lua` remain available separately.
+
+**306030 TV caveat:** real MiTV_MOEU0 / Android 14 testing verified the controls
+after explicit BLE pairing, but found failures in the normal accessory picker
+and app Disconnect/Connect recovery. This version is not yet a reliable
+standalone BLE remote for that TV. See [the TV results](../firmware/ble-remote-tv-evidence/README.md).
 
 ```sh
 # One-time setup from a computer.
@@ -46,9 +51,10 @@ The fixed IDs come from the [stock firmware key tables](stock-ux.md#physical-key
 Left/Right send ordinary keyboard arrows (HID usages 80/79), so the TV app
 and focus determine whether they seek or navigate. Volume sends Consumer
 Volume Increment/Decrement (233/234), not Ditoo speaker volume. A sent report
-does not prove that every TV app handles it. SmartTube Play/Pause is
-owner-confirmed for the earlier Classic profile; that does not verify the
-new BLE profile on the TV. See the verification notes below.
+does not prove that every TV app handles it. On the real Android 14 TV, BLE
+Play/Pause toggled SmartTube, Left/Right sought backward/forward ten seconds,
+and volume/mute changed the TV's speaker output. Space reached Android as a
+press/release but did not toggle SmartTube in the tested player state.
 
 The remote saves the selected host identity, BLE address type, and whether to
 accept reconnections. When enabled, later boots advertise for the saved host.
@@ -94,6 +100,10 @@ old Classic keyboard connection first. Settings → Bluetooth must allow App or
 Remote mode. The Audio override blocks switching, and the screen explains the
 required setting. The BLE advertised name is **Ditoo BLE Remote**. The Classic
 HID and AVRCP Lua APIs remain available to other scripts.
+The stock Classic name is still **DitooPro-Audio**, and both transports use the
+same device address. Android may continue showing that remembered name for
+the BLE accessory and its input node. The displayed name does not indicate an
+active speaker profile; the TV tests showed that name with LE HID and no A2DP.
 
 Hold any keyboard key for five seconds to stop the app and return to stock
 controls and the native menu. Hold a key during power-on to skip the app for
@@ -142,8 +152,18 @@ The earlier [306029 hardware record](../firmware/ble-remote-evidence/verificatio
 contains the exact image hash and all 27 checks. A first control request after
 the final flash failed with ATT `0x0e`; disconnecting and reconnecting only the
 Ditoo LE bearer recovered it without resetting Bluetooth or deleting a bond.
-TV compatibility, cold-boot TV reconnection and two simultaneous BLE hosts
-remain untested.
+The later [306030 TV record](../firmware/ble-remote-tv-evidence/verification.json)
+verifies Android input events and SmartTube/media-volume effects from app
+messages using the actual Ditoo BLE link. It does not test physical buttons.
+The normal TV accessory picker attempted Classic pairing and failed;
+explicit `createBond(TRANSPORT_LE)` succeeded with no A2DP audio connection.
+After app Disconnect/Connect, Android reconnected while the app was off and
+then reported HID connected, but the app remained Waiting for device and no
+new input arrived. A TV-menu reconnect did not resolve that state. Treat both
+paths as unresolved bugs, not as successful standalone setup/reconnection.
+Cold-boot TV reconnection and reliable simultaneous control from a second BLE
+host remain unverified; one laptop control attempt timed out while TV HID
+remained connected.
 
 ## BLE remote API (306029+)
 

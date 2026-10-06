@@ -1,0 +1,199 @@
+{
+  "date_utc": "2026-10-06",
+  "firmware": {
+    "version": 306030,
+    "sha256": "26aefe7adda9bbe5fd82a22c9d340f9d8f4c4417badac621e533d4c9134de505",
+    "bytes": 2023403,
+    "changed_during_test": false
+  },
+  "app": {
+    "path": "examples/lua/tv-keyboard.lua",
+    "sha256": "2a049d59135114c21a5f2c85fff0008f925eda72a7de2561d4e258538f314a04",
+    "installed_bundle_bytes": 9940,
+    "replaced_during_test": false
+  },
+  "host": {
+    "model": "MiTV_MOEU0",
+    "android": "14",
+    "application": "app.smarttube.fdroid"
+  },
+  "method": {
+    "control": "Temporary TV APK sends real Divoom BLE Lua messages to the saved app. Ditoo returns HID reports to the same TV.",
+    "observations": [
+      "Android getevent on Ditoo input node",
+      "Android media_session state and position",
+      "Android STREAM_MUSIC volume, mute and output route",
+      "Android Bluetooth and Ditoo trace metadata"
+    ],
+    "android_input_injection": "Used only for setup, video selection and Settings navigation; never as the remote action under test.",
+    "physical_ditoo_keys_tested": false
+  },
+  "initial_pairing": {
+    "ordinary_tv_picker": {
+      "passed": false,
+      "shown_initially": "Ditoo BLE Remote",
+      "shown_after_selection": "DitooPro-Audio",
+      "transport_observed": "BR/EDR",
+      "result": "Pairing then Could not pair",
+      "ditoo_trace": "Classic connection request/completion, SSP confirmation, timeout"
+    },
+    "explicit_le": {
+      "passed": true,
+      "api": "BluetoothDevice.createBond(TRANSPORT_LE)",
+      "transport_in_bond_list": "LE",
+      "hid_host_state": 2,
+      "input_device": "DitooPro-Audio Keyboard",
+      "a2dp_active_device": null
+    }
+  },
+  "input_checks": [
+    {
+      "action": "play_pause",
+      "linux_key": "KEY_PLAYPAUSE",
+      "press_and_release": true,
+      "app_effect": "PLAYING -> PAUSED -> PLAYING",
+      "paused_position_ms": 50668,
+      "resumed_position_ms": 50832,
+      "passed": true
+    },
+    {
+      "action": "volume_up",
+      "linux_key": "KEY_VOLUMEUP",
+      "press_and_release": true,
+      "before": 12,
+      "after": 13,
+      "passed": true
+    },
+    {
+      "action": "volume_down",
+      "linux_key": "KEY_VOLUMEDOWN",
+      "press_and_release": true,
+      "before": 13,
+      "after": 12,
+      "passed": true
+    },
+    {
+      "action": "mute",
+      "linux_key": "KEY_MUTE",
+      "press_and_release": true,
+      "before": {
+        "volume": 12,
+        "muted": false
+      },
+      "after": {
+        "volume": 0,
+        "muted": true
+      },
+      "second_press": {
+        "volume": 12,
+        "muted": false
+      },
+      "passed": true
+    },
+    {
+      "action": "space",
+      "linux_key": "KEY_SPACE",
+      "press_and_release": true,
+      "input_delivery_passed": true,
+      "smarttube_toggle_passed": false,
+      "before": {
+        "state": "PAUSED",
+        "position_ms": 51256
+      },
+      "after": {
+        "state": "PAUSED",
+        "position_ms": 51256
+      }
+    },
+    {
+      "action": "right",
+      "linux_key": "KEY_RIGHT",
+      "press_and_release": true,
+      "before_position_ms": 51256,
+      "after_position_ms": 61256,
+      "passed": true
+    },
+    {
+      "action": "left",
+      "linux_key": "KEY_LEFT",
+      "press_and_release": true,
+      "before_position_ms": 61256,
+      "after_position_ms": 51256,
+      "passed": true
+    }
+  ],
+  "audio": {
+    "output_during_tests": "speaker(2)",
+    "original_volume": 12,
+    "original_muted": false,
+    "a2dp_active_device": null,
+    "speaker_takeover_observed": false,
+    "mute_test_note": "Initial immediate mute assertion after volume-down was confounded by vendor doubleVolumeDownToMute. Isolated mute/unmute checks with delays passed."
+  },
+  "reconnect": {
+    "passed": false,
+    "trigger": "App disconnect, wait four seconds, app connect",
+    "android_link": "Disconnected at TV log time 19:46:18.652, automatically reconnected/encrypted at 19:46:20.800 before app connect at 19:46:23.427",
+    "new_pair_requested_for_this_attempt": false,
+    "android_hid_state_after": 2,
+    "ditoo_screen_after": "WAITING FOR DEVICE",
+    "subsequent_play_pause": "No new input event; SmartTube stayed paused at 51256 ms",
+    "tv_menu_disconnect_connect": "Did not recover HID readiness",
+    "diagnosis": "Link reconnection and HID readiness diverge when the TV returns during the app-off interval. Native code clears report subscriptions on disconnect and hides HID while not listening; exact missing setup exchange requires further validation.",
+    "recovery_attempts": [
+      {
+        "action": "TV Settings Disconnect / Connect",
+        "recovered": false
+      },
+      {
+        "action": "Forget Ditoo only on TV and explicitly pair LE again",
+        "recovered": false,
+        "ditoo_result": "CONNECTING, then COULD NOT CONNECT after the native HID setup timeout"
+      },
+      {
+        "action": "BluetoothGatt.refresh() for Ditoo only, then TV Settings reconnect and another explicit LE pairing",
+        "refresh_returned": true,
+        "recovered": false
+      }
+    ]
+  },
+  "second_ble_host": {
+    "attempted": true,
+    "laptop_control_result": "D-Bus NoReply timeout",
+    "tv_hid_remained_connected": true,
+    "simultaneous_host_support_verified": false
+  },
+  "limitations": [
+    "Ordinary TV pairing is not fixed.",
+    "App Disconnect/Connect recovery is not fixed.",
+    "No cold-boot TV reconnect test.",
+    "No physical Ditoo button test in this run.",
+    "TV reboot, TV Bluetooth restart, and firmware flash were not performed."
+  ],
+  "artifacts": {
+    "raw_private_logs": "Ignored target/tv-306030/ only",
+    "committed": "Curated results, probe source/build recipe, and documentation"
+  },
+  "cleanup": {
+    "temporary_tv_apk_removed": true,
+    "temporary_tv_files_removed": true,
+    "input_capture_stopped": true,
+    "laptop_ditoo_link_disconnected": true,
+    "tv_volume": 12,
+    "tv_muted": false,
+    "tv_audio_output": "speaker(2)",
+    "ditoos_tv_bond_retained": true,
+    "original_xiaomi_remote_bond_retained": true,
+    "ditoo_remote_currently_functional": false,
+    "last_ditoo_screen": "ATTENTION: COULD NOT CONNECT",
+    "firmware_and_app_unchanged": true,
+    "tv_foreground": "SmartTube BrowseActivity",
+    "active_smarttube_playback": false
+  },
+  "verification_tools": {
+    "probe_build": "javac, d8, aapt2 and apksigner completed; built APK installed and read firmware-guarded Ditoo Lua status on the real TV.",
+    "shellcheck": "passed",
+    "json_validation": "passed",
+    "git_diff_check": "passed"
+  }
+}
