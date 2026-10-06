@@ -475,6 +475,20 @@ impl BleConnection {
     }
     tokio::time::sleep(Duration::from_secs(1)).await;
     connection.refresh_stream_capacity().await;
+    // Stock BLE remembers the last binary sequence across controller sessions.
+    // Reusing it gets an ACK without executing the command. Prime that counter
+    // with a read-only volume query; the first user command then has a different
+    // sequence whether this primer was executed or deduplicated. JSON clock
+    // initialization uses a separate path and does not reset this counter.
+    connection
+      .send(
+        &Packet {
+          command: crate::protocol::command::Command::GetVolume,
+          payload: Vec::new(),
+        },
+        None,
+      )
+      .await?;
     log::info!("Connected via BLE GATT (device clock synchronized)");
     Ok(connection)
   }
