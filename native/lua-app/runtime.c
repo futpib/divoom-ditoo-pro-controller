@@ -2,6 +2,8 @@
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
+#include "lstate.h"
+#include "lmem.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <setjmp.h>
@@ -663,6 +665,32 @@ static const char *runtime_load_saved(void) {
     return NULL;
 }
 
+static int lazy_module(lua_State *L) {
+    if(peripheral_lazy_module(L)) return 1;
+    const char *name=lua_tostring(L,2);if(!name) return 0;
+    static const luaL_Reg assets[]={{"count",asset_count},{"info",asset_info},{"image",asset_image},{"glyph",asset_glyph},{NULL,NULL}};
+    static const luaL_Reg drawing[] = {{"clear",clear},{"pixel",setpixel},{"get",getpixel},
+        {"line",line},{"rect",rect},{"blit",blit},{"text",text},{"present",present},{"frame",frame},
+        {"image",draw_image},{"glyph",draw_glyph},{NULL,NULL}};
+    static const luaL_Reg timing[] = {{"millis",ticks},{"calendar",calendar},{NULL,NULL}};
+    static const luaL_Reg timers[] = {{"after",after},{"every",every},{"cancel",untimer},{NULL,NULL}};
+    static const luaL_Reg keyboard[] = {{"held",held},{NULL,NULL}};
+    static const luaL_Reg device[] = {{"brightness",brightness},{"volume",volume},{"stats",stats},{"result",operation_result},{NULL,NULL}};
+    static const luaL_Reg lights[] = {{"fill",led_fill},{"pixel",led_pixel},{"frame",led_frame},
+        {"enabled",led_enable},{"present",led_present},{"claim",led_claim},{NULL,NULL}};
+    static const luaL_Reg control[] = {{"claim",claim},{"stop",stop},{"menu",app_menu},{"log",logging},{NULL,NULL}};
+    static const luaL_Reg comms[] = {{"send",send},{NULL,NULL}};
+    static const struct { const char *name;const luaL_Reg *functions; } libs[]={
+        {"display",drawing},{"time",timing},{"timer",timers},{"keys",keyboard},{"device",device},
+        {"app",control},{"comms",comms},{"lights",lights},{"assets",assets}};
+    for(unsigned i=0;i<sizeof libs/sizeof *libs;++i) if(!strcmp(name,libs[i].name)) {
+        module(L,name,libs[i].functions);lua_getglobal(L,name);
+        if(!strcmp(name,"lights")) { lua_pushinteger(L,LED_COUNT);lua_setfield(L,-2,"count"); }
+        return 1;
+    }
+    return 0;
+}
+
 static int setup(lua_State *L) {
     luaL_requiref(L,"_G",luaopen_base,1);
     /* No filesystem, dynamically loaded code, or mutable interpreter hooks. */
@@ -677,25 +705,10 @@ static int setup(lua_State *L) {
     const char *strings[] = {"format","dump","pack","unpack","packsize",NULL};
     for (int i = 0; strings[i]; ++i) remove_field(L,strings[i]);
     lua_pop(L,1);
-    static const luaL_Reg drawing[] = {{"clear",clear},{"pixel",setpixel},{"get",getpixel},
-        {"line",line},{"rect",rect},{"blit",blit},{"text",text},{"present",present},{"frame",frame},
-        {"image",draw_image},{"glyph",draw_glyph},{NULL,NULL}};
-    static const luaL_Reg assets[] = {{"count",asset_count},{"info",asset_info},
-        {"image",asset_image},{"glyph",asset_glyph},{NULL,NULL}};
-    static const luaL_Reg timing[] = {{"millis",ticks},{"calendar",calendar},{NULL,NULL}};
-    static const luaL_Reg timers[] = {{"after",after},{"every",every},{"cancel",untimer},{NULL,NULL}};
-    static const luaL_Reg keyboard[] = {{"held",held},{NULL,NULL}};
-    static const luaL_Reg device[] = {{"brightness",brightness},{"volume",volume},{"stats",stats},{NULL,NULL}};
-    static const luaL_Reg lights[] = {{"fill",led_fill},{"pixel",led_pixel},{"frame",led_frame},
-        {"enabled",led_enable},{"present",led_present},{"claim",led_claim},{NULL,NULL}};
-    static const luaL_Reg control[] = {{"claim",claim},{"stop",stop},{"menu",app_menu},{"log",logging},{NULL,NULL}};
-    static const luaL_Reg comms[] = {{"send",send},{NULL,NULL}};
-    module(L,"display",drawing); module(L,"time",timing); module(L,"timer",timers);
-    module(L,"keys",keyboard); module(L,"device",device); module(L,"app",control); module(L,"comms",comms);
-    module(L,"lights",lights);
-    module(L,"assets",assets);
-    peripherals_modules(L);
-    lua_getglobal(L,"lights"); lua_pushinteger(L,LED_COUNT); lua_setfield(L,-2,"count"); lua_pop(L,1);
+    lua_pushglobaltable(L);lua_createtable(L,0,2);
+    lua_pushcfunction(L,lazy_module);lua_setfield(L,-2,"__index");
+    lua_pushliteral(L,"native globals");lua_setfield(L,-2,"__metatable");
+    lua_setmetatable(L,-2);lua_pop(L,1);
     lua_pushcfunction(L,brightness); lua_setglobal(L,"brightness");
     lua_pushcfunction(L,volume); lua_setglobal(L,"volume");
     lua_pushcfunction(L,logging); lua_setglobal(L,"print");
@@ -725,6 +738,13 @@ static void scalar(lua_State *L) {
     else if (lua_isstring(L,-1)) result(lua_tostring(L,-1));
     else result("non-scalar result");
 }
+/* The sandbox has no debugger. Keep source lines for errors, but discard the
+ * compiler's local-variable records and upvalue names before executing code. */
+static void release_debug_names(lua_State *L,Proto *p) {
+    luaM_freearray(L,p->locvars,p->sizelocvars);p->locvars=NULL;p->sizelocvars=0;
+    for(int i=0;i<p->sizeupvalues;++i) p->upvalues[i].name=NULL;
+    for(int i=0;i<p->sizep;++i) release_debug_names(L,p->p[i]);
+}
 static void launch(void) {
     app.used = app.peak = app.frames = app.callbacks = app.dropped = app.steps = 0;
     app.outbox_size = 0; app.app_ref = 0; app.last_tick = stock_ticks();
@@ -748,6 +768,7 @@ static void launch(void) {
     /* The compiled function owns its strings; source bytes are no longer read. */
     source_free(app.source); app.source = NULL;
     if (loaded) abort_script(lua_tostring(app.L,-1));
+    release_debug_names(app.L,((const LClosure *)lua_topointer(app.L,-1))->p);
     /* Parse before creating API tables, then reclaim compiler temporaries.
      * Neither the source buffer nor parser scratch needs to coexist with them. */
     lua_gc(app.L,LUA_GCCOLLECT);

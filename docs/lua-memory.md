@@ -4,6 +4,25 @@ Firmware 306030 accepts up to 16,384 source bytes with a 49,152-byte Lua arena.
 It retains the allocator and streaming-parser improvements introduced in
 306023. UI helpers remain ordinary Lua modules bundled on the host.
 
+## Lua API and compiler metadata (306039)
+
+Native API tables are created on first ordinary global access and cached for
+that VM. For example, a clock does not allocate the Bluetooth or microphone API
+tables. `rawget(_G, 'keyboard')` and `pairs(_G)` do not discover an API before its
+first access; use `keyboard` normally. The global metatable is protected.
+
+After compilation, the runtime frees local-variable debug records and upvalue
+names, then collects their otherwise unused strings. Bytecode, closure captures
+and source line information remain intact, including line numbers in errors.
+The TV app separates rendering from its update callback to reduce temporary
+compiler allocations. Host tests cover nested captured values and error lines.
+
+The 48 KiB Lua cap, 24 KiB native reserve, source size and execution budgets are
+unchanged. Configured HID profiles use a small native allocation while enabled;
+pending configuration copies are freed on completion, cancellation, timeout or
+Bluetooth reset. Active profiles are freed on profile disable/reset, while an
+app stop preserves the existing connection and its report format.
+
 ## Allocate only while used (306036)
 
 The app profile now reserves 4,096 bytes of globals instead of 8,192. The current

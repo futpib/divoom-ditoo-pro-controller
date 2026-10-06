@@ -2,6 +2,14 @@
 #define DITOO_BLUETOOTH_HOGP_H
 #include "bluetooth-hid.h"
 #define BT_NAME_BYTES 32
+#define HID_PROFILE_USAGES 16
+struct hid_profile {
+    unsigned char name_size,keys,media,wake;
+    uint16_t appearance,usage[HID_PROFILE_USAGES*2];
+    char name[30];
+};
+unsigned runtime_hogp_configure(const struct hid_profile *);
+unsigned runtime_hogp_profile_equal(const struct hid_profile *);
 unsigned runtime_hogp_enabled(void);
 unsigned runtime_hogp_mode(unsigned enabled);
 void runtime_hogp_command(unsigned op,unsigned value,const unsigned char *data,unsigned epoch,unsigned generation);

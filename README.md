@@ -361,6 +361,11 @@ Firmware **306037** adds [cached Bluetooth device names](docs/lua-keyboard.md#de
 to the BLE remote app and native Saved devices menu, with `keyboard.name()` for other scripts.
 It is [verified on the TV](firmware/device-names-evidence/README.md), including saved-name reuse and HID key delivery.
 See [the TV pairing verification](firmware/ble-pairing-evidence/README.md).
+Firmware **306039** adds [Lua-defined HID profiles](docs/lua-hid.md): scripts
+choose advertised keys and Consumer usages, BLE name, appearance and wake
+behavior. Numeric input and bounded hold durations avoid new firmware patches
+for each remote action. Friendly aliases and the remote preset live in `lua/hid.lua`.
+
 Install `examples/lua/tv-keyboard.lua` with `lua install` for the BLE remote.
 Classic HID and AVRCP remain available to other scripts.
 Firmware 306030 raises the source limit to 16 KiB without raising the 48 KiB Lua
@@ -368,7 +373,8 @@ memory limit. Upgrade, then reinstall the saved app. The remote has
 Devices → Connect / Disconnect / Forget and a separate Pair new device action.
 It starts after power-on and remembers the selected host and disconnected state. Fixed controls follow the printed
 keys: lever for Play/Pause, +/− for TV volume, arrows for seeking/navigation,
-M for menus, source for Mute, and the ☀ sun key for Space. There is no button setup
+M for menus, source for Mute, and the ☀ sun key for TV Power (firmware 306039+).
+Space remains available as a Lua API or app message. There is no button setup
 or on-screen keybinding guide. Pairing and connection states appear on the
 screen; only the Ditoo and TV are needed after installation.
 See [the button guide](docs/lua-keyboard.md).

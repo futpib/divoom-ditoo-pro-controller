@@ -63,15 +63,20 @@ static read_fn original_read;
 static write_fn original_write;
 static unsigned initialized,next_generation;
 static uint16_t control_handle=0xffff;
+static const uint16_t default_keys[]={40,41,44,79,80,81,82};
+static const uint16_t default_media[]={0xcd,0xe2,0xe9,0xea,0xb5,0xb6,0xb7,0x30};
+struct profile { struct hid_profile value;unsigned map_size;unsigned char map[160],scan[31]; };
 static struct hogp {
     struct hid_status status;
     unsigned epoch,started,pair_at,pair_duration,pair_epoch,listen,phase,report,release_at;
     uint16_t handle;
-    uint8_t cccd[2],down[2],suspended,scan_length;
+    uint8_t cccd[2],down[2][2],suspended,scan_length;
+    unsigned hold_ms;
+    struct profile *profile;
     unsigned identity_pending,previous_address_mode;
     uint8_t identity[6],previous_address[6];
     unsigned setup_at,setup_size,setup_done;
-    uint8_t setup_response[80];
+    uint8_t setup_response[160];
     const unsigned char *scan_data;
     unsigned name_requested;
     struct { uint8_t address[6],type,valid,subscriptions,name_loaded;char *name; } bonds[16];
@@ -80,6 +85,7 @@ static void release(void) {
     struct hogp *old=ble;next_generation=old->status.generation+1;
     ble=NULL;
     for(unsigned i=0;i<16;++i) stock_free(old->bonds[i].name);
+    stock_free(old->profile);
     stock_free(old);
 }
 static const unsigned char remote_adv[]={2,1,6,3,3,0x12,0x18,3,0x19,0x80,1};
@@ -87,6 +93,61 @@ static const unsigned char control_adv[]={2,1,6,3,3,0,0xab};
 static const unsigned char remote_name[]={17,9,'D','i','t','o','o',' ','B','L','E',' ','R','e','m','o','t','e'};
 static unsigned word(const unsigned char *p) { return p[0]|(p[1]<<8); }
 static unsigned age(unsigned t) { return stock_ticks()-t; }
+static unsigned report_size(unsigned report) {
+    if(!ble->profile) return 1;
+    return ((report ? ble->profile->value.media : ble->profile->value.keys)+7)/8;
+}
+static void advertise_profile(void) {
+    unsigned char data[sizeof remote_adv];memcpy(data,remote_adv,sizeof data);
+    unsigned appearance=ble->profile ? ble->profile->value.appearance : 0x180;
+    data[sizeof data-2]=appearance;data[sizeof data-1]=appearance>>8;
+    stock_le_adv_data(sizeof data,data);
+    stock_le_scan_data(ble->profile ? ble->profile->value.name_size+2U : sizeof remote_name,
+                      ble->profile ? ble->profile->scan : remote_name);
+}
+unsigned runtime_hogp_profile_equal(const struct hid_profile *p) {
+    unsigned irq=runtime_irq_save(),same=0;
+    if(ble && ble->profile) same=!memcmp(p,&ble->profile->value,sizeof *p);
+    else same=p->name_size==sizeof remote_name-2 && !memcmp(p->name,remote_name+2,p->name_size) &&
+        p->appearance==0x180 && p->wake==1 && p->keys==7 && p->media==8 &&
+        !memcmp(p->usage,default_keys,sizeof default_keys) && !memcmp(p->usage+16,default_media,sizeof default_media);
+    runtime_irq_restore(irq);return same;
+}
+unsigned runtime_hogp_configure(const struct hid_profile *p) {
+    if(!ble || !ble->status.enabled || !p->name_size || p->name_size>29 || p->wake>1 ||
+            !p->keys || p->keys>16 || !p->media || p->media>16) return 0;
+    for(unsigned i=0;i<p->name_size;++i) if((unsigned char)p->name[i]<32 || p->name[i]==127) return 0;
+    for(unsigned report=0;report<2;++report) for(unsigned i=0;i<(report ? p->media : p->keys);++i) {
+        unsigned v=p->usage[report*16+i];if(!v || (!report && (v<4 || v>231))) return 0;
+        for(unsigned j=0;j<i;++j) if(p->usage[report*16+j]==v) return 0;
+    }
+    if(runtime_hogp_profile_equal(p)) return 1;
+    if(ble->handle!=0xffff || stock_free_heap()<sizeof(struct profile)+32+24576) return 0;
+    struct profile *next=stock_alloc(sizeof *next);if(!next) return 0;
+    memset(next,0,sizeof *next);next->value=*p;
+    unsigned char *out=next->map;
+    for(unsigned report=0;report<2;++report) {
+        const unsigned char key_head[]={5,1,9,6,0xa1,1,0x85,1,5,7};
+        const unsigned char media_head[]={5,12,9,1,0xa1,1,0x85,2};
+        unsigned n=report ? sizeof media_head : sizeof key_head;
+        memcpy(out,report ? media_head : key_head,n);out+=n;
+        unsigned count=report ? p->media : p->keys;
+        for(unsigned i=0;i<count;++i) {
+            unsigned value=p->usage[report*16+i];*out++=value>255 ? 0x0a : 9;*out++=value;
+            if(value>255) *out++=value>>8;
+        }
+        const unsigned char tail[]={0x15,0,0x25,1,0x75,1,0x95,count,0x81,2};
+        memcpy(out,tail,sizeof tail);out+=sizeof tail;
+        if(count%8) { *out++=0x95;*out++=8-count%8;*out++=0x81;*out++=3; }
+        *out++=0xc0;
+    }
+    next->map_size=out-next->map;next->scan[0]=p->name_size+1;next->scan[1]=9;
+    memcpy(next->scan+2,p->name,p->name_size);
+    stock_le_adv_enable(0);
+    struct profile *old=ble->profile;ble->profile=next;advertise_profile();stock_free(old);
+    if(!ble->identity_pending) stock_le_adv_enable(1);
+    return 1;
+}
 static void error(unsigned code) {
     ble->status.error=code;++ble->status.errors;
     runtime_bt_trace(5,1,&code,sizeof code);
@@ -278,14 +339,18 @@ static uint16_t copy(const void *value,unsigned n,unsigned offset,unsigned char 
 }
 static uint16_t read_value(uint16_t connection,uint16_t attribute,uint16_t offset,unsigned char *out,uint16_t capacity) {
     if (attribute<0x20) {
-        if (attribute==3 && runtime_hogp_enabled()) return copy(remote_name+2,sizeof remote_name-2,offset,out,capacity);
-        if (attribute==5 && runtime_hogp_enabled()) { const unsigned char a[]={0x80,1};return copy(a,2,offset,out,capacity); }
+        if (attribute==3 && runtime_hogp_enabled()) return copy(ble->profile ? (const unsigned char *)ble->profile->value.name : remote_name+2,ble->profile ? ble->profile->value.name_size : sizeof remote_name-2,offset,out,capacity);
+        if (attribute==5 && runtime_hogp_enabled()) { unsigned appearance=ble->profile ? ble->profile->value.appearance : 0x180;const unsigned char a[]={appearance,appearance>>8};return copy(a,2,offset,out,capacity); }
         return original_read(connection,attribute,offset,out,capacity);
     }
+    if(attribute==0x24) return copy(ble && ble->profile ? ble->profile->map : hogp_default_map,
+        ble && ble->profile ? ble->profile->map_size : sizeof hogp_default_map,offset,out,capacity);
+    if(attribute==0x22) { const unsigned char info[]={0x11,1,0,2 | (ble && ble->profile ? ble->profile->value.wake : 1)};
+        return copy(info,sizeof info,offset,out,capacity); }
     unsigned char value[2]={0};unsigned n=1;
     if (attribute==0x32) value[0]=stock_battery_level>=7 ? 100 : stock_battery_level*100/7;
     else if (attribute==0x28 || attribute==0x2c) {
-        if (ble && connection==ble->handle) value[0]=ble->down[attribute==0x2c];
+        if (ble && connection==ble->handle) { n=report_size(attribute==0x2c);memcpy(value,ble->down[attribute==0x2c],n); }
     } else if (attribute==0x29 || attribute==0x2d) {
         n=2;if (ble && connection==ble->handle) value[0]=ble->cccd[attribute==0x2d];
     } else return 0;
@@ -308,8 +373,8 @@ static int write_value(uint16_t connection,uint16_t attribute,uint16_t transacti
     if (!allowed(connection,1)) return 8;
     if (attribute==0x26) {
         ble->suspended=!value[0];
-        if (ble->phase==1) { ble->phase=0;ble->status.busy=0;ble->down[ble->report]=0; }
-        else if (ble->phase) ble->phase=3;
+        if (ble->phase==1) { ble->phase=0;ble->status.busy=0;memset(ble->down[ble->report],0,2); }
+        else if (ble->phase && ble->phase!=3) { ble->phase=3;ble->release_at=stock_ticks(); }
     } else {
         unsigned report=attribute==0x2d;
         unsigned mask=(ble->cccd[0] | (ble->cccd[1]<<1)) & ~(1U<<report);
@@ -356,7 +421,7 @@ void runtime_hogp_event(unsigned type,unsigned channel,unsigned char *p,unsigned
             ble->setup_size=ble->setup_done=0;
             ++ble->status.closed;ble->status.close_status=p[5];
             ble->handle=0xffff;ble->phase=0;ble->status.busy=0;
-            ble->cccd[0]=ble->cccd[1]=ble->down[0]=ble->down[1]=0;
+            ble->cccd[0]=ble->cccd[1]=0;memset(ble->down,0,sizeof ble->down);
             ble->suspended=0;ble->status.encryption_state=0;
             ble->status.state=ble->listen ? 4 : 0;++ble->status.generation;
             if (ble->listen) stock_le_adv_enable(1);
@@ -407,8 +472,7 @@ unsigned runtime_hogp_mode(unsigned enabled) {
             memcpy(&ble->scan_data,stock_hci_stack+0x4e0,sizeof ble->scan_data);
             ble->scan_length=stock_hci_stack[0x4e4];
         }
-        stock_le_adv_data(sizeof remote_adv,remote_adv);
-        stock_le_scan_data(sizeof remote_name,remote_name);
+        advertise_profile();
     } else {
         stock_le_adv_data(sizeof control_adv,control_adv);
         if (ble->scan_data && ble->scan_length<=31) stock_le_scan_data(ble->scan_length,ble->scan_data);
@@ -416,12 +480,18 @@ unsigned runtime_hogp_mode(unsigned enabled) {
     return 1;
 }
 unsigned runtime_hogp_key(unsigned op,unsigned value,unsigned modifiers) {
-    static const unsigned char keys[]={40,41,44,79,80,81,82};
-    static const unsigned char media[]={0xcd,0xe2,0xe9,0xea,0xb5,0xb6,0xb7};
-    if (modifiers || (op!=HID_KEY && op!=HID_CONSUMER)) return 0;
-    const unsigned char *map=op==HID_KEY ? keys : media;
-    for (unsigned i=0;i<7;++i) if (value==map[i]) return 1U<<i;
-    return 0;
+    if (op!=HID_KEY && op!=HID_CONSUMER) return 0;
+    unsigned report=op==HID_CONSUMER;
+    unsigned irq=runtime_irq_save(),count=report ? 8 : 7,bit=0,found=0;
+    const uint16_t *map=report ? default_media : default_keys;
+    if(ble && ble->profile) { map=ble->profile->value.usage+report*16;count=report ? ble->profile->value.media : ble->profile->value.keys; }
+    for(unsigned i=0;i<count;++i) {
+        if(value==map[i]) { bit|=1U<<i;found=1; }
+        if(!report && map[i]>=0xe0 && map[i]<=0xe7 && (modifiers & (1U<<(map[i]-0xe0)))) {
+            bit|=1U<<i;modifiers&=~(1U<<(map[i]-0xe0));
+        }
+    }
+    runtime_irq_restore(irq);return found && !modifiers ? bit : 0;
 }
 void runtime_hogp_command(unsigned op,unsigned value,const unsigned char *data,unsigned epoch,unsigned generation) {
     if (!runtime_hogp_enabled()) return;
@@ -449,10 +519,14 @@ void runtime_hogp_command(unsigned op,unsigned value,const unsigned char *data,u
         return;
     }
     unsigned bit=runtime_hogp_key(op,value,data ? data[0] : 0);
-    if (generation!=ble->status.generation || ble->status.state!=2 || ble->phase || ble->suspended) { error(13);return; }
+    /* Lua profiles opt into remote wake; the legacy default permits Power.
+     * Release and cancellation deadlines remain native even during suspend. */
+    if (generation!=ble->status.generation || ble->status.state!=2 || ble->phase || (ble->suspended && !(ble->profile ? ble->profile->value.wake : op==HID_CONSUMER && value==0x30))) { error(13);return; }
     if (!bit) { error(14);return; }
     unsigned report=op==HID_CONSUMER;
-    ble->down[report]=bit;ble->report=report;ble->phase=1;ble->epoch=epoch;
+    ble->hold_ms=data ? word(data+2) : 0;if(!ble->hold_ms) ble->hold_ms=80;
+    if(ble->hold_ms>2000) { error(14);return; }
+    ble->down[report][0]=bit;ble->down[report][1]=bit>>8;ble->report=report;ble->phase=1;ble->epoch=epoch;
     ble->release_at=stock_ticks();ble->status.busy=1;
 }
 void runtime_hogp_service(unsigned epoch) {
@@ -512,21 +586,21 @@ void runtime_hogp_service(unsigned epoch) {
             error(21);disconnect();return;
         }
         if (ble->phase && epoch!=ble->epoch) {
-            if (ble->phase==1) { ble->phase=0;ble->status.busy=0;ble->down[ble->report]=0; }
-            else ble->phase=3;
+            if (ble->phase==1) { ble->phase=0;ble->status.busy=0;memset(ble->down[ble->report],0,2); }
+            else if(ble->phase!=3) { ble->phase=3;ble->release_at=stock_ticks(); }
         }
         if (ble->phase==1) {
-            unsigned rc=stock_att_notify(ble->handle,ble->report ? 0x2c : 0x28,&ble->down[ble->report],1);
+            unsigned rc=stock_att_notify(ble->handle,ble->report ? 0x2c : 0x28,ble->down[ble->report],report_size(ble->report));
             if (!rc) { ble->phase=2;ble->release_at=stock_ticks();++ble->status.sent; }
             else if (age(ble->release_at)>=1000) {
-                error(0x700+rc);ble->phase=0;ble->status.busy=0;ble->down[ble->report]=0;
+                error(0x700+rc);ble->phase=0;ble->status.busy=0;memset(ble->down[ble->report],0,2);
             }
         }
-        if (ble->phase==2 && age(ble->release_at)>=80) ble->phase=3;
+        if (ble->phase==2 && age(ble->release_at)>=ble->hold_ms) { ble->phase=3;ble->release_at=stock_ticks(); }
         if (ble->phase==3) {
-            const unsigned char zero=0;
-            if (!stock_att_notify(ble->handle,ble->report ? 0x2c : 0x28,&zero,1)) {
-                ble->down[ble->report]=0;ble->phase=0;ble->status.busy=0;++ble->status.released;
+            const unsigned char zero[2]={0};
+            if (!stock_att_notify(ble->handle,ble->report ? 0x2c : 0x28,zero,report_size(ble->report))) {
+                memset(ble->down[ble->report],0,2);ble->phase=0;ble->status.busy=0;++ble->status.released;
             } else if (age(ble->release_at)>=1000) { error(10);disconnect(); }
         }
         name_service();

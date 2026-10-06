@@ -223,7 +223,7 @@ public class Control extends BroadcastReceiver {
         int version = (f[7] & 255) | ((f[8] & 255) << 8) |
                       ((f[9] & 255) << 16) | ((f[10] & 255) << 24);
         Log.i("DitooTVControl", "firmware=" + version);
-        if (version != 306035 && version != 306036 && version != 306037) {
+        if (version != 306035 && version != 306036 && version != 306037 && version != 306038 && version != 306039) {
           finish("wrong firmware=" + version);
           return;
         }

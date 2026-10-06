@@ -1,7 +1,7 @@
 #ifndef DITOO_BLUETOOTH_HID_H
 #define DITOO_BLUETOOTH_HID_H
 #include <stdint.h>
-enum { HID_CONNECT=1, HID_DISCONNECT, HID_KEY, HID_CONSUMER, HID_LISTEN, HID_PAIR, HID_FORGET, HID_MODE };
+enum { HID_CONNECT=1, HID_DISCONNECT, HID_KEY, HID_CONSUMER, HID_LISTEN, HID_PAIR, HID_FORGET, HID_MODE, HID_CONFIGURE };
 struct hid_status {
     unsigned enabled, state, generation, sent, released, errors, error, busy;
     unsigned char peer[6];

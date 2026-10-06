@@ -4,7 +4,8 @@
 #include "bluetooth-hogp.c"
 static unsigned allocated,fail_alloc;
 static unsigned clock_ms,confirmations,disconnects,notifications,notify_rc,encrypted,paired,adv,forgotten;
-static unsigned char connection[0x500],second[0x500],last_report;
+static unsigned char connection[0x500],second[0x500];
+static unsigned last_report,last_size;
 static unsigned last_attribute,last_connection,forwarded;
 static unsigned setup_sent,setup_busy,setup_rc;
 static unsigned char address[]={0x84,0x5c,0xf3,0xef,0x87,0x78};
@@ -65,13 +66,13 @@ void stock_att_set_db(const unsigned char *p) { selected_db=p; }
 uint16_t stock_att_request(void *c,unsigned char *p,uint16_t n,unsigned char *r) {
     (void)c;
     if (selected_db==hogp_database && n==3 && p[0]==0x0a && p[1]==0x24) {
-        memset(r,0xa5,77);r[0]=0x0b;return 77;
+        r[0]=0x0b;return 1+read_value(4,0x24,0,r+1,159);
     }
     return selected_db==hogp_database ? 1 : 2;
 }
 unsigned stock_att_can_send(unsigned handle) { assert(handle==4);return !setup_busy; }
 unsigned stock_att_send(unsigned handle,unsigned cid,const void *p,unsigned n) {
-    assert(handle==4 && cid==4 && n==77 && ((const unsigned char *)p)[0]==0x0b);
+    assert(handle==4 && cid==4 && n==75 && ((const unsigned char *)p)[0]==0x0b);
     if (!setup_rc) ++setup_sent;
     return setup_rc;
 }
@@ -99,7 +100,7 @@ void stock_le_delete_bond(unsigned type,const unsigned char *a) { assert(!type &
 void stock_sm_confirm(unsigned handle) { assert(handle==4);++confirmations; }
 unsigned stock_att_notify(unsigned handle,unsigned attribute,const void *data,unsigned n) {
     last_connection=handle;last_attribute=attribute;
-    if (!notify_rc) { assert(n==1);last_report=*(const unsigned char *)data;++notifications; }
+    if (!notify_rc) { assert(n==1 || n==2);last_size=n;last_report=((const unsigned char *)data)[0];if(n==2)last_report|=((const unsigned char *)data)[1]<<8;++notifications; }
     return notify_rc;
 }
 void stock_le_adv_data(unsigned n,const unsigned char *p) { assert(n>0 && n<=31 && p); }
@@ -150,7 +151,51 @@ static void name_value(const char *value,unsigned size) {
     unsigned char packet[128]={0xa5,0,4,0,3,0,size,0};assert(size<=sizeof packet-8);
     memcpy(packet+8,value,size);gatt.callback(4,0,packet,size+8);
 }
+static void report_map(unsigned expected_inputs) {
+    /* Decode the generated wire descriptor independently of the report sender.
+     * Every advertised bit must select the same usage, including Power bit 7. */
+    unsigned char buffer[160];const unsigned char *map=NULL;unsigned length=0,wake=0;
+    for(unsigned at=1;at+8<=sizeof hogp_database;) {
+        unsigned n=word(hogp_database+at);if(!n) break;
+        assert(n>=8 && at+n<=sizeof hogp_database);
+        unsigned handle=word(hogp_database+at+4);
+        if(handle==0x24) { assert(n==8 && (word(hogp_database+at+2)&0x100));map=buffer;length=read_value(4,0x24,0,buffer,sizeof buffer); }
+        if(handle==0x22) { unsigned char info[4];assert(n==8 && read_value(4,0x22,0,info,sizeof info)==4);wake=info[3]; }
+        at+=n;
+    }
+    assert(map && wake==3);
+    unsigned page=0,id=0,size=0,count=0,usage[16],used=0,bits[3]={0},inputs=0,power=0;
+    for(unsigned at=0;at<length;) {
+        unsigned tag=map[at++],n=tag&3,value=0;if(n==3) n=4;
+        assert(tag!=0xfe && at+n<=length);
+        for(unsigned j=0;j<n;++j) value|=(unsigned)map[at++]<<(j*8);
+        unsigned type=(tag>>2)&3;tag>>=4;
+        if(type==1) {
+            if(tag==0) page=value;
+            else if(tag==7) size=value;
+            else if(tag==8) id=value;
+            else if(tag==9) count=value;
+        } else if(type==2 && tag==0) { assert(used<16);usage[used++]=value; }
+        else if(type==0) {
+            if(tag==8) {
+                assert(id>=1 && id<=2 && size==1 && bits[id]+count<=16);
+                if(!(value&1)) {
+                    assert(used==count && page==(id==1 ? 7U : 12U));
+                    for(unsigned j=0;j<count;++j) {
+                        assert(runtime_hogp_key(id==1 ? HID_KEY : HID_CONSUMER,usage[j],0)==(1U<<(bits[id]+j)));
+                        if(page==12 && usage[j]==0x30) { assert(bits[id]+j==7);++power; }
+                        ++inputs;
+                    }
+                }
+                bits[id]+=count;
+            }
+            used=0;
+        }
+    }
+    assert(bits[1]%8==0 && bits[2]%8==0 && inputs==expected_inputs && power==1);
+}
 int main(void) {
+    report_map(15);
     memcpy(connection+4,address,6);memset(second+4,0x77,6);
     unsigned state=7;memcpy(connection+20,&state,4);memcpy(second+20,&state,4);
     runtime_hogp_init(NULL,read_original,write_original);
@@ -192,20 +237,31 @@ int main(void) {
      * Backpressure retries are bounded, and reconnect discards stale output. */
     unsigned char request[]={0x0a,0x24,0},response[80];
     assert(!runtime_hogp_request(att_connection,request,sizeof request,response));
-    assert(selected_db==original_db && ble->setup_size==77);
+    assert(selected_db==original_db && ble->setup_size==75);
     memset(response,0,sizeof response);
     clock_ms+=999;runtime_hogp_service(1);assert(!setup_sent);
     setup_busy=1;++clock_ms;runtime_hogp_service(1);assert(!setup_sent);
     setup_busy=0;setup_rc=0x57;runtime_hogp_service(1);assert(!setup_sent && ble->setup_size);
     setup_rc=0;runtime_hogp_service(1);assert(setup_sent==1 && !ble->setup_size);
-    assert(runtime_hogp_request(att_connection,request,sizeof request,response)==77);
-    const unsigned usages[]={40,41,44,79,80,81,82,0xcd,0xe2,0xe9,0xea,0xb5,0xb6,0xb7};
-    for (unsigned i=0;i<14;++i) {
+    assert(runtime_hogp_request(att_connection,request,sizeof request,response)==75);
+    const unsigned usages[]={40,41,44,79,80,81,82,0xcd,0xe2,0xe9,0xea,0xb5,0xb6,0xb7,0x30};
+    for (unsigned i=0;i<15;++i) {
         key(i<7 ? HID_KEY : HID_CONSUMER,usages[i]);
-        assert(last_report==(1U<<(i%7)) && last_attribute==(i<7 ? 0x28U : 0x2cU));
+        assert(last_report==(1U<<(i<7 ? i : i-7)) && last_attribute==(i<7 ? 0x28U : 0x2cU));
         assert(ble->status.busy);clock_ms+=80;runtime_hogp_service(1);
         assert(!last_report && !ble->status.busy);
     }
+    /* A suspended host can receive Power to wake, with a bounded release.
+     * Suspending still blocks ordinary keys and no stale job can wake it. */
+    unsigned char suspend=0,resume=1;
+    assert(!write_value(4,0x26,0,0,&suspend,1) && ble->suspended);
+    unsigned before_wake=ble->status.sent;
+    key(HID_CONSUMER,0xcd);assert(ble->status.sent==before_wake && !ble->phase);
+    runtime_hogp_command(HID_CONSUMER,0x30,NULL,1,ble->status.generation-1);
+    assert(!ble->phase && ble->status.sent==before_wake);
+    key(HID_CONSUMER,0x30);assert(last_report==0x80 && ble->phase==2);
+    runtime_hogp_service(2);assert(!last_report && !ble->status.busy);
+    assert(!write_value(4,0x26,0,0,&resume,1) && !ble->suspended);
     unsigned sent=ble->status.sent;key(HID_KEY,4);assert(ble->status.sent==sent && ble->status.error==14);
     assert(!runtime_hogp_key(HID_KEY,44,1));
     runtime_hogp_command(HID_KEY,44,target,1,ble->status.generation-1);assert(ble->status.sent==sent);
@@ -216,7 +272,7 @@ int main(void) {
     clock_ms+=80;runtime_hogp_service(1);
     key(HID_KEY,44);runtime_hogp_service(2);assert(!last_report && !ble->status.busy);
     key(HID_CONSUMER,0xcd);notify_rc=0x57;clock_ms+=80;runtime_hogp_service(1);assert(ble->status.busy);
-    clock_ms+=920;runtime_hogp_service(1);assert(disconnects==1 && ble->status.state==3);
+    clock_ms+=1000;runtime_hogp_service(1);assert(disconnects==1 && ble->status.state==3);
     closed();notify_rc=0;assert(ble->status.state==0);
     reverse(target,address);runtime_hogp_command(HID_CONNECT,0,target,1,0);subscribe(4);
     assert(ble->status.state==2 && confirmations==1); /* Bond reuse needs no new Just Works. */
@@ -334,5 +390,46 @@ int main(void) {
     key(HID_DISCONNECT,0);closed();
     runtime_hogp_command(HID_FORGET,0,target,1,0);assert(!saved_name_size[0] && !runtime_hogp_name(target,0,name));
     assert(runtime_hogp_mode(0));runtime_hogp_service(1);assert(!allocated);
+    /* Lua-selected usages and presentation survive app replacement, while
+     * changed profiles require a disconnected host and release all memory. */
+    paired=encrypted=1;gatt_enabled=0;
+    assert(runtime_hogp_mode(1));runtime_hogp_service(1);
+    struct hid_profile profile={.name_size=10,.keys=16,.media=16,.wake=1,.appearance=0x180,.name="Lua Remote"};
+    for(unsigned i=0;i<16;++i) { profile.usage[i]=4+i;profile.usage[16+i]=0x200+i; }
+    profile.usage[15]=224;profile.usage[16+7]=0x30;
+    assert(runtime_hogp_configure(&profile) && runtime_hogp_profile_equal(&profile));
+    unsigned owned=allocated;assert(runtime_hogp_configure(&profile) && allocated==owned);
+    report_map(32);
+    unsigned char value[160],partial[160];
+    unsigned size=read_value(4,0x24,0,value,sizeof value);
+    assert(size<=sizeof value && read_value(4,0x24,size,partial,sizeof partial)==0);
+    for(unsigned i=0;i<size;i+=13) assert(read_value(4,0x24,i,partial+i,13)==(size-i<13 ? size-i : 13));
+    assert(!memcmp(value,partial,size));
+    assert(read_value(4,3,4,value,sizeof value)==6 && !memcmp(value,"Remote",6));
+    struct hid_profile changed=profile;changed.keys=17;assert(!runtime_hogp_configure(&changed));
+    changed=profile;changed.usage[1]=changed.usage[0];assert(!runtime_hogp_configure(&changed));
+    changed=profile;changed.name[0]='X';fail_alloc=1;assert(!runtime_hogp_configure(&changed));fail_alloc=0;
+    assert(runtime_hogp_profile_equal(&profile) && allocated==owned);
+    runtime_hogp_command(HID_CONNECT,0,target,1,0);subscribe(4);
+    assert(runtime_hogp_configure(&profile) && !runtime_hogp_configure(&changed));
+    unsigned char hold[16]={1,0,0xd0,7};
+    runtime_hogp_command(HID_KEY,4,hold,1,ble->status.generation);runtime_hogp_service(1);
+    assert(last_report==0x8001 && last_size==2);
+    clock_ms+=1999;runtime_hogp_service(1);assert(last_report==0x8001);
+    runtime_hogp_service(2);assert(!last_report && !ble->phase);
+    hold[0]=0;hold[2]=0xf4;hold[3]=1;
+    runtime_hogp_command(HID_CONSUMER,0x20f,hold,1,ble->status.generation);runtime_hogp_service(1);
+    assert(last_report==0x8000 && read_value(4,0x2c,0,value,sizeof value)==2 && value[1]==0x80);
+    clock_ms+=499;runtime_hogp_service(1);assert(last_report==0x8000);
+    ++clock_ms;runtime_hogp_service(1);assert(!last_report && !ble->phase);
+    hold[2]=0xd1;hold[3]=7;
+    runtime_hogp_command(HID_CONSUMER,0x20f,hold,1,ble->status.generation);assert(!ble->phase);
+    key(HID_DISCONNECT,0);closed();
+    profile.wake=0;assert(runtime_hogp_configure(&profile));
+    runtime_hogp_command(HID_CONNECT,0,target,1,0);subscribe(4);
+    assert(!write_value(4,0x26,0,0,&suspend,1));key(HID_CONSUMER,0x30);assert(!ble->phase);
+    key(HID_DISCONNECT,0);closed();
+    assert(runtime_hogp_mode(0));runtime_hogp_service(1);assert(!allocated);
+    assert(!runtime_hogp_key(HID_KEY,4,0));
     puts("HOGP: peer/security gates, reports, bond reuse, name lookup/cache/lifecycle, failure isolation and memory cleanup passed");
 }

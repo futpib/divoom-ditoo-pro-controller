@@ -62,7 +62,15 @@ static struct {
     unsigned noise_owned, noise_previous, recording, record_started, preview_owned;
     volatile unsigned recorded_bytes;
     unsigned bt_attempts, bt_last_attempt, bt_bond_since, bt_bond_pending, bt_bonds_saved, bt_forget_saved;
+    struct hid_profile *profile;
+    unsigned profile_ticket,profile_at;
 } peripheral;
+
+static struct hid_profile *take_profile(unsigned ticket) {
+    unsigned irq=runtime_irq_save();struct hid_profile *p=NULL;
+    if(peripheral.profile_ticket==ticket) { p=peripheral.profile;peripheral.profile=NULL; }
+    runtime_irq_restore(irq);return p;
+}
 
 /* Called only on the stock Bluetooth task. Unknown commands still pass through
  * its normal dispatcher/pop path; no Lua pointer enters this queue. */
@@ -71,6 +79,18 @@ void runtime_bt_peek(struct bt_command *command) {
     stock_bt_peek(command);
     if (command->op==BT_HID_COMMAND && command->length==32 && command->data) {
         unsigned values[4]; memcpy(values,command->data,16);
+        if(values[2]==HID_CONFIGURE) {
+            struct hid_profile *p=take_profile(values[3]);
+            if(p) {
+                unsigned ok=values[0]==peripheral.epoch && runtime_hogp_configure(p);
+                stock_free(p);
+                if(peripheral.ticket==values[3]) {
+                    peripheral.error=ok ? NULL : "profile change failed; disconnect first";
+                    __asm__ volatile ("" ::: "memory");peripheral.state=JOB_DONE;
+                }
+            }
+            return;
+        }
         if(values[2]==HID_MODE && preferences.bt_mode && !(preferences.bt_mode==1 && values[3]==2))
             values[3]=preferences.bt_mode==1;
         if (values[0]==peripheral.epoch)
@@ -205,6 +225,14 @@ static const char *perform_job(void) {
     case BT_HID: {
         if (!stock_bt_context) return "Bluetooth unavailable";
         struct hid_status status; runtime_hid_status(&status);
+        if(peripheral.slot==HID_CONFIGURE) {
+            if(!status.transport) return "BLE profile required";
+            if(status.state && status.state!=4 && !runtime_hogp_profile_equal(peripheral.profile))
+                return "disconnect before changing profile";
+            unsigned data[8]={peripheral.epoch,status.generation,HID_CONFIGURE,peripheral.ticket};
+            if(!stock_bt_enqueue(BT_HID_COMMAND,data,sizeof data)) return "Bluetooth queue full";
+            return NULL;
+        }
         if (peripheral.slot==HID_CONNECT || peripheral.slot==HID_LISTEN || peripheral.slot==HID_PAIR) {
             if ((status.state==1 || status.state==2) && !memcmp(status.peer,peripheral.data,6) &&
                     (!status.transport || status.address_type==peripheral.data[6])) return NULL;
@@ -390,6 +418,13 @@ void runtime_native_service(void) {
             peripheral.preview_owned = 0;
         }
     }
+    irq=runtime_irq_save();struct hid_profile *expired_profile=NULL;
+    if(peripheral.profile && (peripheral.job_epoch!=peripheral.epoch || !stock_bt_context ||
+            stock_ticks()-peripheral.profile_at>=1000)) {
+        expired_profile=peripheral.profile;peripheral.profile=NULL;
+        peripheral.error="profile request expired";peripheral.state=JOB_DONE;
+    }
+    runtime_irq_restore(irq);stock_free(expired_profile);
     if (peripheral.indicator_dirty) {
         peripheral.indicator_dirty = 0;
         stock_indicator_write(preferences.indicator_off ? 0 : peripheral.indicator_owned ? peripheral.indicator_level : peripheral.native_indicator);
@@ -403,8 +438,13 @@ void runtime_native_service(void) {
             (unsigned)(stock_ticks()-peripheral.last_job)<100) return;
     peripheral.had_job = 1; peripheral.last_job = stock_ticks();
     peripheral.state = JOB_RUNNING;
-    if (peripheral.job_epoch != peripheral.epoch) peripheral.error = "app released operation";
-    else peripheral.error = perform_job();
+    const char *error=peripheral.job_epoch!=peripheral.epoch ? "app released operation" : perform_job();
+    /* Configuration completes on the Bluetooth task. Its queue carries only a
+     * ticket: cancelling a script or resetting Bluetooth cannot strand a buffer. */
+    if(!error && peripheral.op==BT_HID && peripheral.slot==HID_CONFIGURE) return;
+    peripheral.error=error;
+    if(peripheral.op==BT_HID && peripheral.slot==HID_CONFIGURE)
+        stock_free(take_profile(peripheral.ticket));
     __asm__ volatile ("" ::: "memory");
     peripheral.state = JOB_DONE;
 }
@@ -418,19 +458,22 @@ static void flag(lua_State *L, const char *name, unsigned value) {
 static int failure(lua_State *L, const char *why) {
     lua_pushnil(L); lua_pushstring(L,why); return 2;
 }
-static int submit(lua_State *L, unsigned op, unsigned slot, unsigned value,
-                  const unsigned char *data, unsigned mask) {
-    native_budget();
-    if (!app.resident) return failure(L,"native requests require a resident app");
-    if (peripheral.cleanup || peripheral.state == JOB_QUEUED || peripheral.state == JOB_RUNNING)
-        return failure(L,"busy");
+static unsigned queue_request(unsigned op,unsigned slot,unsigned value,const unsigned char *data,unsigned mask) {
     peripheral.op = op; peripheral.slot = slot; peripheral.value = value; peripheral.mask = mask;
     if (data) memcpy(peripheral.data,data,16);
     peripheral.job_epoch = peripheral.epoch;
     peripheral.ticket = (++peripheral.sequence & 0x7fffffff) + 1;
     __asm__ volatile ("" ::: "memory");
     peripheral.state = JOB_QUEUED;
-    lua_pushinteger(L,peripheral.ticket); return 1;
+    return peripheral.ticket;
+}
+static int submit(lua_State *L, unsigned op, unsigned slot, unsigned value,
+                  const unsigned char *data, unsigned mask) {
+    native_budget();
+    if (!app.resident) return failure(L,"native requests require a resident app");
+    if (peripheral.cleanup || peripheral.state == JOB_QUEUED || peripheral.state == JOB_RUNNING)
+        return failure(L,"busy");
+    lua_pushinteger(L,queue_request(op,slot,value,data,mask));return 1;
 }
 static void config_table(lua_State *L, unsigned wake) {
     const unsigned char *d = peripheral.data;
@@ -658,6 +701,36 @@ static int keyboard_mode(lua_State *L) {
     const char *names[]={"combined","keyboard","ble-remote",NULL};
     return submit(L,BT_HID,HID_MODE,luaL_checkoption(L,1,NULL,names),NULL,0);
 }
+static int keyboard_configure(lua_State *L) {
+    native_budget();luaL_checktype(L,1,LUA_TTABLE);
+    struct hid_profile p={0};
+    lua_getfield(L,1,"name");size_t size;const char *name=luaL_checklstring(L,-1,&size);
+    luaL_argcheck(L,size>=1 && size<=29,1,"name must contain 1..29 bytes");
+    for(unsigned i=0;i<size;++i) luaL_argcheck(L,(unsigned char)name[i]>=32 && name[i]!=127,1,"invalid name");
+    memcpy(p.name,name,size);p.name_size=size;lua_pop(L,1);
+    lua_getfield(L,1,"appearance");p.appearance=integer(L,-1,0,65535);lua_pop(L,1);
+    lua_getfield(L,1,"wake");luaL_checktype(L,-1,LUA_TBOOLEAN);p.wake=lua_toboolean(L,-1);lua_pop(L,1);
+    for(unsigned report=0;report<2;++report) {
+        lua_getfield(L,1,report ? "consumer" : "keys");luaL_checktype(L,-1,LUA_TTABLE);
+        unsigned count=lua_rawlen(L,-1);luaL_argcheck(L,count>=1 && count<=16,1,"each report needs 1..16 usages");
+        if(report) p.media=count;else p.keys=count;
+        for(unsigned i=0;i<count;++i) {
+            lua_rawgeti(L,-1,i+1);unsigned v=integer(L,-1,report ? 1 : 4,report ? 65535 : 231);lua_pop(L,1);
+            for(unsigned j=0;j<i;++j) luaL_argcheck(L,p.usage[report*16+j]!=v,1,"duplicate usage");
+            p.usage[report*16+i]=v;
+        }
+        lua_pop(L,1);
+    }
+    if(!app.resident) return failure(L,"native requests require a resident app");
+    if(peripheral.profile || peripheral.cleanup || peripheral.state==JOB_QUEUED || peripheral.state==JOB_RUNNING)
+        return failure(L,"busy");
+    if(stock_free_heap()<sizeof p+32+STOCK_HEAP_RESERVE) return failure(L,"insufficient native heap");
+    struct hid_profile *copy=stock_alloc(sizeof p);if(!copy) return failure(L,"insufficient native heap");
+    *copy=p;unsigned irq=runtime_irq_save();
+    peripheral.profile=copy;peripheral.profile_at=stock_ticks();
+    unsigned ticket=queue_request(BT_HID,HID_CONFIGURE,0,NULL,0);peripheral.profile_ticket=ticket;
+    runtime_irq_restore(irq);lua_pushinteger(L,ticket);return 1;
+}
 static int settings_get(lua_State *L) {
     if (!saved.initialized || !saved.settings_size) { lua_pushnil(L);return 1; }
     lua_pushlstring(L,(const char *)saved.settings,saved.settings_size);return 1;
@@ -676,11 +749,19 @@ static int keyboard_tap(lua_State *L) {
     struct hid_status status;runtime_hid_status(&status);
     luaL_argcheck(L,!status.transport || runtime_hogp_key(HID_KEY,key,modifiers),1,"unsupported BLE remote key or modifier");
     unsigned char data[16]={0};data[0]=modifiers;
+    unsigned ms=lua_isnoneornil(L,3) ? 0 : integer(L,3,10,2000);data[2]=ms;data[3]=ms>>8;
     return submit(L,BT_HID,HID_KEY,key,data,0);
 }
+static int keyboard_consumer(lua_State *L) {
+    unsigned usage=integer(L,1,1,65535),ms=lua_isnoneornil(L,2) ? 0 : integer(L,2,10,2000);
+    struct hid_status s;runtime_hid_status(&s);
+    luaL_argcheck(L,s.transport ? runtime_hogp_key(HID_CONSUMER,usage,0)!=0 : usage<=1023,1,"usage is not advertised by this profile");
+    unsigned char data[16]={0};data[2]=ms;data[3]=ms>>8;
+    return submit(L,BT_HID,HID_CONSUMER,usage,data,0);
+}
 static int keyboard_media(lua_State *L) {
-    const char *names[]={"play_pause","mute","volume_up","volume_down","next","previous","stop",NULL};
-    static const unsigned usages[]={0xcd,0xe2,0xe9,0xea,0xb5,0xb6,0xb7};
+    const char *names[]={"play_pause","mute","volume_up","volume_down","next","previous","stop","power",NULL};
+    static const unsigned usages[]={0xcd,0xe2,0xe9,0xea,0xb5,0xb6,0xb7,0x30};
     unsigned char data[16]={0};
     return submit(L,BT_HID,HID_CONSUMER,usages[luaL_checkoption(L,1,NULL,names)],data,0);
 }
@@ -738,16 +819,16 @@ static int bt_status(lua_State *L) {
     }
     return 1;
 }
-static void peripherals_modules(lua_State *L) {
+/* Native API tables are cached on first access and reclaimed with the VM. */
+static int peripheral_lazy_module(lua_State *L) {
+    const char *name=lua_tostring(L,2);if(!name) return 0;
     static const luaL_Reg storage[]={{"get",settings_get},{"set",settings_set},{NULL,NULL}};
-    luaL_newlib(L,storage);lua_setglobal(L,"storage");
     static const luaL_Reg keyboard[]={{"connect",keyboard_connect},{"listen",keyboard_listen},{"disconnect",keyboard_disconnect},
         {"pair",keyboard_pair},{"forget",keyboard_forget},{"bonds",keyboard_bonds},{"mode",keyboard_mode},
-        {"tap",keyboard_tap},{"media",keyboard_media},{"status",keyboard_status},{"name",keyboard_name},{NULL,NULL}};
-    luaL_newlib(L,keyboard);lua_setglobal(L,"keyboard");
+        {"configure",keyboard_configure},{"tap",keyboard_tap},{"consumer",keyboard_consumer},
+        {"media",keyboard_media},{"status",keyboard_status},{"name",keyboard_name},{NULL,NULL}};
     static const luaL_Reg bluetooth[] = {{"status",bt_status},{"connect_media",bt_connect},
         {"disconnect_media",bt_disconnect},{"media",bt_media},{"mute",bt_mute},{NULL,NULL}};
-    luaL_newlib(L,bluetooth); lua_setglobal(L,"bluetooth");
     static const luaL_Reg power[] = {{"battery",battery},{"indicator",indicator},
         {"get_schedule",get_wake},{"set_schedule",set_wake},{NULL,NULL}};
     static const luaL_Reg alarms[] = {{"get",get_alarm},{"set",set_alarm},{"status",alarm_status},
@@ -757,6 +838,10 @@ static void peripherals_modules(lua_State *L) {
         {"stop",audio_stop},{"status",audio_status},{"memo_play",record_play},{"memo_delete",record_delete},{NULL,NULL}};
     static const luaL_Reg mic[] = {{"noise",noise_enable},{"level",noise_level},
         {"record",record_start},{"stop",record_stop},{NULL,NULL}};
-    module(L,"power",power); module(L,"alarm",alarms); module(L,"audio",audio); module(L,"microphone",mic);
-    lua_getglobal(L,"device"); lua_pushcfunction(L,operation_result); lua_setfield(L,-2,"result"); lua_pop(L,1);
+    static const struct { const char *name;const luaL_Reg *functions; } libs[]={
+        {"keyboard",keyboard},{"storage",storage},{"bluetooth",bluetooth},{"power",power},{"alarm",alarms},{"audio",audio},{"microphone",mic}};
+    for(unsigned i=0;i<sizeof libs/sizeof *libs;++i) if(!strcmp(name,libs[i].name)) {
+        module(L,name,libs[i].functions);lua_getglobal(L,name);return 1;
+    }
+    return 0;
 }

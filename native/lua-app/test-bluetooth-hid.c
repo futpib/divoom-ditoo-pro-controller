@@ -133,6 +133,16 @@ int main(void) {
     assert(sent_size==4 && sent[1]==2 && sent[2]==0xcd);
     event(1,6,&hid.tx[1].packet);runtime_hid_service(2); /* Lua stopped or failed. */
     assert(sent[2]==0 && hid.status.released==2);
+    connected();unsigned char hold[16]={0,0,0xd0,7};
+    runtime_hid_command(HID_CONSUMER,0x224,hold,1,hid.status.generation);
+    assert(sent[2]==0x24 && sent[3]==2);event(1,6,&hid.tx[1].packet);n=sends;
+    clock_ms+=1999;runtime_hid_service(1);assert(sends==n && hid.down);
+    ++clock_ms;runtime_hid_service(1);assert(sends==n+1 && !hid.down);
+    event(1,6,&hid.tx[1].packet);
+    runtime_hid_command(HID_KEY,44,hold,1,hid.status.generation);event(1,6,&hid.tx[1].packet);
+    runtime_hid_service(2);assert(!hid.down); /* Cancellation shortens even a long hold. */
+    event(1,6,&hid.tx[1].packet);hold[2]=0xd1;n=sends;
+    runtime_hid_command(HID_KEY,44,hold,1,hid.status.generation);assert(sends==n && hid.status.error==14);
     connected();key(HID_CONSUMER,0xe2);n=disconnects;
     clock_ms+=1000;runtime_hid_service(1);assert(disconnects>n && !hid.active);
     connected();rc=12;key(HID_KEY,44);assert(!hid.active && !hid.down);

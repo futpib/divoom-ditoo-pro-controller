@@ -1,26 +1,28 @@
 local ui = require('../../lua/ui')
+local hid = require('../../lua/hid')
 local view = ui.screen(true)
 local screen, age, now = view.set, ui.elapsed, time.millis
 -- Stock ADC IDs: lever, source, sun, M, +, -, left, right.
 local keys = { [4] = 1, [10] = 2, [7] = 3, [0] = 4, [1] = 5, [9] = 6, [2] = 7, [3] = 8 }
 local actions =
-  { 'play_pause', 'mute', 'space', false, 'volume_up', 'volume_down', 'left', 'right' }
-local labels = { 'PLAY/PAUSE', 'MUTE', 'SPACE', '', 'VOLUME UP', 'VOLUME DOWN', 'LEFT', 'RIGHT' }
-local icons = { '>II', 'X', '_', 'M', '+', '-', '<', '>' }
+  { 'play_pause', 'mute', 'power', false, 'volume_up', 'volume_down', 'left', 'right', 'space' }
+local labels =
+  { 'PLAY/PAUSE', 'MUTE', 'POWER', '', 'VOLUME UP', 'VOLUME DOWN', 'LEFT', 'RIGHT', 'SPACE' }
+local icons = { '>II', 'X', 'PWR', 'M', '+', '-', '<', '>', '_' }
 local taps = { space = 44, left = 80, right = 79 }
 local b, bonds = {}, {}
 local peer, kind, on = nil, 'public', false
 local job, flow, pair, err, key, icon
 local step, at, retry, key_at, sent_at, shown = 0, 0, 0, 0, 0, 0
 local dirty, saving, save_at, errors = false, nil, 0, 0
+local configured = false
 local page, pos, item = nil, 1, nil
 local root = { 'DEVICES', 'PAIR NEW DEVICE', 'EXIT', 'BACK' }
 local function same(address, addr_type)
   return peer == address and kind == addr_type
 end
 local function label(address, addr_type)
-  return address
-    and ((keyboard.name and keyboard.name(address, addr_type)) or (address .. ' ' .. addr_type:upper()))
+  return address and (keyboard.name(address, addr_type) or (address .. ' ' .. addr_type:upper()))
     or 'NO SAVED DEVICE'
 end
 local function dirty_settings()
@@ -120,7 +122,7 @@ local function press(role)
     return
   end
   local action = actions[role]
-  if queue('key', taps[action] and keyboard.tap or keyboard.media, taps[action] or action) then
+  if queue('key', taps[action] and keyboard.tap or hid.media, taps[action] or action) then
     icon, shown, sent_at = role, now(), now()
   end
 end
@@ -132,6 +134,7 @@ local function progress()
     err, flow, on = err or 'COULD NOT COMPLETE', nil, false
     dirty_settings()
   elseif b.transport ~= 'ble' then
+    configured = false
     if b.state ~= 0 then
       queue('mode', keyboard.disconnect)
     elseif not b.mode_locked then
@@ -141,7 +144,11 @@ local function progress()
     end
   elseif step == 1 then
     if flow == 'connect' and b.connected and same(b.peer, b.address_type) then
-      flow = nil
+      if configured then
+        flow = nil
+      else
+        queue('profile-check', hid.remote)
+      end
     else
       queue('step', audio.source, 'bluetooth')
     end
@@ -160,6 +167,8 @@ local function progress()
       flow = nil
     elseif flow == 'forget' then
       queue('step', keyboard.forget, item.address, item.address_type)
+    elseif not configured then
+      queue('profile', hid.remote)
     elseif flow == 'pair' then
       if queue('pair', keyboard.pair) then
         step = 5
@@ -187,9 +196,55 @@ local function progress()
     end
   end
 end
+local function draw()
+  local title, hint = 'DISCONNECTED', label(peer, kind)
+  if page == 'root' then
+    title, hint = root[pos], 'REMOTE'
+    if pos == 2 and (pair or b.pairing) then
+      title = 'CANCEL PAIRING'
+    end
+  elseif page == 'devices' then
+    local bond = bonds[pos]
+    title, hint =
+      bond and 'SAVED DEVICE' or 'BACK',
+      bond and label(bond.address, bond.address_type)
+        or (#bonds == 0 and 'NO SAVED DEVICES' or 'DEVICES')
+  elseif page == 'device' or page == 'forget' then
+    hint = label(item.address, item.address_type)
+    if page == 'forget' then
+      title, hint = pos == 1 and 'CANCEL' or 'FORGET', 'FORGET ' .. hint .. '?'
+    else
+      title = pos == 1 and (active() and 'DISCONNECT' or 'CONNECT')
+        or pos == 2 and 'FORGET'
+        or 'BACK'
+    end
+  elseif err then
+    title, hint = 'ATTENTION', err
+  elseif flow then
+    title = flow == 'pair' and 'SETTING UP'
+      or flow == 'forget' and 'FORGETTING'
+      or flow == 'disconnect' and 'DISCONNECTING'
+      or 'CONNECTING'
+  elseif b.connected then
+    title, hint =
+      icon and icons[icon] or 'CONNECTED', icon and labels[icon] or label(b.peer, b.address_type)
+  elseif b.state == 1 then
+    title = pair and not b.paired and 'PAIRING' or 'CONNECTING'
+  elseif b.pairing then
+    title, hint = 'READY TO PAIR', 'SELECT DITOO BLE REMOTE'
+  elseif on and peer then
+    title = 'WAITING FOR DEVICE'
+  end
+  screen(title, hint, b.connected and 0x20ff40 or err and 0xffa030 or nil)
+  view.draw(
+    b.connected,
+    page and pos or b.pairing and b.pair_remaining_ms or nil,
+    page and count() or 120000
+  )
+end
 return {
   init = function()
-    assert(keyboard.status().transport, 'firmware 306029 required')
+    assert(keyboard.configure, 'firmware 306039 required')
     brightness(20)
     lights.fill(0)
     lights.present()
@@ -292,10 +347,14 @@ return {
       if ok ~= nil then
         local name = job.name
         job = nil
-        if not ok then
+        if name == 'profile-check' and not ok then
+          step = 2
+        elseif not ok then
           err = name == 'save' and 'COULD NOT SAVE' or 'PLEASE TRY AGAIN'
           flow, key = nil, nil
           save_at = now()
+        elseif name == 'profile' or name == 'profile-check' then
+          configured = true
         elseif name == 'save' then
           dirty = config() ~= saving
           if not dirty and err == 'COULD NOT SAVE' then
@@ -350,49 +409,6 @@ return {
     if icon and age(shown) > 700 then
       icon = nil
     end
-    local title, hint = 'DISCONNECTED', label(peer, kind)
-    if page == 'root' then
-      title, hint = root[pos], 'REMOTE'
-      if pos == 2 and (pair or b.pairing) then
-        title = 'CANCEL PAIRING'
-      end
-    elseif page == 'devices' then
-      local bond = bonds[pos]
-      title, hint =
-        bond and 'SAVED DEVICE' or 'BACK',
-        bond and label(bond.address, bond.address_type)
-          or (#bonds == 0 and 'NO SAVED DEVICES' or 'DEVICES')
-    elseif page == 'device' or page == 'forget' then
-      hint = label(item.address, item.address_type)
-      if page == 'forget' then
-        title, hint = pos == 1 and 'CANCEL' or 'FORGET', 'FORGET ' .. hint .. '?'
-      else
-        title = pos == 1 and (active() and 'DISCONNECT' or 'CONNECT')
-          or pos == 2 and 'FORGET'
-          or 'BACK'
-      end
-    elseif err then
-      title, hint = 'ATTENTION', err
-    elseif flow then
-      title = flow == 'pair' and 'SETTING UP'
-        or flow == 'forget' and 'FORGETTING'
-        or flow == 'disconnect' and 'DISCONNECTING'
-        or 'CONNECTING'
-    elseif b.connected then
-      title, hint =
-        icon and icons[icon] or 'CONNECTED', icon and labels[icon] or label(b.peer, b.address_type)
-    elseif b.state == 1 then
-      title = pair and not b.paired and 'PAIRING' or 'CONNECTING'
-    elseif b.pairing then
-      title, hint = 'READY TO PAIR', 'SELECT DITOO BLE REMOTE'
-    elseif on and peer then
-      title = 'WAITING FOR DEVICE'
-    end
-    screen(title, hint, b.connected and 0x20ff40 or err and 0xffa030 or nil)
-    view.draw(
-      b.connected,
-      page and pos or b.pairing and b.pair_remaining_ms or nil,
-      page and count() or 120000
-    )
+    draw()
   end,
 }

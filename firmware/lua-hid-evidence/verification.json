@@ -1,0 +1,165 @@
+{
+  "date_utc": "2026-10-06T22:54:54.614822+00:00",
+  "firmware": {
+    "version": 306039,
+    "sha256": "8c217c7e4eed340c0d1a9e096dd1c263dcfe3d159081c1f714771d5fdbeed1ee",
+    "bytes": 2030939
+  },
+  "app": {
+    "path": "examples/lua/tv-keyboard.lua",
+    "source_sha256": "7455adc7a84d1e675c99233821ea773615c81451f7118b52daef95c74a240046",
+    "bundle_sha256": "19cfc4628bf2dfb8e31ddeb2ac14aecfdb75112b51e5b25061e913f4b74adb1e",
+    "bundle_bytes": 10794,
+    "unused_repeat_helper_removed": true,
+    "saved_for_startup": true
+  },
+  "hardware": {
+    "transport": "ble",
+    "post_update_version": 306039,
+    "version_verified": true,
+    "chunks": 7934,
+    "transfer_seconds": 296.050209065,
+    "host": "MiTV_MOEU0 / Android 14",
+    "pairing": "Normal Settings > Remotes and accessories > Forget Ditoo > Pair accessory > Ditoo BLE Remote",
+    "cached_report_map_before_pairing_lacked_power": true,
+    "new_pairing_succeeded": true,
+    "advertised_linux_keys": [
+      "KEY_ESC",
+      "KEY_ENTER",
+      "KEY_SPACE",
+      "KEY_UP",
+      "KEY_LEFT",
+      "KEY_RIGHT",
+      "KEY_DOWN",
+      "KEY_MUTE",
+      "KEY_VOLUMEDOWN",
+      "KEY_VOLUMEUP",
+      "KEY_POWER",
+      "KEY_MENU",
+      "KEY_BACK",
+      "KEY_NEXTSONG",
+      "KEY_PLAYPAUSE",
+      "KEY_PREVIOUSSONG",
+      "KEY_STOPCD",
+      "KEY_HOMEPAGE"
+    ],
+    "power_states": [
+      "Awake",
+      "Asleep",
+      "Awake"
+    ],
+    "smarttube_states": [
+      "PLAYING",
+      "PAUSED",
+      "PLAYING"
+    ],
+    "inputs": [
+      {
+        "key": "KEY_POWER",
+        "down_and_up": true,
+        "release_after_ms": 74.222
+      },
+      {
+        "key": "KEY_POWER",
+        "down_and_up": true,
+        "release_after_ms": 75.498
+      },
+      {
+        "key": "KEY_PLAYPAUSE",
+        "down_and_up": true,
+        "release_after_ms": 62.476
+      },
+      {
+        "key": "KEY_PLAYPAUSE",
+        "down_and_up": true,
+        "release_after_ms": 75.028
+      }
+    ],
+    "audio_route": "TV speaker; no active A2DP device",
+    "final_lua_state": "active",
+    "final_lua_error": 0,
+    "final_connection": "connected",
+    "original_xiaomi_remote_retained": true,
+    "temporary_probe_removed": true,
+    "input_device_retained_after_cleanup": true,
+    "final_tv_activity": "SmartTube PlaybackActivity"
+  },
+  "scope": {
+    "method": "TV test receiver sends Lua messages over Ditoo control GATT. getevent observes actual Ditoo HID reports; dumpsys observes wakefulness and SmartTube states. ADB input is used only for Settings navigation.",
+    "android_system_modified": false,
+    "pairing_api_override": false,
+    "physical_ditoo_buttons_tested": false,
+    "deep_sleep_or_cold_power_on_tested": false,
+    "custom_name_appearance_modifiers_and_maximum_hold": "32-bit sanitizer tests; not a separate TV hardware test"
+  },
+  "checks": {
+    "native_32bit_asan_ubsan": "passed",
+    "rust_tests": 77,
+    "python_tests": 30,
+    "lua_lint": "zero warnings or errors",
+    "on_device_guards": 43,
+    "reproducible_builds": [
+      {
+        "run": "first",
+        "profile": "reflash",
+        "version": 306008,
+        "sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "probe",
+        "version": 306009,
+        "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "runtime",
+        "version": 306012,
+        "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+        "identical": true
+      },
+      {
+        "run": "first",
+        "profile": "app",
+        "version": 306039,
+        "sha256": "8c217c7e4eed340c0d1a9e096dd1c263dcfe3d159081c1f714771d5fdbeed1ee",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "reflash",
+        "version": 306008,
+        "sha256": "6cef319b7b7f2dceb56f370cf79d74b27489aca55b9f78bca1ca756f6cf9281b",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "probe",
+        "version": 306009,
+        "sha256": "4ee39062806d46095573865c9e65f36091fd50a3359897d0bcc843d46298f59e",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "runtime",
+        "version": 306012,
+        "sha256": "cfb36afbf644ddb7dbaeb90b0b50c8fcd1021fa01933c18584b44e9e48839a56",
+        "identical": true
+      },
+      {
+        "run": "different-path-second",
+        "profile": "app",
+        "version": 306039,
+        "sha256": "8c217c7e4eed340c0d1a9e096dd1c263dcfe3d159081c1f714771d5fdbeed1ee",
+        "identical": true
+      }
+    ],
+    "maximum_remote_lua_peak_bytes": 47608,
+    "maximum_named_remote_lua_peak_bytes": 47152,
+    "lua_limit_bytes": 49152,
+    "native_heap_reserve_bytes": 24576,
+    "manifest": "no drift"
+  }
+}

@@ -97,6 +97,12 @@ const DEMAND_MEMORY_SIZE: usize = 2_026_763;
 const DEVICE_NAMES_VERSION: u32 = 306037;
 const DEVICE_NAMES_SHA256: &str = "e5d2a41cf9e121fe67c74734ab2d7ffce3f1c72180ffca2f2a100ae855c00613";
 const DEVICE_NAMES_SIZE: usize = 2027979;
+const REMOTE_POWER_VERSION: u32 = 306038;
+const REMOTE_POWER_SHA256: &str = "1a4d3a4adf2e6e0cccde13b8cb61faa4c0cf661abc043bdd59fc4803d41952af";
+const REMOTE_POWER_SIZE: usize = 2028003;
+const LUA_HID_VERSION: u32 = 306039;
+const LUA_HID_SHA256: &str = "8c217c7e4eed340c0d1a9e096dd1c263dcfe3d159081c1f714771d5fdbeed1ee";
+const LUA_HID_SIZE: usize = 2030939;
 const CHUNK_SIZE: usize = 256;
 const EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -154,7 +160,9 @@ impl Image {
       BLE_JOURNAL_CACHE_SHA256 => BLE_JOURNAL_CACHE_VERSION,
       DEMAND_MEMORY_SHA256 => DEMAND_MEMORY_VERSION,
       DEVICE_NAMES_SHA256 => DEVICE_NAMES_VERSION,
-      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013/306014/306015/306016/306017/306018/306019/306020/306021/306022/306023/306024/306025/306026/306027/306028/306029/306030/306031/306032/306033/306034/306035/306036/306037 are supported".into()),
+      REMOTE_POWER_SHA256 => REMOTE_POWER_VERSION,
+      LUA_HID_SHA256 => LUA_HID_VERSION,
+      _ => return Err("Unrecognized firmware image: only pinned stock 306007, reflash probe 306008 and native memory probe 306009 and Lua runtimes 306012/306013/306014/306015/306016/306017/306018/306019/306020/306021/306022/306023/306024/306025/306026/306027/306028/306029/306030/306031/306032/306033/306034/306035/306036/306037/306038/306039 are supported".into()),
     };
     let expected_size = match version {
       LUA_VERSION => LUA_SIZE,
@@ -184,6 +192,8 @@ impl Image {
       BLE_JOURNAL_CACHE_VERSION => BLE_JOURNAL_CACHE_SIZE,
       DEMAND_MEMORY_VERSION => DEMAND_MEMORY_SIZE,
       DEVICE_NAMES_VERSION => DEVICE_NAMES_SIZE,
+      REMOTE_POWER_VERSION => REMOTE_POWER_SIZE,
+      LUA_HID_VERSION => LUA_HID_SIZE,
       _ => IMAGE_SIZE,
     };
     if bytes.len() != expected_size {
@@ -345,10 +355,10 @@ fn validate_target(
         | DEVICE_VERSION
         | BLUETOOTH_VERSION
         | MUTE_VERSION
-        | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION | MEMORY_VERSION | BLUETOOTH_TRACE_VERSION | KEYBOARD_ONLY_VERSION | ASSETS_VERSION | PERSISTENT_HID_VERSION | MENU_VERSION | BLE_REMOTE_VERSION | LARGE_APP_VERSION | BLE_PAIRING_VERSION | BLE_IDENTITY_VERSION | LUA_LOAD_BUDGET_VERSION | BLE_SUBSCRIPTION_CHECK_VERSION | BLE_JOURNAL_CACHE_VERSION | DEMAND_MEMORY_VERSION | DEVICE_NAMES_VERSION
+        | USB_VERSION | KEYBOARD_VERSION | KEYBOARD_PAIRING_VERSION | STANDALONE_VERSION | MEMORY_VERSION | BLUETOOTH_TRACE_VERSION | KEYBOARD_ONLY_VERSION | ASSETS_VERSION | PERSISTENT_HID_VERSION | MENU_VERSION | BLE_REMOTE_VERSION | LARGE_APP_VERSION | BLE_PAIRING_VERSION | BLE_IDENTITY_VERSION | LUA_LOAD_BUDGET_VERSION | BLE_SUBSCRIPTION_CHECK_VERSION | BLE_JOURNAL_CACHE_VERSION | DEMAND_MEMORY_VERSION | DEVICE_NAMES_VERSION | REMOTE_POWER_VERSION | LUA_HID_VERSION
     ) && version == VERSION)
   {
-    return Err("--restore-stock requires a supported probe device (306008 through 306037) and pinned stock 306007".into());
+    return Err("--restore-stock requires a supported probe device (306008 through 306039) and pinned stock 306007".into());
   }
   if installed / 1000 != version / 1000 {
     return Err(format!("Hardware mismatch: device {installed}, image {version}").into());
@@ -650,7 +660,9 @@ mod tests {
     assert!(validate_target(306035, VERSION, false, true).is_ok());
     assert!(validate_target(306036, VERSION, false, true).is_ok());
     assert!(validate_target(306037, VERSION, false, true).is_ok());
-    assert!(validate_target(306038, VERSION, false, true).is_err());
+    assert!(validate_target(306038, VERSION, false, true).is_ok());
+    assert!(validate_target(306039, VERSION, false, true).is_ok());
+    assert!(validate_target(306040, VERSION, false, true).is_err());
     assert!(validate_target(306007, VERSION, false, true).is_err());
     assert!(validate_target(306008, PROBE_VERSION, false, true).is_err());
     assert!(validate_target(306006, VERSION, false, false).is_ok());

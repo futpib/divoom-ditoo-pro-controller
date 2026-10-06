@@ -150,6 +150,11 @@ int main(void) {
     check("return tostring(time.calendar().year)",DONE,"2026");
     check("return io or os or package or debug or load or string.dump or string.format",DONE,"nil");
     check("return device.stats().free_heap",DONE,"100000");
+    check("assert(rawget(_G,'audio')==nil);local a=audio;assert(a==audio and rawget(_G,'audio')==a);"
+        "assert(lights.count==12 and _G[false]==nil and unknown_native_api==nil);"
+        "assert(not pcall(setmetatable,_G,{}));return type(device.result)",DONE,"function");
+    check("local function outer(x) local function inner(y) return x+y end return inner end return outer(19)(23)",DONE,"42");
+    check("local function inner() error('line preserved') end\nreturn inner()",ERROR,"[string \"app\"]:1: line preserved");
     free_heap = STARTUP_HEAP_BUDGET+STOCK_HEAP_RESERVE-1024;
     check("return 1",ERROR,"insufficient stock heap headroom");free_heap=100000;
     const char *attacks[] = {
@@ -291,6 +296,7 @@ int main(void) {
     }
     puts("Bundled modules: deduplication, lazy evaluation, cached values, lexical boundaries and UI rendering passed");
     test_keyboard_lifecycle();
+    test_keyboard_profile();
     load("return {}",1);free_heap=STOCK_HEAP_RESERVE;
     assert(!allocate(NULL,NULL,0,2048));free_heap=100000;
     app.cancel=1;service();runtime_native_service();assert(!allocations);

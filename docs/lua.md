@@ -1,6 +1,6 @@
 # Resident Lua apps
 
-Firmware **306028** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
+Firmware **306039** runs Lua 5.4.9 on the Ditoo Pro itself. Upload a clock or game
 over Bluetooth, disconnect, and it keeps running. Changing scripts does not flash
 firmware. 306014 adds independent RGB control of 12 keyboard LED positions;
 306013 remains supported for the original resident app API. The earlier one-shot [306012 runtime](lua-306012.md) remains reproducible
@@ -22,7 +22,7 @@ and does not replace the saved app. See [persistence and recovery](lua-storage.m
 
 ```sh
 # Install the runtime once; see docs/usb.md for USB permissions.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306028-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306039-lua.MVA
 
 # Save the standalone remote once; it runs after subsequent power-ons.
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
@@ -189,7 +189,7 @@ python3 scripts/build-lua-app-runtime.py
 python3 scripts/test-lua-app-runtime.py
 cargo test --locked --no-default-features
 cargo build --locked --release --no-default-features
-# Requires an already-installed 306023; stops the current app, performs no flash writes.
+# Requires an already-installed 306039; stops the current app, performs no flash writes.
 python3 scripts/check-lua-app-device.py B1:21:81:DD:B8:9B \
   --output firmware/runs/lua-app-check
 ```
@@ -213,7 +213,7 @@ To reproduce the previous 306013 image exactly, build the source at commit
 Use `ae62a69` for 306016, `95d7f6e` for 306017 and `ac82bb9` for 306018.
 Use `606eb91` to reproduce 306019, `b703bc0` for 306020 and `c79d982` for 306021.
 Use `a586981` to reproduce 306022.
-The current builder produces 306028 with the [native device menu](device-menu.md),
+The current builder produces 306039 with [Lua-defined HID profiles](lua-hid.md), the [native device menu](device-menu.md),
 [persistent keyboard connections](lua-keyboard.md#idle-links-and-reconnecting),
 [disconnect-request tracing](bluetooth-trace.md),
 [stock assets](lua-assets.md), [lower Lua memory use](lua-memory.md),
@@ -222,7 +222,7 @@ saved apps, settings,
 [native Bluetooth media connection APIs](lua-bluetooth.md). Previous images
 remain pinned.
 
-The image reserves 8 KiB of native globals below `0x2004c000`; text starts at
+The image reserves 4 KiB of native globals below `0x2004c000`; text starts at
 `0x1ca000`. From 306027, initialized data loads immediately after the aligned
 text end. The builder checks that the whole MVA, including its header and CRC,
 fits the stock Bluetooth staging capacity of `0x1f0000` bytes. Earlier images

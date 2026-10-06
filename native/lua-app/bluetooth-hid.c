@@ -101,7 +101,7 @@ static struct hid_context {
     struct psm psm[2];
     struct security security[2];
     uint16_t cid[2];
-    unsigned up[2], pending[2], active, epoch, started, phase, down, listening, outgoing;
+    unsigned up[2], pending[2], active, epoch, started, phase, down, listening, outgoing,hold_ms;
     unsigned access_owned, access_previous, pair_started, pair_duration, pair_epoch;
     unsigned le_access_owned, le_access_previous;
     struct record *hidden[8];
@@ -418,7 +418,7 @@ void runtime_hid_service(unsigned epoch) {
     }
     for (unsigned i=0;i<2;++i)
         if (hid.tx[i].busy && elapsed(hid.tx[i].started,1000)) { error(10);disconnect();return; }
-    if (hid.phase && (epoch!=hid.epoch || elapsed(hid.started,80))) hid.phase=2;
+    if (hid.phase && (epoch!=hid.epoch || elapsed(hid.started,hid.hold_ms))) hid.phase=2;
     if (hid.phase==2 && !hid.tx[1].busy) {
         unsigned char release[10]={0xa1,hid.report[1]};
         if (send(1,release,release[1]==1 ? 10 : 4)) {
@@ -490,6 +490,8 @@ void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,
     } else if (op==HID_CONSUMER && value>0 && value<=1023) {
         hid.report[1]=2;hid.report[2]=value;hid.report[3]=value>>8;
     } else { error(14);return; }
+    hid.hold_ms=data[2]|(data[3]<<8);if(!hid.hold_ms) hid.hold_ms=80;
+    if(hid.hold_ms>2000) { error(14);return; }
     hid.started=stock_ticks();hid.epoch=epoch;
     if (send(1,hid.report,hid.report[1]==1 ? 10 : 4)) {
         hid.phase=1;hid.down=1;hid.status.busy=1;++hid.status.sent;

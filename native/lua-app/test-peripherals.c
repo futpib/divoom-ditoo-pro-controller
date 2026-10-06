@@ -232,9 +232,10 @@ static unsigned tv_ops[32],tv_value,tv_last;
 static void tv_ticks(unsigned n) {
     for(unsigned i=0;i<n;++i) {
         tick();runtime_native_service();
-        if(app.state!=ACTIVE) { fprintf(stderr,"TV app failed: %s peak %u\n",app.result,app.peak);abort(); }
+        if(app.state!=ACTIVE) { fprintf(stderr,"TV app failed: %s peak %u used %u reserved %u free %u callbacks %u\n",app.result,app.peak,app.used,app.reserved,stock_free_heap(),app.callbacks);abort(); }
         if(bt_queued.op==BT_HID_COMMAND) {
             unsigned v[4];memcpy(v,bt_payload,sizeof v);tv_last=v[2];tv_value=v[3];++tv_ops[tv_last];
+            if(tv_last==HID_CONFIGURE) { struct bt_command command;runtime_bt_peek(&command); }
             if(tv_last==HID_MODE) { fake_hid_status.transport=1;fake_hid_status.keyboard_only=1; }
             if(tv_last==HID_DISCONNECT) { fake_hid_status.state=0;fake_hid_status.pairing=0; }
             if(tv_last==HID_LISTEN || tv_last==HID_CONNECT || tv_last==HID_PAIR) {
@@ -259,6 +260,7 @@ static void tv_stop(void) {
     app.cancel=1;service();runtime_native_service();assert(!allocations);
 }
 static void test_tv_keyboard(void) {
+    fake_profile_valid=0;
     char source[SOURCE_LIMIT+1];
     FILE *file=fopen("target/lua-app/runtime/tv-keyboard.bundle.lua","rb");assert(file);
     size_t n=fread(source,1,sizeof source-1,file);assert(!ferror(file));fclose(file);source[n]=0;
@@ -270,15 +272,15 @@ static void test_tv_keyboard(void) {
     memcpy(saved.settings,setting,strlen(setting));saved.settings_size=strlen(setting);
     /* The 4 KiB smaller static reservation returns this space to the native heap. */
     track_heap=1;free_heap=76000+(8192-4096);bt_queued.op=0;memset(tv_ops,0,sizeof tv_ops);
-    load(source,1);tv_ticks(100);tv_frame(0);
+    load(source,1);tv_ticks(100);fake_hid_status.state=2;tv_ticks(20);tv_frame(0);
     assert(strstr(app.result,"CONNECTED: 01:01:01:01:01:01 PUBLIC"));
     assert(!memcmp(saved.settings,"TV6|01:01:01:01:01:01|public|1",saved.settings_size));
     unsigned sent_message=tv_ops[HID_CONSUMER];
     tv_message("play_pause");assert(tv_ops[HID_CONSUMER]==sent_message+1 && tv_value==0xcd);
-    const unsigned keys[]={4,10,7,1,9,2,3},usages[]={0xcd,0xe2,44,0xe9,0xea,80,79};
+    const unsigned keys[]={4,10,7,1,9,2,3},usages[]={0xcd,0xe2,0x30,0xe9,0xea,80,79};
     for(unsigned i=0;i<7;++i) {
         clock_ms+=600;tv_key(keys[i]);assert(tv_value==usages[i]);
-        assert(tv_last==(i==2 || i>=5 ? HID_KEY : HID_CONSUMER));
+        assert(tv_last==(i>=5 ? HID_KEY : HID_CONSUMER));
         unsigned before=tv_ops[HID_KEY]+tv_ops[HID_CONSUMER];
         for(unsigned e=3;e<=5;++e) { runtime_adc_result(e<<16|keys[i]);tv_ticks(1); }
         assert(tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==before);
@@ -301,9 +303,10 @@ static void test_tv_keyboard(void) {
     tv_ticks(50);assert(strstr(app.result,"CONNECTED: 02:02:02:02:02:02 RANDOM"));
     /* Opening a menu discards a deferred action. A late connection does too. */
     fake_hid_status.state=4;tv_ticks(1);tv_key(7);tv_key(0);
-    unsigned sent=tv_ops[HID_KEY];fake_hid_status.state=2;tv_ticks(50);assert(tv_ops[HID_KEY]==sent);tv_key(0);
+    unsigned sent=tv_ops[HID_KEY]+tv_ops[HID_CONSUMER];fake_hid_status.state=2;tv_ticks(50);
+    assert(tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==sent);tv_key(0);
     fake_hid_status.state=4;tv_ticks(1);tv_key(7);tv_ticks(150);fake_hid_status.state=2;tv_ticks(50);
-    assert(tv_ops[HID_KEY]==sent);
+    assert(tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==sent);
     tv_message("disconnect");tv_ticks(200);assert(strstr(app.result,"DISCONNECTED:"));tv_frame(4);
     unsigned listens=tv_ops[HID_LISTEN];tv_key(4);tv_ticks(200);assert(tv_ops[HID_LISTEN]==listens);
     tv_stop();load(source,1);tv_ticks(200);assert(strstr(app.result,"DISCONNECTED:") && tv_ops[HID_LISTEN]==listens);
@@ -417,4 +420,43 @@ static void test_keyboard_lifecycle(void) {
     fake_hid_status=(struct hid_status){0};memset((void *)(stock_bt_manager+7),0,8*26);
     peripheral.bt_attempts=0;bt_queued.op=0;
     puts("Keyboard pairing tickets, bond listing, connection reuse, table reuse and zero-bond persistence passed");
+}
+
+static void test_keyboard_profile(void) {
+    const char *source="local t;return {init=function() t=assert(keyboard.configure({name='Lua Remote',appearance=384,wake=true,keys={4,224},consumer={48,548}})) end,"
+        "update=function() local ok,e=device.result(t);if ok~=nil then assert(ok,e);app.log('ok') end end}";
+    fake_hid_status=(struct hid_status){.transport=1};fake_profile_valid=0;bt_queue_ok=1;
+    load(source,1);assert(peripheral.profile);runtime_native_service();
+    assert(peripheral.state==JOB_RUNNING && peripheral.profile);
+    unsigned char stale[32];memcpy(stale,bt_payload,32);
+    struct bt_command command;runtime_bt_peek(&command);bt_queued.op=0;tick();
+    assert(!peripheral.profile && peripheral.state==JOB_DONE && !strcmp(app.result,"ok"));
+    assert(fake_profile.keys==2 && fake_profile.usage[17]==548);
+    tv_stop();
+    /* Reapplying the same profile preserves an active connection. */
+    fake_hid_status.state=2;load(source,1);runtime_native_service();runtime_bt_peek(&command);bt_queued.op=0;tick();
+    assert(!strcmp(app.result,"ok"));tv_stop();fake_hid_status.state=0;
+    /* A queued ticket cannot consume a later app's replacement buffer. */
+    load(source,1);runtime_native_service();memcpy(stale,bt_payload,32);tv_stop();
+    assert(!peripheral.profile);
+    load(source,1);runtime_native_service();unsigned char current[32];memcpy(current,bt_payload,32);
+    memcpy(bt_payload,stale,32);runtime_bt_peek(&command);assert(peripheral.profile && !fake_hid_status.state);
+    memcpy(bt_payload,current,32);runtime_bt_peek(&command);bt_queued.op=0;tick();
+    assert(!peripheral.profile && !strcmp(app.result,"ok"));tv_stop();
+    /* A lost/reset Bluetooth queue cannot strand the native request allocation. */
+    load(source,1);runtime_native_service();stock_bt_context=NULL;runtime_native_service();
+    assert(!peripheral.profile && peripheral.state==JOB_DONE && peripheral.error);stock_bt_context=bt_context;tv_stop();
+    load(source,1);runtime_native_service();clock_ms+=1000;runtime_native_service();
+    assert(!peripheral.profile && peripheral.state==JOB_DONE && peripheral.error);tv_stop();
+    bt_queue_ok=0;load(source,1);runtime_native_service();assert(!peripheral.profile && peripheral.error);tv_stop();bt_queue_ok=1;
+    check("return pcall(keyboard.configure,{name='X',appearance=384,wake=true,keys={4,4},consumer={48}})",DONE,"false");
+    check("return pcall(keyboard.configure,{name='X',appearance=384,wake=true,keys={},consumer={48}})",DONE,"false");
+    check("return pcall(keyboard.consumer,0)",DONE,"false");
+    check("return pcall(keyboard.tap,4,0,2001)",DONE,"false");
+    fake_hid_status.state=2;
+    request_test("local t;return {init=function() t=assert(keyboard.consumer(548,500)) end,update=function() assert(device.result(t));print('ok') end}");
+    unsigned values[4];memcpy(values,bt_payload,16);assert(values[2]==HID_CONSUMER && values[3]==548);
+    assert(bt_payload[18]==0xf4 && bt_payload[19]==1);
+    fake_hid_status=(struct hid_status){0};fake_profile_valid=0;bt_queued.op=0;
+    puts("Lua HID profile: asynchronous completion, cancellation, stale tickets, reset/expiry, validation and numeric held usages passed");
 }

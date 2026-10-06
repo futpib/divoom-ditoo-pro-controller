@@ -8,7 +8,7 @@ descriptor. Use firmware **306035** for the Android TV pairing and reconnect
 fixes. Native speaker profiles stay disabled in this mode.
 The app is designed for setup, pairing, reconnection and ordinary use on the
 Ditoo and host after one installation; see the TV limitations below.
-Bluetooth HID sends Play/Pause, Mute, Volume Up/Down, Space and Left/Right reports. AVRCP and the
+Bluetooth HID sends Play/Pause, Mute, Volume Up/Down, Power and Left/Right reports. AVRCP and the
 older `tv-remote.lua` remain available separately.
 
 Real MiTV_MOEU0 / Android 14 testing on 306035 passed ordinary **Pair accessory**
@@ -21,7 +21,7 @@ earlier failures; Android Settings and Bluetooth services have not been patched.
 
 ```sh
 # One-time setup from a computer.
-divoom-ditoo-pro-controller --transport usb firmware-update firmware/306035-lua.MVA
+divoom-ditoo-pro-controller --transport usb firmware-update firmware/306039-lua.MVA
 divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard.lua
 ```
 
@@ -37,9 +37,9 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
    select **Ditoo BLE Remote** on the TV. Accept a confirmation if shown; the
    tested Android TV completed pairing without a separate confirmation dialog.
    A blue bar shows the two-minute window. Pairing preserves existing bonds.
-5. **Connected**, a green dot, and the connected Bluetooth address identify the
-   actual host. The firmware does not expose host names; the app does not assume
-   that every connected host is a TV.
+5. **Connected**, a green dot, and the connected Bluetooth name identify the
+   actual host. Firmware 306037+ caches peer names; unknown names use the address
+   and address type as a fallback.
 
 | # | Physical control | Remote action | Stock ADC ID |
 | --- | --- | --- | --- |
@@ -49,7 +49,7 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
 | 4 | ← | Left arrow (seek or navigate) | 2 |
 | 5 | → | Right arrow (seek or navigate) | 3 |
 | 6 | M | Open/close local menu | 0 |
-| 7 | ☀ Sun key (top-right) | Space | 7 |
+| 7 | ☀ Sun key (top-right) | TV Power (306039+) | 7 |
 | 8 | Audio-source button (beside lever base) | Mute/unmute | 10 |
 
 The fixed IDs come from the [stock firmware key tables](stock-ux.md#physical-key-ids).
@@ -91,8 +91,8 @@ prompts.
 Pairing displays **Setting up**, **Ready to pair**, **Pairing**, then **Connected**
 as those conditions occur. A failed setup or expired window remains visible;
 a timeout does not silently become a request to connect the old device.
-The host appears as its full address and address type because friendly names
-are not available through the current firmware API.
+The host appears by its cached name, or by address and address type while the
+name is unknown.
 
 Each short press sends one automatically released report. Long-down, repeat and
 release events do not repeat actions. Brief symbols (`>II`, `X`, `_`, `+`, `-`, `<`,
@@ -118,7 +118,7 @@ that boot. Power cycling starts the saved remote when Settings → Autostart is 
 is only temporary and does not replace the saved app. See [storage and boot
 recovery](lua-storage.md).
 
-The developer messages `toggle`/`play_pause`, `mute`, `space`, `volume_up`,
+The developer messages `toggle`/`play_pause`, `mute`, `power`, `space`, `volume_up`,
 `volume_down`, `left`, `right`, `menu`,
 `pair`, `connect`, `listen`, `disconnect`, `status`, and
 `target XX:XX:XX:XX:XX:XX` remain available.
@@ -223,11 +223,31 @@ The wire format follows the Bluetooth SIG
 [GAP name discovery procedure](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core-62/out/en/host/generic-access-profile.html).
 Reinstall `examples/lua/tv-keyboard.lua` after upgrading to use the new labels.
 
-`keyboard.tap` supports Enter (40), Escape (41), Space (44), Right (79), Left
-(80), Down (81), and Up (82), with no modifiers. All existing `keyboard.media`
-actions work: play_pause, mute, volume_up/down, next, previous, stop. Other keys
-are rejected in this mode. The descriptor enumerates these usages explicitly,
-so it advertises no alphabetic keys, pointer, joystick or stylus.
+### Lua-defined HID and Power (306039+)
+
+The current app requires **306039** and declares its BLE HID capabilities using
+[`lua/hid.lua`](../lua/hid.lua). Keys, Consumer usages, advertised name, GAP
+appearance and wake permission are Lua data. See [Lua HID configuration](lua-hid.md)
+for numeric input, bounded holds, repetition and compatibility rules.
+
+The Sun key now sends Consumer Power (`0x0030`) with brief `PWR` feedback.
+The `power` developer message invokes the same action; `space` still sends Space.
+The Ditoo's own power control is unchanged. The app keeps its non-alphabetic
+remote descriptor and disables speaker profiles.
+
+The compatibility default (without `keyboard.configure`) has Enter (40), Escape
+(41), Space (44), Right (79), Left (80), Down (81), Up (82), and the eight legacy
+Consumer actions, including Power from 306038. The current Lua remote preset
+also advertises Consumer Home, Back and Menu; they have no physical bindings.
+
+A host can cache its old report map. When upgrading this app's capabilities,
+forget only the Ditoo accessory on the TV and pair it again through ordinary
+**Pair accessory**, with Ditoo **Pair new device** open. Later restarts using the
+same profile reuse the bond. Power is a standby/wake input; deep-sleep wake
+requires the TV to keep Bluetooth wake available.
+
+See the USB-IF [HID Usage Tables](https://www.usb.org/sites/default/files/hut1_3_0.pdf)
+and Android's [HID report cache](https://android.googlesource.com/platform/packages/modules/Bluetooth/+/refs/heads/android14-release/system/bta/hh/bta_hh_le.cc).
 
 New pairing uses the stock Security Manager's encrypted, bonded Just Works
 procedure, restricted to the Lua pairing window and selected host. This stock

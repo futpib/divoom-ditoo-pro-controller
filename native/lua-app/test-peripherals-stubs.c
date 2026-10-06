@@ -95,6 +95,15 @@ void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,un
     (void)op;(void)value;(void)data;(void)epoch;(void)generation;
 }
 static struct hid_status fake_hid_status;
+static struct hid_profile fake_profile;
+static unsigned fake_profile_valid;
+unsigned runtime_hogp_profile_equal(const struct hid_profile *p) {
+    return fake_profile_valid && !memcmp(&fake_profile,p,sizeof *p);
+}
+unsigned runtime_hogp_configure(const struct hid_profile *p) {
+    if(fake_hid_status.state==2 && !runtime_hogp_profile_equal(p)) return 0;
+    fake_profile=*p;fake_profile_valid=1;return 1;
+}
 static unsigned saved_bonds,bond_count=1;
 void runtime_hid_status(struct hid_status *s) { *s=fake_hid_status; }
 unsigned runtime_hid_preserve_link(unsigned caller) { (void)caller;return 0; }
@@ -116,5 +125,11 @@ unsigned runtime_hogp_bond(unsigned i,unsigned char *a,unsigned *type) {
     memcpy(a,fake_le_bonds[i],6);*type=fake_le_bonds[i][6];return 1;
 }
 unsigned runtime_hogp_key(unsigned op,unsigned value,unsigned modifiers) {
+    if(fake_profile_valid) {
+        unsigned report=op==HID_CONSUMER;
+        for(unsigned i=0;i<(report ? fake_profile.media : fake_profile.keys);++i)
+            if(fake_profile.usage[report*16+i]==value) return !modifiers;
+        return 0;
+    }
     return !modifiers && (op==HID_CONSUMER || value==40 || value==41 || value==44 || (value>=79 && value<=82));
 }

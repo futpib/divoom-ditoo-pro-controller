@@ -6,6 +6,10 @@ Sequence `start`/`run` steps use the same bundler. The device receives one text
 chunk and needs no filesystem, package loader, or additional firmware update.
 An installed bundle remains standalone after disconnecting the host.
 
+`lua/hid.lua` provides [HID action names, a TV profile and a repeat helper](lua-hid.md)
+for firmware 306039+. Like the UI helpers, these are ordinary Lua and unused
+functions are removed during bundling.
+
 For an app under `examples/lua/`:
 
 ```lua

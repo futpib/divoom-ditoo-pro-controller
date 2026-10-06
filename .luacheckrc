@@ -42,7 +42,9 @@ read_globals = {
   ),
   microphone = api('noise level record stop'),
   bluetooth = api('status connect_media disconnect_media media mute'),
-  keyboard = api('connect listen disconnect pair forget bonds tap media status mode'),
+  keyboard = api(
+    'connect listen disconnect pair forget bonds name configure tap consumer media status mode'
+  ),
   storage = api('get set'),
   'brightness',
   'volume',
