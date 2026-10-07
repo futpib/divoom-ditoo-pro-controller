@@ -1,0 +1,83 @@
+{
+  "firmware": 306040,
+  "sha256": "937a160b3a3e7c5129d5d2ebc9ccdcdb640b808ef2b66aab9afb34df5d186064",
+  "transport": "ble",
+  "device": "D1:21:81:DD:B8:9B",
+  "previous_version": 306039,
+  "flash": {
+    "device_update_complete": true,
+    "running_version_verified": true,
+    "transfer_seconds": 755.506552536,
+    "average_bytes_per_second": 2688.739087429445
+  },
+  "wake_trial": {
+    "candidate": "MediaTek legacy manufacturer filter",
+    "target": "0C:CD:B4:D0:0C:26",
+    "data_hex": "02010613ff460000260cd0b4cd0c0000000043524b544d",
+    "advertising_type": "connectable",
+    "interval_ms": 100,
+    "duration_ms": 3000,
+    "received_hci_advertising_reports": 10,
+    "first_report_seconds": 21.517387,
+    "last_report_seconds": 23.623385,
+    "normal_hid_reports_after": 187,
+    "app_status": {
+      "state": "active",
+      "peak_memory_bytes": 21832,
+      "instructions": 19,
+      "result": "SENT",
+      "abi": 2,
+      "memory_bytes": 20760,
+      "frames": 354,
+      "callbacks": 1062,
+      "dropped_keys": 0,
+      "held_keys": 0,
+      "generation": 2
+    },
+    "tv_woke": false,
+    "tv_result": "User reported that the TV stayed asleep."
+  },
+  "saved_app_replaced": false,
+  "adb_used": false,
+  "limitations": [
+    "Both candidate payloads were transmitted but failed to wake this TV; the rejecting condition remains unknown.",
+    "Per-bearer BlueZ disconnect timed out; explicit Device1.Disconnect released the laptop link before transmission.",
+    "Advertising cancellation and Lua failures during active transmission are host-tested; hardware testing remains pending."
+  ],
+  "device_guards": {
+    "checks": 43,
+    "passed": 43,
+    "exit_code": 0,
+    "stock_version_afterwards": true
+  },
+  "captured_payload_trial": {
+    "candidate": "Captured Xiaomi RC wake payload",
+    "target": "0C:CD:B4:D0:0C:26",
+    "source_address": "D1:21:81:DD:B8:9B",
+    "source_address_type": "random",
+    "data_hex": "02010503ff000106084d4920524303031218040d040500020a0004fe260cd0",
+    "advertising_type": "connectable",
+    "interval_ms": 100,
+    "duration_ms": 3000,
+    "received_hci_advertising_reports": 10,
+    "first_report_seconds": 22.10583,
+    "last_report_seconds": 23.583811,
+    "normal_hid_reports_after": 130,
+    "app_status": {
+      "state": "active",
+      "peak_memory_bytes": 22136,
+      "instructions": 19,
+      "result": "SENT",
+      "abi": 2,
+      "memory_bytes": 20360,
+      "frames": 479,
+      "callbacks": 1437,
+      "dropped_keys": 0,
+      "held_keys": 0,
+      "generation": 13
+    },
+    "tv_woke": false,
+    "tv_result": "User reported that the TV stayed asleep.",
+    "limitations": "Payload replay uses the Ditoo source identity and a 100 ms interval, not the stock remote identity or exact timing. The rejecting condition is unknown."
+  }
+}

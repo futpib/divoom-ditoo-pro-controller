@@ -2,7 +2,7 @@
 
 Lua constructs legacy BLE advertising data and requests a timed burst. This is
 a generic radio primitive: no Xiaomi wake packet or TV wake guarantee is built
-in. The stock remote's long-standby wake format still needs capture/verification.
+in. Replaying the captured stock-remote payload has not woken this TV.
 The existing HID `wake=true` flag retains its separate meaning.
 
 ```lua
@@ -22,6 +22,34 @@ The [complete example](../examples/lua/advertise.lua) waits five seconds before
 submitting, giving a BLE uploader time to disconnect. USB control can remain
 connected. Installing this example persistently is unnecessary; use `lua start`.
 An existing TV/HID connection also causes `busy`; the example does not close it.
+
+The experimental [TV wake app](../examples/lua/tv-wake.lua) uses the TV address
+saved by `tv-keyboard.lua` and `wake.xiaomi_rc(address)`. Start it temporarily with `lua start`; after twelve
+seconds it sends one three-second connectable burst. `SENT` means local completion,
+not confirmation that the TV woke. M returns to the native menu. It does not
+change the saved remote app or its pairing.
+
+The host-bundled [`wake.xiaomi_rc(address)`](../lua/wake.lua) helper reproduces
+the 31-byte advertisement captured from the stock Xiaomi RC while the user
+successfully woke the TV. The payload contains `MI RC`, the HID service,
+manufacturer field `03 ff 00 01`, and a vendor field whose three bytes match
+the end of the target TV address in reverse order. A later stock-remote burst
+used `03 ff 00 00` instead. See the [capture](../firmware/lua-advertising-evidence/stock-remote-capture.json).
+The Ditoo retains its own source address and uses a 100 ms interval; this
+reproduces the payload, not the stock remote's identity or exact radio timing.
+Whether another TV uses the same format or accepts Ditoo's identity is unknown.
+The user reported that this replay left the TV asleep, despite the laptop
+receiving the expected payload and the app completing successfully.
+
+The alternative `wake.mediatek(address)` helper constructs a candidate from the
+legacy manufacturer-data filter in
+[MediaTek's published bootloader driver](https://android.googlesource.com/platform/external/u-boot/+/refs/heads/android-tv-s-beta3/board/amlogic/tl1_x301_v1/mtk-bt/LD_btmtk_usb.c#976):
+company bytes `46 00`, one masked byte, the target TV address in HCI byte order,
+four masked bytes, and `43 52 4B 54 4D` (`CRKTM`). Flags `02 01 06` precede the
+manufacturer AD structure. This is a best guess: `woble_setting.bin` or
+`wake_on_ble.conf` can replace that driver's default, and the Xiaomi's actual
+filter remains unknown. That candidate was transmitted successfully but did
+not wake this TV. No generic HID Power event is sent by this example.
 
 | # | Field | Accepted value |
 | --- | --- | --- |

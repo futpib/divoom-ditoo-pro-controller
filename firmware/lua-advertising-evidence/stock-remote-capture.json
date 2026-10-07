@@ -1,0 +1,20 @@
+{
+  "address": "E8:55:40:98:7A:3D",
+  "address_type": "public",
+  "tv_address": "0C:CD:B4:D0:0C:26",
+  "user_observation": "Pressed stock remote Power once; TV woke.",
+  "payloads": [
+    {
+      "hex": "02010503ff000106084d4920524303031218040d040500020a0004fe260cd0",
+      "count": 58,
+      "first_seconds": 39.525056,
+      "last_seconds": 42.540084
+    },
+    {
+      "hex": "02010503ff000006084d4920524303031218040d040500020a0004fe260cd0",
+      "count": 158,
+      "first_seconds": 99.85307,
+      "last_seconds": 109.435971
+    }
+  ]
+}
