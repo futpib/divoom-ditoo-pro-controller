@@ -4,12 +4,22 @@ local view = ui.screen(true)
 local screen, age, now = view.set, ui.elapsed, time.millis
 -- Stock ADC IDs: lever, source, sun, M, +, -, left, right.
 local keys = { [4] = 1, [10] = 2, [7] = 3, [0] = 4, [1] = 5, [9] = 6, [2] = 7, [3] = 8 }
-local actions =
-  { 'play_pause', 'mute', 'power', false, 'volume_up', 'volume_down', 'left', 'right', 'space' }
-local labels =
-  { 'PLAY/PAUSE', 'MUTE', 'POWER', '', 'VOLUME UP', 'VOLUME DOWN', 'LEFT', 'RIGHT', 'SPACE' }
-local icons = { '>II', 'X', 'PWR', 'M', '+', '-', '<', '>', '_' }
-local taps = { space = 44, left = 80, right = 79 }
+-- Compact records avoid growing the compiler's string table for each label/icon.
+-- The first six roles use Consumer usages; the rest use Keyboard usages.
+local actions, labels, icons, usages = {}, {}, {}, {}
+for action, icon, usage in
+  (
+    'play_pause:>II:205 mute:X:226 power:PWR:48 menu:M:0 volume_up:+:233 volume_down:-:234 '
+    .. 'left:<:80 right:>:79 space:_:44 enter:OK:40 up:^:82 down:v:81'
+  ):gmatch('(%S+):(%S+):(%d+)')
+do
+  local i = #actions + 1
+  actions[i], icons[i], labels[i] = action, icon, action:gsub('_', ' '):upper()
+  usages[i] = tonumber(usage)
+end
+labels[1] = 'PLAY/PAUSE'
+local navigation = { [1] = 10, [2] = 9, [5] = 11, [6] = 12 }
+local nav = false
 local b, bonds = {}, {}
 local peer, kind, on = nil, 'public', false
 local job, flow, pair, err, key, icon
@@ -121,8 +131,7 @@ local function press(role)
     key, key_at = role, now()
     return
   end
-  local action = actions[role]
-  if queue('key', taps[action] and keyboard.tap or hid.media, taps[action] or action) then
+  if queue('key', role >= 7 and keyboard.tap or keyboard.consumer, usages[role]) then
     icon, shown, sent_at = role, now(), now()
   end
 end
@@ -227,7 +236,8 @@ local function draw()
       or 'CONNECTING'
   elseif b.connected then
     title, hint =
-      icon and icons[icon] or 'CONNECTED', icon and labels[icon] or label(b.peer, b.address_type)
+      icon and icons[icon] or nav and 'NAV' or 'MEDIA',
+      icon and labels[icon] or label(b.peer, b.address_type)
   elseif b.state == 1 then
     title = pair and not b.paired and 'PAIRING' or 'CONNECTING'
   elseif b.pairing then
@@ -301,8 +311,12 @@ return {
     elseif not peer and not b.connected then
       open('root')
       pos = 2
+    elseif role == 3 then
+      if not flow and not pair and not b.pairing then
+        nav, key, icon = not nav, nil, nil
+      end
     else
-      press(role)
+      press(nav and navigation[role] or role)
     end
   end,
   message = function(s)

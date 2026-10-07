@@ -8,7 +8,7 @@ descriptor. Use firmware **306035** for the Android TV pairing and reconnect
 fixes. Native speaker profiles stay disabled in this mode.
 The app is designed for setup, pairing, reconnection and ordinary use on the
 Ditoo and host after one installation; see the TV limitations below.
-Bluetooth HID sends Play/Pause, Mute, Volume Up/Down, Power and Left/Right reports. AVRCP and the
+Bluetooth HID sends media controls, Space, Enter and arrow reports. AVRCP and the
 older `tv-remote.lua` remain available separately.
 
 Real MiTV_MOEU0 / Android 14 testing on 306035 passed ordinary **Pair accessory**
@@ -37,20 +37,29 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
    select **Ditoo BLE Remote** on the TV. Accept a confirmation if shown; the
    tested Android TV completed pairing without a separate confirmation dialog.
    A blue bar shows the two-minute window. Pairing preserves existing bonds.
-5. **Connected**, a green dot, and the connected Bluetooth name identify the
+5. **Media** or **Nav**, a green dot, and the connected Bluetooth name identify the
    actual host. Firmware 306037+ caches peer names; unknown names use the address
    and address type as a fallback.
 
-| # | Physical control | Remote action | Stock ADC ID |
-| --- | --- | --- | --- |
-| 1 | Lever | Play/Pause | 4 |
-| 2 | + | TV volume up | 1 |
-| 3 | − | TV volume down | 9 |
-| 4 | ← | Left arrow (seek or navigate) | 2 |
-| 5 | → | Right arrow (seek or navigate) | 3 |
-| 6 | M | Open/close local menu | 0 |
-| 7 | ☀ Sun key (top-right) | TV Power (306039+) | 7 |
-| 8 | Audio-source button (beside lever base) | Mute/unmute | 10 |
+| # | Physical control | Media layout | Nav layout | Stock ADC ID |
+| --- | --- | --- | --- | --- |
+| 1 | Lever | Play/Pause | Enter/OK | 4 |
+| 2 | + | TV volume up | Up arrow | 1 |
+| 3 | − | TV volume down | Down arrow | 9 |
+| 4 | ← | Left arrow (seek or navigate) | Left arrow | 2 |
+| 5 | → | Right arrow (seek or navigate) | Right arrow | 3 |
+| 6 | M | Open/close local menu | Open/close local menu | 0 |
+| 7 | ☀ Sun key (top-right) | Switch to Nav | Switch to Media | 7 |
+| 8 | Audio-source button (beside lever base) | Mute/unmute | Space | 10 |
+
+Tap Sun, then Source to send Space. Sun toggles a layout; no simultaneous key
+presses are needed. The connected idle screen always shows **Media** or **Nav**;
+brief action feedback returns to that layout name. The app starts in Media on
+every restart. Layout changes stay in RAM, do not write flash, and cancel any
+queued action. The local M menu has the same controls in both layouts and
+preserves the layout when closed. Sun is inactive while pairing or changing
+the connection. These bindings use the existing HID profile, so this app update
+requires neither a firmware flash nor re-pairing.
 
 The fixed IDs come from the [stock firmware key tables](stock-ux.md#physical-key-ids).
 Left/Right send ordinary keyboard arrows (HID usages 80/79), so the TV app
@@ -88,7 +97,7 @@ prompts.
 | 5 | Exit | Stop the app and open the native menu. The Bluetooth connection can remain active. |
 | 6 | Back | Return to the parent menu or remote screen. |
 
-Pairing displays **Setting up**, **Ready to pair**, **Pairing**, then **Connected**
+Pairing displays **Setting up**, **Ready to pair**, **Pairing**, then **Media/Nav**
 as those conditions occur. A failed setup or expired window remains visible;
 a timeout does not silently become a request to connect the old device.
 The host appears by its cached name, or by address and address type while the
@@ -119,7 +128,7 @@ is only temporary and does not replace the saved app. See [storage and boot
 recovery](lua-storage.md).
 
 The developer messages `toggle`/`play_pause`, `mute`, `power`, `space`, `volume_up`,
-`volume_down`, `left`, `right`, `menu`,
+`volume_down`, `left`, `right`, `up`, `down`, `enter`, `menu`,
 `pair`, `connect`, `listen`, `disconnect`, `status`, and
 `target XX:XX:XX:XX:XX:XX` remain available.
 `status` sends HID state, peer and address type to the outbox; read it with
@@ -230,8 +239,9 @@ The current app requires **306039** and declares its BLE HID capabilities using
 appearance and wake permission are Lua data. See [Lua HID configuration](lua-hid.md)
 for numeric input, bounded holds, repetition and compatibility rules.
 
-The Sun key now sends Consumer Power (`0x0030`) with brief `PWR` feedback.
-The `power` developer message invokes the same action; `space` still sends Space.
+The `power` developer message sends Consumer Power (`0x0030`) with brief `PWR`
+feedback; it has no physical binding in the two-layout app. `space` sends Space
+in either layout. These messages select actions independently of the layout.
 The Ditoo's own power control is unchanged. The app keeps its non-alphabetic
 remote descriptor and disables speaker profiles.
 
