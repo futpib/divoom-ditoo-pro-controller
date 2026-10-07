@@ -365,6 +365,9 @@ Firmware **306039** adds [Lua-defined HID profiles](docs/lua-hid.md): scripts
 choose advertised keys and Consumer usages, BLE name, appearance and wake
 behavior. Numeric input and bounded hold durations avoid new firmware patches
 for each remote action. Friendly aliases and the remote preset live in `lua/hid.lua`.
+Firmware **306040** adds [bounded BLE advertising](docs/lua-advertising.md).
+Lua supplies advertising/scan-response bytes and timing; native deadlines restore
+the previous advertiser even after a Lua failure. TV wake packets remain unverified.
 
 Install `examples/lua/tv-keyboard.lua` with `lua install` for the BLE remote.
 Classic HID and AVRCP remain available to other scripts.

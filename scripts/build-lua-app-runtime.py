@@ -35,7 +35,7 @@ def build():
              '-I/usr/nds32le-elf/include/newlib-nano','-Dluai_makeseed(L)=((unsigned)(L)^0x44554c41)', '-I'+str(src)]
     skip = {'lua.c','luac.c','linit.c','liolib.c','loslib.c','loadlib.c','ldblib.c'}
     sources = sorted(p for p in src.glob('*.c') if p.name not in skip)
-    sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','parse-number.c','usb-control.c','bluetooth-hid.c','bluetooth-hogp.c','bluetooth-trace.c','runtime-entry.S']]
+    sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','parse-number.c','usb-control.c','bluetooth-hid.c','bluetooth-hogp.c','bluetooth-advertising.c','bluetooth-trace.c','runtime-entry.S']]
     sources += [ROOT/'native/lua/libc.c']
     patch_object = patches.prepare()
     objects = []

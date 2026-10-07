@@ -10,6 +10,7 @@
 #include "runtime.c"
 #include "storage.c"
 #include "bluetooth-trace.c"
+#include "bluetooth-advertising.c"
 unsigned runtime_irq_save(void) { return 1; }
 void runtime_irq_restore(unsigned irq) { (void)irq; }
 unsigned char __data_start[1], __data_end[1], __data_load[1], __bss_start[1], __bss_end[1];
@@ -130,6 +131,7 @@ static void check(const char *source, unsigned state, const char *value) {
 static void tick(void) { clock_ms += FRAME_MS; service(); }
 
 #include "test-peripherals.c"
+#include "test-advertising.c"
 #include "test-persistence.c"
 #include "test-menu.c"
 #include "test-allocator.c"
@@ -138,6 +140,7 @@ static void tick(void) { clock_ms += FRAME_MS; service(); }
 #include "test-lifecycle.c"
 
 int main(void) {
+    test_advertising();
     test_lifecycle();
     test_assets();
     test_allocator();

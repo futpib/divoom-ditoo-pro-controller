@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "bluetooth-trace.c"
+void runtime_advertising_event(unsigned type,const unsigned char *p,unsigned n) { assert(type==4 && p && n>=2); }
 static unsigned irq_disabled,clock_ms=1234,allocated,fail_alloc;
 void *stock_alloc(unsigned n) { if(fail_alloc)return NULL;void *p=malloc(n);if(p)++allocated;return p; }
 void stock_free(void *p) { if(p) { --allocated;free(p); } }

@@ -192,6 +192,7 @@ stock_le_adv_data = 0x10f3ca;
 stock_le_scan_data = 0x10f3ea;
 stock_le_adv_enable = 0x10f45a;
 stock_le_adv_params = 0x1129fc;
+stock_le_adv_parameters_body = 0x10f40a;
 stock_le_address = 0x10d7fa;
 stock_le_address_random = 0x10d81a;
 stock_le_random_address = 0x1129ce;

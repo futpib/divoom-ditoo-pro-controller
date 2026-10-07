@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "bluetooth-hogp.h"
+#include "bluetooth-advertising.h"
 #include "bluetooth-trace.h"
 #include "bluetooth-hogp-db.h"
 typedef uint16_t (*read_fn)(uint16_t,uint16_t,uint16_t,unsigned char *,uint16_t);
@@ -73,6 +74,7 @@ static struct hogp {
     uint8_t cccd[2],down[2][2],suspended,scan_length;
     unsigned hold_ms;
     struct profile *profile;
+    unsigned char advertisement[13];
     unsigned identity_pending,previous_address_mode;
     uint8_t identity[6],previous_address[6];
     unsigned setup_at,setup_size,setup_done;
@@ -98,10 +100,10 @@ static unsigned report_size(unsigned report) {
     return ((report ? ble->profile->value.media : ble->profile->value.keys)+7)/8;
 }
 static void advertise_profile(void) {
-    unsigned char data[sizeof remote_adv];memcpy(data,remote_adv,sizeof data);
+    unsigned char *data=ble->advertisement;memcpy(data,remote_adv,sizeof remote_adv);
     unsigned appearance=ble->profile ? ble->profile->value.appearance : 0x180;
-    data[sizeof data-2]=appearance;data[sizeof data-1]=appearance>>8;
-    stock_le_adv_data(sizeof data,data);
+    data[sizeof remote_adv-2]=appearance;data[sizeof remote_adv-1]=appearance>>8;
+    stock_le_adv_data(sizeof remote_adv,data);
     stock_le_scan_data(ble->profile ? ble->profile->value.name_size+2U : sizeof remote_name,
                       ble->profile ? ble->profile->scan : remote_name);
 }
@@ -114,6 +116,7 @@ unsigned runtime_hogp_profile_equal(const struct hid_profile *p) {
     runtime_irq_restore(irq);return same;
 }
 unsigned runtime_hogp_configure(const struct hid_profile *p) {
+    if(runtime_advertising_busy()) return 0;
     if(!ble || !ble->status.enabled || !p->name_size || p->name_size>29 || p->wake>1 ||
             !p->keys || p->keys>16 || !p->media || p->media>16) return 0;
     for(unsigned i=0;i<p->name_size;++i) if((unsigned char)p->name[i]<32 || p->name[i]==127) return 0;
@@ -387,6 +390,11 @@ static int write_value(uint16_t connection,uint16_t attribute,uint16_t transacti
     return 0;
 }
 void runtime_hogp_init(const unsigned char *db,read_fn read,write_fn write) {
+    runtime_advertising_reset();
+    if(ble && stock_hci_stack) {
+        stock_le_adv_data(sizeof control_adv,control_adv);
+        stock_le_scan_data(ble->scan_length,ble->scan_data);
+    }
     original_db=db;control_handle=0xffff;original_read=read;original_write=write;
     if (ble) release();
     initialized=1;stock_att_init(db,read_value,write_value);
@@ -430,6 +438,9 @@ void runtime_hogp_event(unsigned type,unsigned channel,unsigned char *p,unsigned
     stock_ble_event(type,channel,p,n);
 }
 unsigned runtime_hogp_enabled(void) { return ble && ble->status.enabled; }
+unsigned runtime_hogp_advertising_ready(void) {
+    return !ble || (!ble->identity_pending && !ble->status.pairing && !ble->phase && ble->handle==0xffff);
+}
 static void identity_service(void) {
     if (ble->identity_pending==1 && !stock_hci_stack[0x4e5]) {
         if (ble->status.enabled || ble->previous_address_mode==1)
@@ -445,6 +456,7 @@ static void identity_service(void) {
     }
 }
 unsigned runtime_hogp_mode(unsigned enabled) {
+    if(runtime_advertising_busy()) return 0;
     if (!initialized || !stock_hci_stack) return 0;
     if (!ble) {
         if (!enabled) return 1;
@@ -495,6 +507,7 @@ unsigned runtime_hogp_key(unsigned op,unsigned value,unsigned modifiers) {
 }
 void runtime_hogp_command(unsigned op,unsigned value,const unsigned char *data,unsigned epoch,unsigned generation) {
     if (!runtime_hogp_enabled()) return;
+    if(runtime_advertising_busy()) { error(13);return; }
     if (op==HID_DISCONNECT) { disconnect();return; }
     if (op==HID_FORGET) {
         if (ble->status.state) { error(17);return; }

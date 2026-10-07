@@ -1,0 +1,30 @@
+Use bounded integer/pointer conversions and the runtime's fixed C locale.
+
+--- a/luaconf.h
++++ b/luaconf.h
+@@ -1,4 +1,7 @@
+ extern int runtime_number(char *, unsigned, float);
++extern int runtime_integer(char *, unsigned, int);
++extern int runtime_pointer(char *, unsigned, const void *);
++#define lua_getlocaledecpoint() '.'
+ extern float runtime_parse_number(const char *, char **);
+ /*
+ ** $Id: luaconf.h $
+@@ -513,7 +516,7 @@
+ #define LUAI_UACINT		LUA_INTEGER
+ 
+ #define lua_integer2str(s,sz,n)  \
+-	l_sprintf((s), sz, LUA_INTEGER_FMT, (LUAI_UACINT)(n))
++	runtime_integer((s), (sz), (n))
+ 
+ /*
+ ** use LUAI_UACINT here to avoid problems with promotions (which
+@@ -617,7 +620,7 @@
+ @@ lua_pointer2str converts a pointer to a readable string in a
+ ** non-specified way.
+ */
+-#define lua_pointer2str(buff,sz,p)	l_sprintf(buff,sz,"%p",p)
++#define lua_pointer2str(buff,sz,p)	runtime_pointer(buff,sz,p)
+ 
+ 
+ /*

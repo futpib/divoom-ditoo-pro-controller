@@ -3,6 +3,21 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+static int runtime_digits(char *out,unsigned size,unsigned value,unsigned base,unsigned sign,unsigned pointer) {
+    char digits[32];unsigned count=0,n=0;
+    do { digits[count++]="0123456789abcdef"[value%base];value/=base; } while(value);
+    if(size<=count+sign+2*pointer) return 0;
+    if(sign) out[n++]='-';
+    if(pointer) { out[n++]='0';out[n++]='x'; }
+    while(count) out[n++]=digits[--count];
+    out[n]=0;return n;
+}
+int runtime_integer(char *out,unsigned size,int value) {
+    unsigned u=(unsigned)value;return runtime_digits(out,size,value<0 ? 0U-u : u,10,value<0,0);
+}
+int runtime_pointer(char *out,unsigned size,const void *value) {
+    return runtime_digits(out,size,(uintptr_t)value,16,0,1);
+}
 int runtime_number(char *out, unsigned size, float value) {
     char buffer[40], digits[8]; unsigned n=0;
     if (isnan(value)) { strcpy(buffer,"nan"); n=3; }

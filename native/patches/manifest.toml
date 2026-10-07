@@ -28,8 +28,8 @@ patches = [
 ]
 
 [profiles.app]
-version = 306039
-source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch", "lua/0003-binary32-parser.patch"]
+version = 306040
+source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch", "lua/0003-binary32-parser.patch", "lua/0004-bounded-format.patch"]
 patches = [
     "command_dispatch",
     "runtime_init",
@@ -671,6 +671,65 @@ original = '''
     addi333 $r0, $r6, 3
     addi $r1, $r1, 0x4b9
     jal stock_reverse_address
+'''
+
+[[guards]]
+site = "stock_le_adv_data"
+profiles = ["app"]
+original_size = 26
+purpose = "Pin the retained advertising payload pointer, length and pending flag."
+original = '''
+    push25 $r6, 0
+    lwi.gp $r2, [ + -28232]
+    sbi $r0, [$r2 + 0x4dc]
+    lbi $r0, [$r2 + 0x4e8]
+    swi $r1, [$r2 + 0x4d8]
+    ori $r0, $r0, 1
+    sbi $r0, [$r2 + 0x4e8]
+'''
+
+[[guards]]
+site = "stock_le_scan_data"
+profiles = ["app"]
+original_size = 26
+purpose = "Pin the retained scan response pointer, length and pending flag."
+original = '''
+    push25 $r6, 0
+    lwi.gp $r2, [ + -28232]
+    sbi $r0, [$r2 + 0x4e4]
+    lbi $r0, [$r2 + 0x4e8]
+    swi $r1, [$r2 + 0x4e0]
+    ori $r0, $r0, 2
+    sbi $r0, [$r2 + 0x4e8]
+'''
+
+[[guards]]
+site = "stock_le_adv_parameters_body"
+profiles = ["app"]
+original_size = 74
+purpose = "Pin the complete 14-byte advertising parameter snapshot and dirty bits."
+original = '''
+    push25 $r6, 0
+    lwi.gp $r6, [ + -28232]
+    shi $r0, [$r6 + 0x4ea]
+    lbi $r0, [$sp + 0x10]
+    shi $r1, [$r6 + 0x4ec]
+    sbi $r0, [$r6 + 0x4f1]
+    sbi $r2, [$r6 + 0x4ee]
+    sbi $r3, [$r6 + 0x4ef]
+    sbi $r5, [$r6 + 0x4f0]
+    mov55 $r0, $r4
+    lmw.bim $r16, [$r0], $r16, 0
+    addi $r1, $r6, 0x4f2
+    smw.bi $r16, [$r1], $r16, 0
+    lbi333 $r1, [$r4 + 4]
+    sbi $r1, [$r6 + 0x4f6]
+    lbi333 $r0, [$r0 + 1]
+    lbi $r1, [$r6 + 0x4e8]
+    sbi $r0, [$r6 + 0x4f7]
+    movi $r0, -124
+    or33 $r0, $r1
+    sbi $r0, [$r6 + 0x4e8]
 '''
 
 [[guards]]

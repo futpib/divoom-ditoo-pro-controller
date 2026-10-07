@@ -73,7 +73,7 @@ static struct bt_command bt_queued;
 static unsigned bt_panel_calls,bt_panel_ok=1,bt_pressed[2];
 void stock_bt_peek(struct bt_command *p) { *p=bt_queued; }
 unsigned stock_bt_enqueue(unsigned op,const void *p,unsigned n) {
-    assert((op==BT_MUTE_COMMAND && n==10) || (op==BT_HID_COMMAND && n==32));
+    assert((op==BT_MUTE_COMMAND && n==10) || (op==BT_HID_COMMAND && n==32) || (op==BT_ADVERTISE_COMMAND && n==8));
     if (!bt_queue_ok) return 0;
     memcpy(bt_payload,p,n);bt_queued=(struct bt_command){op,n,0,bt_payload};return 1;
 }

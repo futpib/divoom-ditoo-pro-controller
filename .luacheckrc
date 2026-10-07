@@ -41,7 +41,7 @@ read_globals = {
       .. 'preview stop status memo_play memo_delete'
   ),
   microphone = api('noise level record stop'),
-  bluetooth = api('status connect_media disconnect_media media mute'),
+  bluetooth = api('status connect_media disconnect_media media mute advertise advertise_cancel'),
   keyboard = api(
     'connect listen disconnect pair forget bonds name configure tap consumer media status mode'
   ),

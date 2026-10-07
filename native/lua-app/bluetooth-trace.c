@@ -3,6 +3,7 @@
 #include <string.h>
 #include "bluetooth-trace.h"
 #include "bluetooth-hid.h"
+#include "bluetooth-advertising.h"
 extern unsigned stock_ticks(void), runtime_irq_save(void);
 extern void runtime_irq_restore(unsigned);
 extern void stock_reply(unsigned, unsigned, const void *, unsigned);
@@ -43,6 +44,7 @@ void runtime_bt_trace_hci(const unsigned char *packet) {
     uint16_t size;const unsigned char *p;
     memcpy(&size,packet+8,2);memcpy(&p,packet+12,sizeof p);
     if (!p || size<2 || size!=(unsigned)p[1]+2) return;
+    runtime_advertising_event(4,p,size);
     unsigned event=p[0],n=p[1];p+=2;
     switch (event) {
     case 3: if(n!=11)return;break; /* Connection complete. */

@@ -1,4 +1,5 @@
 #include "bluetooth-hogp.h"
+#include "bluetooth-advertising.h"
 /* Included by runtime.c: Lua publishes values, never pointers into its arena.
  * Only the stock main-task hook enters configuration, recorder and audio code. */
 extern volatile unsigned stock_battery_level;
@@ -43,14 +44,14 @@ extern void stock_bt_peek(struct bt_command *);
 extern unsigned stock_bt_enqueue(unsigned, const void *, unsigned);
 extern unsigned stock_avrcp_panel(void *, unsigned, unsigned);
 #include "bluetooth-hid.h"
-enum { BT_MUTE_COMMAND = 0x80, BT_HID_COMMAND = 0x81 };
+enum { BT_MUTE_COMMAND = 0x80, BT_HID_COMMAND = 0x81, BT_ADVERTISE_COMMAND = 0x82 };
 
 enum { JOB_EMPTY, JOB_QUEUED, JOB_RUNNING, JOB_DONE };
 enum { ALARM_GET=1, ALARM_SET, WAKE_GET, WAKE_SET, ALARM_CANCEL,
        ALARM_SNOOZE, AUDIO_PLAY, AUDIO_DIRECTION, AUDIO_TRACK, AUDIO_SEEK,
        AUDIO_REPEAT, AUDIO_PREVIEW, AUDIO_STOP, NOISE_ENABLE,
        MEMO_START, MEMO_STOP, MEMO_PLAY, MEMO_DELETE, AUDIO_SOURCE,
-       BT_CONNECT, BT_DISCONNECT, BT_MEDIA, BT_MUTE, BT_HID, SETTINGS_SAVE };
+       BT_CONNECT, BT_DISCONNECT, BT_MEDIA, BT_MUTE, BT_HID, SETTINGS_SAVE, BT_ADVERTISE };
 static struct {
     volatile unsigned state, epoch, cleanup;
     unsigned ticket, sequence, job_epoch, op, slot, mask, value;
@@ -64,7 +65,21 @@ static struct {
     unsigned bt_attempts, bt_last_attempt, bt_bond_since, bt_bond_pending, bt_bonds_saved, bt_forget_saved;
     struct hid_profile *profile;
     unsigned profile_ticket,profile_at;
+    struct ble_advertisement *advertisement;
+    unsigned advertisement_ticket,advertisement_at;
+    volatile unsigned advertisement_cancel;
 } peripheral;
+
+static struct ble_advertisement *take_advertisement(unsigned ticket) {
+    unsigned irq=runtime_irq_save();struct ble_advertisement *p=NULL;
+    if(peripheral.advertisement_ticket==ticket) { p=peripheral.advertisement;peripheral.advertisement=NULL; }
+    runtime_irq_restore(irq);return p;
+}
+void runtime_advertising_complete(unsigned ticket,const char *error) {
+    if(peripheral.ticket!=ticket || peripheral.op!=BT_ADVERTISE) return;
+    peripheral.error=error;
+    __asm__ volatile ("" ::: "memory");peripheral.state=JOB_DONE;
+}
 
 static struct hid_profile *take_profile(unsigned ticket) {
     unsigned irq=runtime_irq_save();struct hid_profile *p=NULL;
@@ -75,8 +90,19 @@ static struct hid_profile *take_profile(unsigned ticket) {
 /* Called only on the stock Bluetooth task. Unknown commands still pass through
  * its normal dispatcher/pop path; no Lua pointer enters this queue. */
 void runtime_bt_peek(struct bt_command *command) {
+    runtime_advertising_service(peripheral.epoch,peripheral.advertisement_cancel);
     runtime_hid_service(peripheral.epoch);
     stock_bt_peek(command);
+    if(command->op==BT_ADVERTISE_COMMAND && command->length==8 && command->data) {
+        unsigned values[2];memcpy(values,command->data,sizeof values);
+        struct ble_advertisement *p=take_advertisement(values[1]);
+        if(p) {
+            const char *error=values[0]!=peripheral.epoch || values[1]==peripheral.advertisement_cancel ? "cancelled" :
+                runtime_advertising_start(p,values[1],values[0]);
+            stock_free(p);if(error) runtime_advertising_complete(values[1],error);
+        }
+        return;
+    }
     if (command->op==BT_HID_COMMAND && command->length==32 && command->data) {
         unsigned values[4]; memcpy(values,command->data,16);
         if(values[2]==HID_CONFIGURE) {
@@ -222,6 +248,12 @@ static const char *perform_job(void) {
             (stock_get_source() != 3 || !stock_sd_present() || !stock_sd_queue()))
         return "SD playback unavailable";
     switch (op) {
+    case BT_ADVERTISE: {
+        if(!stock_bt_context) return "Bluetooth unavailable";
+        if(peripheral.advertisement_cancel==peripheral.ticket) return "cancelled";
+        unsigned data[2]={peripheral.epoch,peripheral.ticket};
+        return stock_bt_enqueue(BT_ADVERTISE_COMMAND,data,sizeof data) ? NULL : "Bluetooth queue full";
+    }
     case BT_HID: {
         if (!stock_bt_context) return "Bluetooth unavailable";
         struct hid_status status; runtime_hid_status(&status);
@@ -425,6 +457,14 @@ void runtime_native_service(void) {
         peripheral.error="profile request expired";peripheral.state=JOB_DONE;
     }
     runtime_irq_restore(irq);stock_free(expired_profile);
+    irq=runtime_irq_save();struct ble_advertisement *expired_advertisement=NULL;
+    if(peripheral.advertisement && (peripheral.job_epoch!=peripheral.epoch || !stock_bt_context ||
+            peripheral.advertisement_cancel==peripheral.advertisement_ticket ||
+            stock_ticks()-peripheral.advertisement_at>=1000)) {
+        expired_advertisement=peripheral.advertisement;peripheral.advertisement=NULL;
+        runtime_advertising_complete(peripheral.advertisement_ticket,"advertising request cancelled or expired");
+    }
+    runtime_irq_restore(irq);stock_free(expired_advertisement);
     if (peripheral.indicator_dirty) {
         peripheral.indicator_dirty = 0;
         stock_indicator_write(preferences.indicator_off ? 0 : peripheral.indicator_owned ? peripheral.indicator_level : peripheral.native_indicator);
@@ -442,9 +482,11 @@ void runtime_native_service(void) {
     /* Configuration completes on the Bluetooth task. Its queue carries only a
      * ticket: cancelling a script or resetting Bluetooth cannot strand a buffer. */
     if(!error && peripheral.op==BT_HID && peripheral.slot==HID_CONFIGURE) return;
+    if(!error && peripheral.op==BT_ADVERTISE) return;
     peripheral.error=error;
     if(peripheral.op==BT_HID && peripheral.slot==HID_CONFIGURE)
         stock_free(take_profile(peripheral.ticket));
+    if(peripheral.op==BT_ADVERTISE) stock_free(take_advertisement(peripheral.ticket));
     __asm__ volatile ("" ::: "memory");
     peripheral.state = JOB_DONE;
 }
@@ -796,6 +838,43 @@ static int keyboard_status(lua_State *L) {
 }
 static int bt_disconnect(lua_State *L) { return submit(L,BT_DISCONNECT,0,0,NULL,0); }
 static int bt_mute(lua_State *L) { return submit(L,BT_MUTE,0,0,NULL,0); }
+static int bt_advertise(lua_State *L) {
+    native_budget();luaL_checktype(L,1,LUA_TTABLE);
+    struct ble_advertisement p={0};size_t size;
+    lua_getfield(L,1,"data");luaL_checktype(L,-1,LUA_TSTRING);
+    const char *data=lua_tolstring(L,-1,&size);
+    luaL_argcheck(L,size>=1 && size<=31,1,"data must contain 1..31 bytes");
+    memcpy(p.data,data,size);p.size=size;lua_pop(L,1);
+    lua_getfield(L,1,"scan_response");
+    if(!lua_isnil(L,-1)) {
+        luaL_checktype(L,-1,LUA_TSTRING);data=lua_tolstring(L,-1,&size);
+        luaL_argcheck(L,size<=31,1,"scan response exceeds 31 bytes");
+        memcpy(p.scan,data,size);p.scan_size=size;
+    }
+    lua_pop(L,1);
+    const char *types[]={"nonconnectable","scannable","connectable",NULL};
+    const unsigned char values[]={3,2,0};
+    lua_getfield(L,1,"type");p.type=values[luaL_checkoption(L,-1,"nonconnectable",types)];lua_pop(L,1);
+    lua_getfield(L,1,"interval_ms");p.interval_ms=lua_isnil(L,-1) ? 100 : integer(L,-1,100,1000);lua_pop(L,1);
+    lua_getfield(L,1,"duration_ms");p.duration_ms=lua_isnil(L,-1) ? 1500 : integer(L,-1,100,5000);lua_pop(L,1);
+    luaL_argcheck(L,runtime_advertising_valid(&p),1,"invalid advertisement");
+    if(!app.resident) return failure(L,"native requests require a resident app");
+    if(peripheral.advertisement || runtime_advertising_busy() || peripheral.cleanup ||
+            peripheral.state==JOB_QUEUED || peripheral.state==JOB_RUNNING) return failure(L,"busy");
+    if(stock_free_heap()<sizeof p+32+STOCK_HEAP_RESERVE) return failure(L,"insufficient native heap");
+    struct ble_advertisement *copy=stock_alloc(sizeof p);if(!copy) return failure(L,"insufficient native heap");
+    *copy=p;unsigned irq=runtime_irq_save();
+    peripheral.advertisement=copy;peripheral.advertisement_at=stock_ticks();peripheral.advertisement_cancel=0;
+    unsigned ticket=queue_request(BT_ADVERTISE,0,0,NULL,0);peripheral.advertisement_ticket=ticket;
+    runtime_irq_restore(irq);lua_pushinteger(L,ticket);return 1;
+}
+static int bt_advertise_cancel(lua_State *L) {
+    native_budget();unsigned ticket=integer(L,1,1,0x7fffffff);
+    if(peripheral.op!=BT_ADVERTISE || peripheral.ticket!=ticket || peripheral.job_epoch!=peripheral.epoch)
+        return failure(L,"expired ticket");
+    if(peripheral.state==JOB_DONE) { lua_pushboolean(L,0);return 1; }
+    peripheral.advertisement_cancel=ticket;lua_pushboolean(L,1);return 1;
+}
 static int bt_media(lua_State *L) {
     const char *actions[]={"pause","play",NULL};
     return submit(L,BT_MEDIA,0,luaL_checkoption(L,1,NULL,actions),NULL,0);
@@ -828,7 +907,8 @@ static int peripheral_lazy_module(lua_State *L) {
         {"configure",keyboard_configure},{"tap",keyboard_tap},{"consumer",keyboard_consumer},
         {"media",keyboard_media},{"status",keyboard_status},{"name",keyboard_name},{NULL,NULL}};
     static const luaL_Reg bluetooth[] = {{"status",bt_status},{"connect_media",bt_connect},
-        {"disconnect_media",bt_disconnect},{"media",bt_media},{"mute",bt_mute},{NULL,NULL}};
+        {"disconnect_media",bt_disconnect},{"media",bt_media},{"mute",bt_mute},
+        {"advertise",bt_advertise},{"advertise_cancel",bt_advertise_cancel},{NULL,NULL}};
     static const luaL_Reg power[] = {{"battery",battery},{"indicator",indicator},
         {"get_schedule",get_wake},{"set_schedule",set_wake},{NULL,NULL}};
     static const luaL_Reg alarms[] = {{"get",get_alarm},{"set",set_alarm},{"status",alarm_status},

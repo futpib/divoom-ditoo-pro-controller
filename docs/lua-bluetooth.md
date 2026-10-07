@@ -1,5 +1,8 @@
 # Lua Bluetooth media connections
 
+For Lua-defined timed advertising packets, see the separate
+[BLE advertising API](lua-advertising.md) added in 306040.
+
 Firmware 306017 exposes the stock classic Bluetooth AVRCP connection API to Lua.
 306018 adds a mute toggle through the Bluetooth task queue.
 The computer can use the existing BLE control service or, with 306019,

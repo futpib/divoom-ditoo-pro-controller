@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "bluetooth-hogp.c"
+unsigned runtime_advertising_busy(void) { return 0; }
+void runtime_advertising_reset(void) {}
 static unsigned allocated,fail_alloc;
 static unsigned clock_ms,confirmations,disconnects,notifications,notify_rc,encrypted,paired,adv,forgotten;
 static unsigned char connection[0x500],second[0x500];
@@ -103,8 +105,12 @@ unsigned stock_att_notify(unsigned handle,unsigned attribute,const void *data,un
     if (!notify_rc) { assert(n==1 || n==2);last_size=n;last_report=((const unsigned char *)data)[0];if(n==2)last_report|=((const unsigned char *)data)[1]<<8;++notifications; }
     return notify_rc;
 }
-void stock_le_adv_data(unsigned n,const unsigned char *p) { assert(n>0 && n<=31 && p); }
-void stock_le_scan_data(unsigned n,const unsigned char *p) { assert(n<=31 && p); }
+static const unsigned char *retained_advertisement;
+static unsigned retained_advertisement_size;
+void stock_le_adv_data(unsigned n,const unsigned char *p) {
+    assert(n>0 && n<=31 && p);retained_advertisement=p;retained_advertisement_size=n;
+}
+void stock_le_scan_data(unsigned n,const unsigned char *p) { assert(n<=31 && (!n || p)); }
 void stock_le_adv_enable(unsigned n) { adv=n; }
 void stock_le_address(unsigned type,unsigned char *out) {
     memcpy(out,type ? hci_context+0x4b9 : local_address,6);
@@ -206,6 +212,7 @@ int main(void) {
     assert(address_sets==1 && !adv && ble->identity_pending==2);
     memcpy(hci_context+0x4b9,ble->identity,6);hci_context[0x4bf]=1;address_deferred=0;
     runtime_hogp_service(1);assert(!ble->identity_pending && adv);
+    assert(retained_advertisement_size==sizeof remote_adv && !memcmp(retained_advertisement,remote_adv,sizeof remote_adv));
     assert(hci_context[0x4b9]==0xd1 && !memcmp(hci_context+0x4ba,local_address+1,5));
     assert(runtime_hogp_mode(0));runtime_hogp_service(1);assert(!stock_le_address_mode && adv);
     assert(runtime_hogp_mode(1));runtime_hogp_service(1);assert(stock_le_address_mode==1 && adv);
