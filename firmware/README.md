@@ -1,5 +1,16 @@
 # Firmware for hardware family 306
 
+Experimental `306042-lua.MVA` retains Classic SPP control in remote modes, keeps Classic
+connectable without discoverability in BLE remote mode, and separately blocks
+incoming/outgoing hands-free RFCOMM channels. It preserves the existing BLE
+remote identity, descriptor, bonds and saved app. It hands an unused BLE HID
+host command session to serial, then restores it when serial disconnects.
+Build with
+`scripts/build-lua-app-runtime.py`. Serial flashing, audio rejection and 43 device
+runtime checks passed. A sustained BLE HID input test timed out and left stale
+BLE connection state; stable concurrency remains unverified. See
+[serial control and verification](../docs/bluetooth-serial-control.md).
+
 Downloaded on 2026-09-28 from Divoom's own file server.
 A subsequent [same-version update attempt](../docs/firmware-update.md) was rejected
 by the device with ready status 2 before any firmware data chunks were sent.

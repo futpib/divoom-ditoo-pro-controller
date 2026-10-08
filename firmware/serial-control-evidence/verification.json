@@ -1,0 +1,290 @@
+{
+  "firmware": 306042,
+  "sha256": "526b9d6b0d3eea9e3c7d4fde51cc8bae7bba59fa25777fdcd9f2c63c8b17c249",
+  "status": "experimental; sustained BLE HID plus serial input failed; recovery and TV validation pending",
+  "flash": {
+    "transport": "rfcomm",
+    "bytes": 2031559,
+    "seconds": 416.628967667,
+    "post_reboot_version": 306042
+  },
+  "hid_first_serial_read": {
+    "state": "active",
+    "peak_memory_bytes": 13304,
+    "instructions": 23,
+    "result": "2;true;84:5C:F3:EF:87:78;0;0",
+    "abi": 2,
+    "memory_bytes": 13304,
+    "frames": 0,
+    "callbacks": 331,
+    "dropped_keys": 0,
+    "held_keys": 0,
+    "generation": 2
+  },
+  "audio_policy": {
+    "service_classes": [
+      4353,
+      4388
+    ],
+    "spp_server": 2,
+    "rejections": [
+      {
+        "protocol": "rfcomm",
+        "port": 1,
+        "errno": 111
+      },
+      {
+        "protocol": "rfcomm",
+        "port": 3,
+        "errno": 111
+      },
+      {
+        "protocol": "rfcomm",
+        "port": 4,
+        "errno": 111
+      },
+      {
+        "protocol": "l2cap",
+        "port": 23,
+        "errno": 111
+      },
+      {
+        "protocol": "l2cap",
+        "port": 25,
+        "errno": 111
+      },
+      {
+        "protocol": "l2cap",
+        "port": 27,
+        "errno": 111
+      }
+    ],
+    "same_serial_version_before": 306042,
+    "same_serial_version_after": 306042
+  },
+  "runtime": {
+    "transport": "rfcomm",
+    "checks": [
+      {
+        "name": "integer",
+        "passed": true
+      },
+      {
+        "name": "float",
+        "passed": true
+      },
+      {
+        "name": "libraries",
+        "passed": true
+      },
+      {
+        "name": "loop",
+        "passed": true
+      },
+      {
+        "name": "pcall",
+        "passed": true
+      },
+      {
+        "name": "coroutine",
+        "passed": true
+      },
+      {
+        "name": "nested-coroutine",
+        "passed": true
+      },
+      {
+        "name": "finalizer",
+        "passed": true
+      },
+      {
+        "name": "close",
+        "passed": true
+      },
+      {
+        "name": "tostring",
+        "passed": true
+      },
+      {
+        "name": "sort",
+        "passed": true
+      },
+      {
+        "name": "gsub",
+        "passed": true
+      },
+      {
+        "name": "pattern",
+        "passed": true
+      },
+      {
+        "name": "oom",
+        "passed": true
+      },
+      {
+        "name": "caught-oom",
+        "passed": true
+      },
+      {
+        "name": "recursion",
+        "passed": true
+      },
+      {
+        "name": "native-call-limit",
+        "passed": true
+      },
+      {
+        "name": "syntax",
+        "passed": true
+      },
+      {
+        "name": "binary",
+        "passed": true
+      },
+      {
+        "name": "capabilities",
+        "passed": true
+      },
+      {
+        "name": "stock-heap-headroom",
+        "passed": true
+      },
+      {
+        "name": "led-frame",
+        "passed": true
+      },
+      {
+        "name": "one-shot-present",
+        "passed": true
+      },
+      {
+        "name": "resident-start",
+        "passed": true
+      },
+      {
+        "name": "incoming-message",
+        "passed": true
+      },
+      {
+        "name": "outgoing-message",
+        "passed": true
+      },
+      {
+        "name": "outgoing-acknowledged",
+        "passed": true
+      },
+      {
+        "name": "paused",
+        "passed": true
+      },
+      {
+        "name": "resumed",
+        "passed": true
+      },
+      {
+        "name": "stopped",
+        "passed": true
+      },
+      {
+        "name": "update-loop",
+        "passed": true
+      },
+      {
+        "name": "update-loop-recovery",
+        "passed": true
+      },
+      {
+        "name": "timer-loop",
+        "passed": true
+      },
+      {
+        "name": "timer-loop-recovery",
+        "passed": true
+      },
+      {
+        "name": "message-loop",
+        "passed": true
+      },
+      {
+        "name": "message-loop-recovery",
+        "passed": true
+      },
+      {
+        "name": "full-16384-byte-upload",
+        "passed": true
+      },
+      {
+        "name": "led-resident",
+        "passed": true
+      },
+      {
+        "name": "led-paused",
+        "passed": true
+      },
+      {
+        "name": "led-resumed",
+        "passed": true
+      },
+      {
+        "name": "led-error-reclaimed",
+        "passed": true
+      },
+      {
+        "name": "led-error-recovery",
+        "passed": true
+      },
+      {
+        "name": "final-stop",
+        "passed": true
+      }
+    ],
+    "stock_version_afterwards": true
+  },
+  "input_failure": {
+    "host": "Linux laptop",
+    "tv_tested": false,
+    "physical_keys_tested": false,
+    "observed_keys": [],
+    "ble_interval_ms": 45,
+    "ble_supervision_ms": 420,
+    "ble_disconnect_reason": 8,
+    "native_lua_generation_before": 10,
+    "native_lua_generation_after_serial_recovery": 10,
+    "native_disconnect_command_status": 2,
+    "cause": "unresolved"
+  },
+  "restoration": {
+    "settings": "TV6|0C:CD:B4:D0:0C:26|public|1",
+    "settings_readback_verified": true,
+    "startup_app": "examples/lua/tv-keyboard.lua",
+    "install_result": {
+      "state": "active",
+      "peak_memory_bytes": 43984,
+      "instructions": 353,
+      "result": "CONNECTING: GoogleTV5136",
+      "abi": 2,
+      "memory_bytes": 43984,
+      "frames": 1,
+      "callbacks": 2,
+      "dropped_keys": 0,
+      "held_keys": 0,
+      "generation": 26
+    },
+    "tv_bond_preserved": true,
+    "temporary_laptop_bond_cleanup_pending": true,
+    "reboot_verified": false
+  },
+  "local_validation": {
+    "native": "32-bit ASan/UBSan suite passed",
+    "reproducibility": "two isolated builds matched all four maintained profiles",
+    "rust_no_default_features": {
+      "library": 60,
+      "binary": 5,
+      "integration": 2
+    },
+    "strict_production_clippy_no_default_features": "passed",
+    "python_unit_tests": 30,
+    "lua_files_checked": 20
+  },
+  "captures": "Raw captures and JSONL logs remain ignored under firmware/runs/306042-serial; they are not committed."
+}

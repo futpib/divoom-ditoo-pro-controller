@@ -134,9 +134,14 @@ The developer messages `toggle`/`play_pause`, `mute`, `power`, `space`, `volume_
 `status` sends HID state, peer and address type to the outbox; read it with
 `lua receive`. `target` saves a public address without connecting.
 `connect` and `listen` both advertise for the saved BLE host. USB control and
-the existing Divoom BLE control service remain available. Concurrent control
-and HID on one laptop connection are covered by the HOGP test; two simultaneous
-BLE hosts require separate hardware validation.
+the existing Divoom BLE control service remain available. Firmware 306042 also
+retains [experimental Classic serial control](bluetooth-serial-control.md), intended
+for a computer to use the Classic address while the TV occupies the BLE remote
+connection. Basic simultaneous reads passed; sustained HID input exposed a BLE
+timeout and is not yet verified.
+Concurrent control and HID on one laptop BLE connection are covered by the HOGP
+test; two simultaneous BLE hosts are not supported by the current controller
+connection allocator.
 `menu` opens/closes the local menu. Ordinary use does not require these messages.
 Settings use `TV6|peer|public-or-random|enabled`, where enabled is `0` or `1`.
 TV5 settings are adopted as enabled. TV2/TV3/TV4 Classic targets are not treated
@@ -388,10 +393,14 @@ performed. The ordinary startup app was restored after the temporary probe.
 ## Lua API
 
 - `keyboard.mode('keyboard'|'combined')` (306025) queues a reversible profile
-  change. Keyboard-only mode hides native A2DP, AVRCP, HFP/HSP and serial SDP
-  records, disables their L2CAP registrations, closes existing audio/serial
-  channels, and advertises keyboard class `0x000540`. HID, SDP, BLE and USB stay
-  available. This applies to all classic peers; it is not a per-TV audio switch.
+  change. Keyboard-only mode hides native A2DP, AVRCP and HFP/HSP SDP records,
+  disables their audio L2CAP registrations, closes existing audio channels,
+  and advertises keyboard class `0x000540`. Firmware 306042 preserves serial
+  control: RFCOMM admits the native SPP server and rejects hands-free channels
+  in both directions. Existing hands-free channels close individually without
+  closing a serial channel sharing their connection. Earlier versions also
+  disabled serial control. HID, SDP, BLE and USB stay available. This applies
+  to all classic peers; it is not a per-TV audio switch.
   `combined` restores the native records, registrations and previous class.
   Mode changes preserve HID connections and bonds. Like those connections, the
   mode survives Lua stop/failure; restore it explicitly or restart the Bluetooth

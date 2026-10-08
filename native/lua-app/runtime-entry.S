@@ -76,8 +76,61 @@ led_stock:
 
 .section .native_hook,"ax"
     jal native_service
+.section .control_open_hook,"ax"
+    jal runtime_control_open
+.section .control_close_hook,"ax"
+    jal runtime_control_close
 .section .bt_command_hook,"ax"
     jal runtime_bt_peek
+.section .rfcomm_accept_hook,"ax"
+    j rfcomm_accept
+.section .rfcomm_client_hook,"ax"
+    j rfcomm_client
+    nop16
+
+.section .text.rfcomm_accept,"ax"
+rfcomm_accept:
+    smw.adm $r6, [$sp], $r8, 2
+    move $r6, $r0
+    move $r7, $r1
+    move $r8, $r2
+    move $r0, $r1
+    jal runtime_hid_rfcomm_accept
+    beqz $r0, rfcomm_rejected
+    move $r0, $r6
+    move $r1, $r7
+    move $r2, $r8
+    lmw.bim $r6, [$sp], $r8, 2
+    subi333 $r3, $r1, 1
+    slti45 $r3, 4
+    j stock_rf_accept_guard
+rfcomm_rejected:
+    movi $r0, 1
+    lmw.bim $r6, [$sp], $r8, 2
+    ret
+
+.section .text.rfcomm_client,"ax"
+rfcomm_client:
+    smw.adm $r6, [$sp], $r9, 2
+    move $r6, $r0
+    move $r7, $r1
+    move $r8, $r2
+    move $r9, $r3
+    move $r0, $r2
+    jal runtime_hid_rfcomm_client
+    beqz $r0, rfcomm_client_rejected
+    move $r0, $r6
+    move $r1, $r7
+    move $r2, $r8
+    move $r3, $r9
+    lmw.bim $r6, [$sp], $r9, 2
+    push25 $r10, 8
+    addi.gp $fp, -35356
+    j stock_rf_client_resume
+rfcomm_client_rejected:
+    movi $r0, 1
+    lmw.bim $r6, [$sp], $r9, 2
+    ret
 .section .bt_stack_hook,"ax"
     j bt_stack_trace
 .section .bt_hci_hook,"ax"

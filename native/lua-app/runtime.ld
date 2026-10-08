@@ -2,13 +2,14 @@ ENTRY(runtime_command)
 INCLUDE native/patches/stock-306007.ld
 SECTIONS {
     INCLUDE target/lua-app/runtime/patch-layout.ld
-    .text 0x1ca000 : { *(.text*) *(EXCLUDE_FILE (*libm.a:libm_a-ef_sqrt.o) .rodata*) }
+    .text 0x1c9f70 : { *(.text*) *(EXCLUDE_FILE (*libm.a:libm_a-ef_sqrt.o) .rodata*) }
     .data 0x2004b000 : AT(ALIGN(ADDR(.text) + SIZEOF(.text), 8)) {
         __data_start = .;
         /* sqrtf alone uses GP-relative constants; all other math tables stay in flash. */
         *libm.a:libm_a-ef_sqrt.o(.rodata*) *(.data*) *(.sdata*)
         __data_end = .;
     }
+    __extension_start = ADDR(.text);
     __data_load = LOADADDR(.data);
     .bss (NOLOAD) : {
         __bss_start = .;

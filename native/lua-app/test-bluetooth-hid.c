@@ -11,7 +11,13 @@ void stock_free(void *p) { if(p){--allocated;free(p);} }
 unsigned runtime_irq_save(void) { return 1; }
 void runtime_irq_restore(unsigned x) { (void)x; }
 static unsigned clock_ms,disconnects,sends,rc=2,connect_rc;
-static unsigned char context[256],remote[256],sent[12],core[0x3200];
+static unsigned char context[256],remote[256],sent[12],core[0x3800],spp[32];
+unsigned char *volatile stock_spp_context=spp;
+void stock_spp_callback(void) {}
+static unsigned rf_closed;
+unsigned stock_rf_close(void *channel) {
+    assert(channel && !serial_channel(channel));++rf_closed;return 2;
+}
 volatile unsigned char stock_bt_manager[0x1c4];
 static unsigned char device_entry[0x40];
 static unsigned access_mode=3,access_rc;
@@ -81,9 +87,10 @@ static void modes(void) {
     static const unsigned char sink[]={0x35,3,0x19,0x11,0x0b};
     static const unsigned char hfp[]={0x35,6,0x19,0x11,0x1e,0x19,0x12,3};
     static const unsigned char pnp[]={0x35,3,0x19,0x12,0};
-    struct attribute attr[]={A(1,sink),A(1,hfp),A(1,pnp)};
-    struct record records[3]={0};
-    for (unsigned i=0;i<3;++i) { records[i].count=1;records[i].attributes=&attr[i];stock_sdp_add(&records[i]); }
+    static const unsigned char serial[]={0x35,3,0x19,0x11,0x01};
+    struct attribute attr[]={A(1,sink),A(1,hfp),A(1,pnp),A(1,serial)};
+    struct record records[4]={0};
+    for (unsigned i=0;i<4;++i) { records[i].count=1;records[i].attributes=&attr[i];stock_sdp_add(&records[i]); }
     struct psm profiles[4]={{.id=0x19},{.id=0x17},{.id=3},{.id=1}};
     for (unsigned i=0;i<4;++i) registered_psms()[i+2]=&profiles[i];
     unsigned char *channel=core+0x291c+2*0x7c;
@@ -91,11 +98,12 @@ static void modes(void) {
     memcpy(channel+0x2c,&cid,2);memcpy(channel+0x28,&p,sizeof p);channel[2]=5;
     unsigned before=disconnects;
     runtime_hid_command(HID_MODE,1,NULL,1,0);
-    assert(hid.status.keyboard_only && hid.status.hidden_services==2 && hid.status.blocked_psms==3);
+    assert(hid.status.keyboard_only && hid.status.hidden_services==2 && hid.status.blocked_psms==2);
     assert(hid.status.audio_channels==1 && disconnects==before+1);
     assert(hid.status.state==2 && hid.status.generation==generation);
-    assert(sdp_head()->next==&hid.record && hid.record.next==&records[2] && records[2].next==sdp_head());
-    assert(!registered_psms()[2] && !registered_psms()[3] && !registered_psms()[4] && registered_psms()[5]==&profiles[3]);
+    assert(sdp_head()->next==&hid.record && hid.record.next==&records[2] && records[2].next==&records[3]);
+    assert(records[3].next==sdp_head());
+    assert(!registered_psms()[2] && !registered_psms()[3] && registered_psms()[4]==&profiles[2] && registered_psms()[5]==&profiles[3]);
     assert(*(unsigned *)(core+0x9a8)==0x540);
     channel[2]=6;runtime_hid_service(1);assert(disconnects==before+1);
     memset(channel,0,0x7c);runtime_hid_service(2);assert(!hid.status.audio_channels && hid.status.keyboard_only);
@@ -107,7 +115,7 @@ static void modes(void) {
     assert(!hid.status.keyboard_only && !hid.status.hidden_services && !hid.status.blocked_psms);
     assert(*(unsigned *)(core+0x9a8)==0x2c0540);
     for (unsigned i=0;i<4;++i) assert(registered_psms()[i+2]==&profiles[i]);
-    assert(records[2].next==&records[0] && records[0].next==&records[1] && records[1].next==sdp_head());
+    assert(records[2].next==&records[3] && records[3].next==&records[0] && records[0].next==&records[1] && records[1].next==sdp_head());
     runtime_hid_command(HID_MODE,1,NULL,2,0);memset(core,0,sizeof core);runtime_hid_service(2);
     assert(!hid_context && !idle_status.enabled && !idle_status.keyboard_only); /* No stale pointers after stack recreation. */
     connected();hid.record.next=&hid.record;
@@ -115,6 +123,34 @@ static void modes(void) {
     assert(hid.status.error==18 && !hid.status.keyboard_only); /* Corrupt list stays bounded and unchanged. */
     connected();
     puts("Keyboard-only mode hides audio SDP/PSMs, drains audio, preserves HID, restores and resets safely");
+}
+static void serial_control(void) {
+    connected();
+    unsigned char control[0x84]={0},handsfree[0x84]={0};
+    uintptr_t callback=(uintptr_t)stock_spp_callback;memcpy(control+8,&callback,sizeof callback);
+    assert(runtime_hid_rfcomm_accept(1) && runtime_hid_rfcomm_client(handsfree));
+    runtime_hid_command(HID_MODE,1,NULL,1,0);
+    for(unsigned server=1;server<=4;++server) {
+        spp[8]=server;
+        for(unsigned peer=0;peer<=5;++peer) assert(runtime_hid_rfcomm_accept(peer)==(peer==server));
+    }
+    stock_spp_context=NULL;assert(!runtime_hid_rfcomm_accept(4));stock_spp_context=spp;
+    assert(runtime_hid_rfcomm_client(control) && !runtime_hid_rfcomm_client(handsfree));
+    assert(!runtime_hid_rfcomm_client(NULL));
+    unsigned before=rf_closed;
+    unsigned char *channels[]={control,handsfree};
+    for(unsigned i=0;i<2;++i) {
+        unsigned char *dlc=core+0x32a0+i*16;dlc[8]=1;memcpy(dlc+12,&channels[i],sizeof channels[i]);
+    }
+    runtime_hid_service(1);assert(rf_closed==before+1 && hid.status.audio_channels==1);
+    core[0x32b8]=0;runtime_hid_service(1);assert(rf_closed==before+1 && !hid.status.audio_channels);
+    runtime_hid_command(HID_MODE,0,NULL,1,0);
+    assert(runtime_hid_rfcomm_client(handsfree) && runtime_hid_rfcomm_accept(1));
+    runtime_hid_command(HID_MODE,1,NULL,1,0);
+    stock_bt_context=NULL;assert(runtime_hid_rfcomm_client(handsfree));stock_bt_context=context;
+    memset(core,0,sizeof core);runtime_hid_service(1);
+    assert(!hid_context && runtime_hid_rfcomm_accept(1));
+    puts("Remote mode keeps serial SDP/RFCOMM, rejects hands-free in both directions and drains only audio DLCs");
 }
 int main(void) {
     connect_rc=2;
@@ -222,6 +258,7 @@ int main(void) {
     connected();memset(core,0,sizeof core);runtime_hid_service(1);
     assert(!hid_context && !allocated); /* Reused stack address. */
     modes();
+    serial_control();
     connected();
     assert(!runtime_hid_preserve_link(0x170a8));
     runtime_hid_command(HID_MODE,1,address,1,hid.status.generation);
@@ -241,10 +278,10 @@ int main(void) {
     connected();runtime_hid_command(HID_DISCONNECT,0,address,1,0);
     event(0,4,NULL);event(1,4,NULL);core[0x792]=3;
     runtime_hid_command(HID_MODE,2,NULL,1,0);
-    assert(hogp_enabled && hid.le_access_owned && !access_mode);
-    core[0x792]=3;runtime_hid_service(1);assert(!access_mode && !core[0x792]);
+    assert(hogp_enabled && hid.le_access_owned && access_mode==2);
+    core[0x792]=3;runtime_hid_service(1);assert(access_mode==2 && core[0x792]==2);
     core[0x792]=3;access_rc=19;runtime_hid_service(1);assert(core[0x792]==3);
-    access_rc=0;runtime_hid_service(1);assert(!core[0x792]);
+    access_rc=0;runtime_hid_service(1);assert(core[0x792]==2);
     runtime_hid_command(HID_MODE,1,NULL,1,0);
     assert(!hogp_enabled && !hid.le_access_owned && access_mode==3);
     runtime_hid_command(HID_MODE,0,NULL,1,0);runtime_hid_service(1);

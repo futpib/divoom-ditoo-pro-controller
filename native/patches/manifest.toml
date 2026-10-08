@@ -28,7 +28,7 @@ patches = [
 ]
 
 [profiles.app]
-version = 306040
+version = 306042
 source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch", "lua/0003-binary32-parser.patch", "lua/0004-bounded-format.patch"]
 patches = [
     "command_dispatch",
@@ -47,6 +47,10 @@ patches = [
     "usb_response",
     "usb_connected",
     "bluetooth_commands",
+    "rfcomm_accept",
+    "rfcomm_client",
+    "control_open",
+    "control_close",
     "ble_att",
     "ble_callback",
     "ble_reply",
@@ -468,6 +472,122 @@ original = '''
     lwi.gp $r0, [ + -35356]
 '''
 
+[[patches]]
+name = "rfcomm_accept"
+section = ".rfcomm_accept_hook"
+site = "stock_patch_rf_accept"
+max_size = 4
+original_size = 4
+purpose = "Accept serial control but reject hands-free RFCOMM servers in remote mode."
+original = '''
+    subi333 $r3, $r1, 1
+    slti45 $r3, 4
+'''
+
+[[patches]]
+name = "rfcomm_client"
+section = ".rfcomm_client_hook"
+site = "stock_patch_rf_client"
+max_size = 6
+original_size = 6
+purpose = "Prevent outgoing hands-free RFCOMM connections while preserving serial control."
+original = '''
+    push25 $r10, 8
+    addi.gp $fp, -35356
+'''
+
+[[guards]]
+site = "stock_spp_register_guard"
+profiles = ["app"]
+original_size = 6
+purpose = "Validate the native SPP context pointer."
+original = '''
+    push25 $r10, 0
+    addi.gp $fp, -27152
+'''
+
+[[guards]]
+site = "stock_spp_callback_guard"
+profiles = ["app"]
+original_size = 12
+purpose = "Validate the SPP RFCOMM callback identity and channel offset."
+original = '''
+    sethi $r0, hi20(stock_spp_callback)
+    ori $r0, $r0, lo12(stock_spp_callback)
+    swi $r0, [$r6 + 0xbc]
+'''
+
+[[guards]]
+site = "stock_spp_server_guard"
+profiles = ["app"]
+original_size = 10
+purpose = "Validate SPP server number at context + 8."
+original = '''
+    addi45 $r1, 8
+    mov55 $r0, $r9
+    movi55 $r2, 1
+    jal stock_rf_register
+'''
+
+[[guards]]
+site = "stock_rf_accept_guard"
+profiles = ["app"]
+original_size = 20
+purpose = "Validate RFCOMM server range and the unchanged accept continuation."
+original = '''
+    beqzs8 stock_rf_accept_reject
+    lwi.gp $r4, [ + -35356]
+    add_slli $r3, $r4, $r1, 4
+    lbi $r3, [$r3 + 0x3755]
+    xlsb33 $r3, $r3
+    beqz38 $r3, stock_rf_accept_reject
+    push25 $r8, 0
+'''
+
+[[guards]]
+site = "stock_rf_dlc_guard"
+profiles = ["app"]
+original_size = 30
+purpose = "Validate the RFCOMM DLC stride and channel-pointer table."
+original = '''
+    lbi $r3, [$r0 + 0x51]
+    movi $r2, 0x4a
+    lbi $r1, [$r0 + 0x52]
+    maddr32 $r1, $r3, $r2
+    lwi.gp $r2, [ + -35356]
+    add_slli $r1, $r2, $r1, 4
+    addi $r2, $r1, 0x32ac
+    lwi450 $r5, [$r2]
+'''
+
+[[guards]]
+site = "stock_rf_valid"
+profiles = ["app"]
+original_size = 24
+purpose = "Validate one RFCOMM multiplexer with eight DLC slots."
+original = '''
+    beqz38 $r0, stock_rf_valid_branch
+    lbi $r1, [$r0 + 0x52]
+    slti45 $r1, 8
+    beqzs8 stock_rf_valid_limit
+    lbi $r0, [$r0 + 0x51]
+    slti $r0, $r0, 1
+    ret5 $lp
+    movi55 $r0, 0
+    ret5 $lp
+'''
+
+[[guards]]
+site = "stock_rf_close"
+profiles = ["app"]
+original_size = 8
+purpose = "Validate native RFCOMM channel closure without dropping the shared multiplexer."
+original = '''
+    push25 $r6, 0
+    mov55 $r6, $r0
+    jal stock_rf_valid
+'''
+
 [[guards]]
 site = "stock_l2_psm_lookup"
 profiles = ["app"]
@@ -881,4 +1001,80 @@ original = '''
     mov55 $r3, $r11
     mov55 $r4, $r10
     j8 stock_gatt_send_uuid16
+'''
+
+[[patches]]
+name = "control_open"
+section = ".control_open_hook"
+site = "stock_patch_control_open"
+max_size = 4
+original_size = 4
+purpose = "Allow serial control to claim an unused HID host command session."
+original = '''
+    jal stock_control_open
+'''
+
+[[patches]]
+name = "control_close"
+section = ".control_close_hook"
+site = "stock_patch_control_close"
+max_size = 4
+original_size = 4
+purpose = "Restore the BLE command session after serial control disconnects."
+original = '''
+    jal stock_control_close
+'''
+
+[[guards]]
+site = "stock_control_open_guard"
+profiles = ["app"]
+original_size = 10
+purpose = "Validate command context transport and notification state fields."
+original = '''
+    sbi333 $r7, [$r6 + 2]
+    sbi333 $r7, [$r6 + 3]
+    movi55 $r0, -1
+    swi $r0, [$r6 + 0x154]
+'''
+
+[[guards]]
+site = "stock_control_close"
+profiles = ["app"]
+original_size = 10
+purpose = "Validate transport-scoped native protocol cleanup."
+original = '''
+    lwi.gp $r2, [ + -34060]
+    beqz38 $r2, stock_control_close_end
+    lbi333 $r5, [$r2 + 2]
+    bnes38 $r1, stock_control_close_end
+'''
+
+[[guards]]
+site = "stock_le_control_connected"
+profiles = ["app"]
+original_size = 6
+purpose = "Validate the native LE connection lookup used for session restoration."
+original = '''
+    push25 $r6, 0
+    jal stock_le_role_connection
+'''
+
+[[guards]]
+site = "stock_control_parse_state_guard"
+profiles = ["app"]
+original_size = 4
+purpose = "Validate the incomplete BLE frame state checked before handoff."
+original = '''
+    lbi333 $r3, [$r7 + 5]
+    slti45 $r3, 5
+'''
+
+[[guards]]
+site = "stock_control_notify_guard"
+profiles = ["app"]
+original_size = 6
+purpose = "Validate the command-seen flag checked before handoff."
+original = '''
+    lbi $r0, [$r8 + 7]
+    bnez38 $r0, stock_control_notify_ready
 '''

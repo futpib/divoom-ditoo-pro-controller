@@ -52,6 +52,9 @@ extern unsigned stock_cmgr_remove(void *);
 extern unsigned stock_sec_register(struct security *);
 extern void stock_l2_security(void *);
 extern unsigned stock_bt_access(unsigned, const void *);
+extern unsigned char *volatile stock_spp_context;
+extern void stock_spp_callback(void);
+extern unsigned stock_rf_close(void *);
 extern void *stock_bt_find_device(const unsigned char *);
 
 /* Report 1: modifier byte, reserved byte, six keyboard usages. Report 2: one
@@ -132,8 +135,25 @@ static void error(unsigned code) {
 }
 static unsigned elapsed(unsigned t,unsigned delay) { return (unsigned)(stock_ticks()-t)>=delay; }
 static unsigned audio_psm(unsigned id) {
-    /* RFCOMM includes HFP/HSP and serial control. SDP, HID and BLE stay up. */
-    return id==3 || id==0x17 || id==0x19 || id==0x1b;
+    /* RFCOMM carries control and hands-free channels; filter those separately. */
+    return id==0x17 || id==0x19 || id==0x1b;
+}
+static unsigned audio_blocked(void) {
+    return hid_context && hid.status.keyboard_only && hid.context==stock_bt_context &&
+        hid.core==stock_bt_core && stock_bt_core;
+}
+static unsigned serial_channel(const unsigned char *channel) {
+    uintptr_t callback=0;
+    if(channel) memcpy(&callback,channel+8,sizeof callback);
+    return callback==(uintptr_t)stock_spp_callback;
+}
+unsigned runtime_hid_rfcomm_accept(unsigned server) {
+    /* Use the native SPP registration, not a guessed/hardcoded channel number. */
+    return !audio_blocked() || (stock_spp_context && server && server<=4 &&
+        server==stock_spp_context[8]);
+}
+unsigned runtime_hid_rfcomm_client(const unsigned char *channel) {
+    return !audio_blocked() || serial_channel(channel);
 }
 static struct psm **registered_psms(void) { return (struct psm **)(stock_bt_core+0x28fc); }
 static unsigned audio_record(const struct record *r) {
@@ -147,7 +167,7 @@ static unsigned audio_record(const struct record *r) {
         for (unsigned j=2;j+3<=a->length;j+=3) {
             if (v[j]!=0x19) break;
             unsigned uuid=v[j+1]*256U+v[j+2];
-            if (uuid==0x1101 || uuid==0x1108 || (uuid>=0x110a && uuid<=0x110f) ||
+            if (uuid==0x1108 || (uuid>=0x110a && uuid<=0x110f) ||
                     uuid==0x1112 || uuid==0x111e || uuid==0x111f || uuid==0x1131) return 1;
         }
     }
@@ -155,6 +175,14 @@ static unsigned audio_record(const struct record *r) {
 }
 static void audio_channels(void) {
     hid.status.audio_channels=0;
+    /* One native RFCOMM multiplexer, eight DLCs. Close only non-SPP channels;
+     * closing their shared L2CAP connection would also drop serial control. */
+    for(unsigned i=0;i<8;++i) {
+        const unsigned char *dlc=stock_bt_core+0x32a0+i*16;
+        unsigned char *channel;memcpy(&channel,dlc+12,sizeof channel);
+        if(!(dlc[8]&1) || !channel || serial_channel(channel)) continue;
+        ++hid.status.audio_channels;stock_rf_close(channel);
+    }
     for (unsigned i=0;i<8;++i) {
         const unsigned char *channel=stock_bt_core+0x291c+i*0x7c;
         uint16_t cid;struct psm *p;
@@ -218,9 +246,9 @@ static void le_access(void) {
         if (!hid.le_access_owned) {
             hid.le_access_previous=stock_bt_core[0x792];hid.le_access_owned=1;
         }
-        /* The stock source UI can request discoverability again. Enforce LE
-         * remote mode on its owning Bluetooth task, preserving BLE control. */
-        if (stock_bt_core[0x792]) stock_bt_access(0,NULL);
+        /* Known computers can page the Classic address for serial control.
+         * Stay out of the TV's accessory picker and keep audio profiles closed. */
+        if (stock_bt_core[0x792]!=2) stock_bt_access(2,NULL);
     } else if (hid.le_access_owned) {
         unsigned rc=stock_bt_access(hid.le_access_previous,NULL);
         if (!rc || rc==2) hid.le_access_owned=0;

@@ -35,7 +35,7 @@ def build():
              '-I/usr/nds32le-elf/include/newlib-nano','-Dluai_makeseed(L)=((unsigned)(L)^0x44554c41)', '-I'+str(src)]
     skip = {'lua.c','luac.c','linit.c','liolib.c','loslib.c','loadlib.c','ldblib.c'}
     sources = sorted(p for p in src.glob('*.c') if p.name not in skip)
-    sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','parse-number.c','usb-control.c','bluetooth-hid.c','bluetooth-hogp.c','bluetooth-advertising.c','bluetooth-trace.c','runtime-entry.S']]
+    sources += [ROOT/'native/lua-app'/n for n in ['runtime.c','storage.c','number.c','parse-number.c','usb-control.c','bluetooth-hid.c','bluetooth-control.c','bluetooth-hogp.c','bluetooth-advertising.c','bluetooth-trace.c','runtime-entry.S']]
     sources += [ROOT/'native/lua/libc.c']
     patch_object = patches.prepare()
     objects = []
@@ -59,7 +59,8 @@ def build():
     code = patches.apply(stock, out/'runtime.elf')
     sections = {name: patches.extract('.'+name) for name in ('text','data')}
     data_load = int(next(line.split()[0] for line in symbols.splitlines() if line.split()[-1]=='__data_load'),16)
-    for address, section in [(0x1ca000,'text'),(data_load,'data')]:
+    extension_start = int(next(line.split()[0] for line in symbols.splitlines() if line.split()[-1]=='__extension_start'),16)
+    for address, section in [(extension_start,'text'),(data_load,'data')]:
         assert len(code) <= address
         code.extend(bytes(address-len(code)))
         code.extend(sections[section])

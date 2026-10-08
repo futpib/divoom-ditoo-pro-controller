@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run hostile scripts and independent recovery queries in one USB or BLE session."""
+"""Run hostile scripts and independent recovery queries in one controller session."""
 import argparse
 import json
 from pathlib import Path
@@ -8,14 +8,14 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('device', nargs='?')
-p.add_argument('--transport', choices=['ble','usb'], default='ble')
+p.add_argument('--transport', choices=['ble','rfcomm','usb'], default='ble')
 p.add_argument('--usb-port')
 p.add_argument('--binary', type=Path, default=ROOT/'target/release/divoom-ditoo-pro-controller')
 p.add_argument('--output', type=Path, required=True)
-p.add_argument('--firmware', type=int, choices=[306013,306014,306015,306016,306017,306018,306019,306020,306021,306022,306023,306024,306025,306026,306027,306028,306029,306030,306031,306032,306033,306034,306035,306036,306037,306038,306039,306040], default=306040)
+p.add_argument('--firmware', type=int, choices=[306013,306014,306015,306016,306017,306018,306019,306020,306021,306022,306023,306024,306025,306026,306027,306028,306029,306030,306031,306032,306033,306034,306035,306036,306037,306038,306039,306040,306041,306042], default=306042)
 a = p.parse_args()
 connection = ['--transport',a.transport]
-if a.transport == 'ble':
+if a.transport != 'usb':
     if not a.device: p.error('Bluetooth requires a device address')
     connection += ['--device',a.device]
 if a.usb_port: connection += ['--usb-port',a.usb_port]
