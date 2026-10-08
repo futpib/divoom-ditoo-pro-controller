@@ -112,7 +112,10 @@ keeps its deterministic `offline-built; hardware-unverified` label.
   connection. The timeout cause is unresolved. A longer supervision timeout is
   a proposed diagnostic, not an established fix.
 - The TV setting was restored to enabled and the current Media/Nav app was
-  installed for startup. Native readback verified both saves. Reboot, temporary
+  installed for startup. Native readback verified both saves. A temporary RAM
+  helper displays RESTART / BLUETOOTH and keeps the saved TV target enabled;
+  otherwise the remote app would persist a disabled target after its timeout.
+  Reboot, temporary
   laptop-bond cleanup and TV concurrency verification remain pending. No TV ADB
   session was opened.
 

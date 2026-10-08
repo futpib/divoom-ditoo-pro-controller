@@ -272,7 +272,21 @@
     },
     "tv_bond_preserved": true,
     "temporary_laptop_bond_cleanup_pending": true,
-    "reboot_verified": false
+    "reboot_verified": false,
+    "running_app": "temporary RAM helper showing RESTART / BLUETOOTH; saved startup app remains the TV remote",
+    "final_settings_readback": {
+      "abi": 2,
+      "callbacks": 5,
+      "dropped_keys": 0,
+      "frames": 2,
+      "generation": 27,
+      "held_keys": 0,
+      "instructions": 191,
+      "memory_bytes": 17048,
+      "peak_memory_bytes": 17280,
+      "result": "RESTORED:TV6|0C:CD:B4:D0:0C:26|public|1",
+      "state": "active"
+    }
   },
   "local_validation": {
     "native": "32-bit ASan/UBSan suite passed",
