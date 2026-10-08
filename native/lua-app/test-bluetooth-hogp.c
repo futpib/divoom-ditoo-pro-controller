@@ -123,7 +123,11 @@ void stock_le_random_address(const unsigned char *address) {
 void stock_le_adv_params(unsigned a,unsigned b,unsigned c,unsigned d,const unsigned char *e,unsigned f,unsigned g) {
     assert(a==48 && b==80 && !c && !d && e && f==7 && !g);
 }
-void runtime_bt_trace(unsigned kind,unsigned event,const void *p,unsigned n) { (void)event;assert(kind==5 && p && n==4); }
+static unsigned char radio_snapshot[8];
+void runtime_bt_trace(unsigned kind,unsigned event,const void *p,unsigned n) {
+    if(kind==7) { assert(event==1 && p && n==8);memcpy(radio_snapshot,p,n); }
+    else { (void)event;assert(kind==5 && p && n==4); }
+}
 static uint16_t read_original(uint16_t a,uint16_t b,uint16_t c,unsigned char *d,uint16_t e) {
     (void)a;(void)b;(void)c;(void)d;(void)e;return 17;
 }
@@ -201,6 +205,9 @@ static void report_map(unsigned expected_inputs) {
     assert(bits[1]%8==0 && bits[2]%8==0 && inputs==expected_inputs && power==1);
 }
 int main(void) {
+    stock_hci_stack=NULL;runtime_hogp_trace();
+    const unsigned char empty_snapshot[]={0,0,0,0,0,0,255,255};
+    assert(!memcmp(radio_snapshot,empty_snapshot,sizeof radio_snapshot));stock_hci_stack=hci_context;
     report_map(15);
     memcpy(connection+4,address,6);memset(second+4,0x77,6);
     unsigned state=7;memcpy(connection+20,&state,4);memcpy(second+20,&state,4);
@@ -208,6 +215,7 @@ int main(void) {
     hci_context[0x4e5]=1;
     assert(runtime_hogp_mode(1));
     runtime_hogp_service(1);assert(!address_sets && !adv && ble->identity_pending==1);
+    runtime_hogp_trace();assert(radio_snapshot[0]==1 && radio_snapshot[4]==1);
     hci_context[0x4e5]=0;address_deferred=1;runtime_hogp_service(1);
     assert(address_sets==1 && !adv && ble->identity_pending==2);
     memcpy(hci_context+0x4b9,ble->identity,6);hci_context[0x4bf]=1;address_deferred=0;

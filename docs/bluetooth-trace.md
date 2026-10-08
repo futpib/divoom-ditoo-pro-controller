@@ -28,6 +28,18 @@ Each event has a sequence number and device uptime in milliseconds.
 | 6 | `disconnect_request` (306027+) | Stock application, forced-link and link-disconnect callers; link records include the peer and requested reason. |
 | 7 | `hogp_subscription` (306031+) | Accepted CCCD writes and restoration on encrypted bonded reconnect, with connection handle and subscription bits. No encryption keys. |
 | 8 | `hogp_storage` (306034+) | Bond slot, requested subscription mask, read-back mask and verification result after a journal write. No encryption keys. |
+| 9 | `ble_radio` (306043+) | Current advertising active/requested/allowed flags, pending configuration bits, identity transition, and HID state/handle. No pointers or pairing keys. |
+
+On 306043, the CLI requests a radio snapshot immediately and every five seconds.
+This distinguishes a Lua app waiting for a device from the native stack's
+advertising state; it does not establish reception over the air. The low three
+`advertising_pending` bits mean payload, scan response
+and parameters respectively; other bits are retained as native values. A false
+`advertising_allowed` flag can be normal while a connection occupies the sole
+peripheral slot. `identity_pending` is 0 when settled, 1 while disabling
+advertising, or 2 while installing the random identity. `hid_handle=65535` means
+the HID extension has not adopted a connection; it does not prove the native
+stack has no other BLE connection. Snapshots observe state without changing it.
 
 Disconnect callers are native return addresses; subtract four to locate the
 calling `jal` in stock disassembly. The three entry points are `BtDisconnectCtrl`
@@ -110,9 +122,15 @@ and latest sequence (u32 each). Each 24-byte record contains u32 sequence, u32
 milliseconds, u8 layer, u8 event, u8 length, a reserved zero byte, and 12 padded
 metadata bytes. Wrong request length returns error 1; 306036 returns error 2 if the ring cannot
 be allocated while preserving native headroom. An optional byte after the cursor
-is 1 to acquire/renew, or 0 to release the lease. The original read packet also
+is 1 to acquire/renew, or 0 to release the lease. Firmware 306043 also accepts 2
+to acquire/renew and append a radio snapshot before reading. The original read packet also
 acquires/renews. Oldest may be latest+1 for an empty newly acquired/released ring.
 There is no raw address, buffer resize or Lua dependency.
+
+The radio snapshot is layer 7, event 1, with eight bytes: advertising active,
+requested, allowed, pending bits, identity phase, HID state, then the little-endian
+HID connection handle. It uses the existing leased ring and adds no persistent
+RAM allocation. The snapshot is copied with interrupts masked, as are ring reads.
 
 ## Hardware verification
 

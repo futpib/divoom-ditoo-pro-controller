@@ -235,6 +235,20 @@ fn event(row: &[u8]) -> Result<Value> {
         v[if code == 2 { "force" } else { "state" }] = json!(p[11]);
       }
     }
+    7 => {
+      if code != 1 || n != 8 {
+        return Err("Malformed BLE radio snapshot".into());
+      }
+      v["layer"] = json!("ble_radio");
+      v["name"] = json!("snapshot");
+      v["advertising_active"] = json!(p[0]);
+      v["advertising_requested"] = json!(p[1]);
+      v["advertising_allowed"] = json!(p[2]);
+      v["advertising_pending"] = json!(p[3]);
+      v["identity_pending"] = json!(p[4]);
+      v["hid_state"] = json!(p[5]);
+      v["hid_handle"] = json!(word(&p[6..]));
+    }
     _ => return Err("Unknown Bluetooth trace layer".into()),
   }
   Ok(v)
@@ -293,10 +307,10 @@ async fn session(
   if !reply.ack
     || reply.data.len() != 5
     || reply.data[0] != 1
-    || !matches!(number(&reply.data[1..]), 306024..=306042)
+    || !matches!(number(&reply.data[1..]), 306024..=306043)
   {
     return Err(
-      "Bluetooth trace requires firmware 306024 through 306042; no diagnostic sent".into(),
+      "Bluetooth trace requires firmware 306024 through 306043; no diagnostic sent".into(),
     );
   }
   let firmware = number(&reply.data[1..]);
@@ -304,9 +318,14 @@ async fn session(
   let deadline = Instant::now() + duration;
   let mut after = 0;
   let mut first = true;
+  let mut snapshot_at = Instant::now();
   loop {
     let mut payload = b"\x7fDLUA\x0d".to_vec();
     payload.extend_from_slice(&u32::to_le_bytes(after));
+    if firmware >= 306043 && Instant::now() >= snapshot_at {
+      payload.push(2);
+      snapshot_at = Instant::now() + Duration::from_secs(5);
+    }
     let page = decode(
       conn
         .send_and_receive(&Packet {
@@ -385,6 +404,19 @@ pub async fn watch(address: Address, duration: Duration, interval: Duration) -> 
 #[cfg(test)]
 mod tests {
   use super::*;
+  #[test]
+  fn radio_snapshot_distinguishes_pending_configuration_and_identity() {
+    let mut row = [0; 24];
+    row[8..11].copy_from_slice(&[7, 1, 8]);
+    row[12..20].copy_from_slice(&[0, 1, 0, 7, 2, 4, 255, 255]);
+    let v = event(&row).unwrap();
+    assert_eq!(v["advertising_pending"], 7);
+    assert_eq!(v["identity_pending"], 2);
+    assert_eq!(v["hid_handle"], 65535);
+    assert_eq!(v["hid_state"], 4);
+    row[10] = 7;
+    assert!(event(&row).is_err());
+  }
   fn response(data: Vec<u8>) -> Response {
     Response {
       original_command: 0x37,

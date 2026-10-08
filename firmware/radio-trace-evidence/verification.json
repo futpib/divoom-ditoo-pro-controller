@@ -1,0 +1,485 @@
+{
+  "firmware": 306043,
+  "sha256": "356f0915b999a80cde5ef2d537bd49ede244355d13afe9edd587f72fa62c1cd7",
+  "bytes": 2031551,
+  "purpose": "Read-only advertising and HID state diagnostics; unchanged 306042 coexistence policy",
+  "flash": {
+    "transport": "rfcomm",
+    "seconds": 449.829813278,
+    "verified": {
+      "event": "verified",
+      "firmware_versions": [
+        306043
+      ],
+      "reconnect_attempt": 1
+    }
+  },
+  "input_runs": [
+    {
+      "parameters": {
+        "device": "D1:21:81:DD:B8:9B",
+        "adapter": 0,
+        "handle": 3585,
+        "status": 0,
+        "interval_ms": 45.0,
+        "latency": 0,
+        "supervision_ms": 5000
+      },
+      "key_callbacks": 27,
+      "linux_key_events": [
+        [
+          1,
+          164,
+          1
+        ],
+        [
+          1,
+          164,
+          0
+        ],
+        [
+          1,
+          113,
+          1
+        ],
+        [
+          1,
+          113,
+          0
+        ],
+        [
+          1,
+          115,
+          1
+        ],
+        [
+          1,
+          115,
+          0
+        ],
+        [
+          1,
+          114,
+          1
+        ],
+        [
+          1,
+          114,
+          0
+        ],
+        [
+          1,
+          105,
+          1
+        ],
+        [
+          1,
+          105,
+          0
+        ],
+        [
+          1,
+          106,
+          1
+        ],
+        [
+          1,
+          106,
+          0
+        ],
+        [
+          1,
+          28,
+          1
+        ],
+        [
+          1,
+          28,
+          0
+        ],
+        [
+          1,
+          57,
+          1
+        ],
+        [
+          1,
+          57,
+          0
+        ],
+        [
+          1,
+          103,
+          1
+        ],
+        [
+          1,
+          103,
+          0
+        ],
+        [
+          1,
+          108,
+          1
+        ],
+        [
+          1,
+          108,
+          0
+        ],
+        [
+          1,
+          105,
+          1
+        ],
+        [
+          1,
+          105,
+          0
+        ],
+        [
+          1,
+          106,
+          1
+        ],
+        [
+          1,
+          106,
+          0
+        ],
+        [
+          1,
+          57,
+          1
+        ],
+        [
+          1,
+          57,
+          0
+        ],
+        [
+          1,
+          113,
+          1
+        ],
+        [
+          1,
+          113,
+          0
+        ]
+      ],
+      "final_hid_status": "2;true;84:5C:F3:EF:87:78;14;14;0",
+      "real_linux_input": true,
+      "physical_buttons_tested": false,
+      "tv_playback_observed": false
+    },
+    {
+      "parameters": {
+        "device": "D1:21:81:DD:B8:9B",
+        "adapter": 0,
+        "handle": 3585,
+        "status": 0,
+        "interval_ms": 45.0,
+        "latency": 0,
+        "supervision_ms": 420
+      },
+      "key_callbacks": 27,
+      "linux_key_events": [
+        [
+          1,
+          164,
+          1
+        ],
+        [
+          1,
+          164,
+          0
+        ],
+        [
+          1,
+          113,
+          1
+        ],
+        [
+          1,
+          113,
+          0
+        ],
+        [
+          1,
+          115,
+          1
+        ],
+        [
+          1,
+          115,
+          0
+        ],
+        [
+          1,
+          114,
+          1
+        ],
+        [
+          1,
+          114,
+          0
+        ],
+        [
+          1,
+          105,
+          1
+        ],
+        [
+          1,
+          105,
+          0
+        ],
+        [
+          1,
+          106,
+          1
+        ],
+        [
+          1,
+          106,
+          0
+        ],
+        [
+          1,
+          28,
+          1
+        ],
+        [
+          1,
+          28,
+          0
+        ],
+        [
+          1,
+          57,
+          1
+        ],
+        [
+          1,
+          57,
+          0
+        ],
+        [
+          1,
+          103,
+          1
+        ],
+        [
+          1,
+          103,
+          0
+        ],
+        [
+          1,
+          108,
+          1
+        ],
+        [
+          1,
+          108,
+          0
+        ],
+        [
+          1,
+          105,
+          1
+        ],
+        [
+          1,
+          105,
+          0
+        ],
+        [
+          1,
+          106,
+          1
+        ],
+        [
+          1,
+          106,
+          0
+        ],
+        [
+          1,
+          57,
+          1
+        ],
+        [
+          1,
+          57,
+          0
+        ],
+        [
+          1,
+          113,
+          1
+        ],
+        [
+          1,
+          113,
+          0
+        ]
+      ],
+      "final_hid_status": "2;true;84:5C:F3:EF:87:78;28;28;0",
+      "real_linux_input": true,
+      "physical_buttons_tested": false,
+      "tv_playback_observed": false
+    }
+  ],
+  "runtime_checks": {
+    "passed": 43,
+    "total": 43,
+    "stock_version_afterwards": true
+  },
+  "boot_tv_status": [
+    {
+      "op": "status",
+      "status": {
+        "abi": 2,
+        "callbacks": 2012,
+        "dropped_keys": 0,
+        "frames": 671,
+        "generation": 1,
+        "held_keys": 0,
+        "instructions": 137,
+        "memory_bytes": 46192,
+        "peak_memory_bytes": 46192,
+        "result": "MEDIA: GoogleTV5136",
+        "state": "active"
+      },
+      "step": 1
+    },
+    {
+      "op": "send",
+      "status": {
+        "abi": 2,
+        "callbacks": 2016,
+        "dropped_keys": 0,
+        "frames": 672,
+        "generation": 1,
+        "held_keys": 0,
+        "instructions": 137,
+        "memory_bytes": 46192,
+        "peak_memory_bytes": 46192,
+        "result": "MEDIA: GoogleTV5136",
+        "state": "active"
+      },
+      "step": 2
+    },
+    {
+      "ms": 200,
+      "op": "sleep",
+      "step": 3
+    },
+    {
+      "op": "receive",
+      "status": {
+        "abi": 2,
+        "callbacks": 2027,
+        "dropped_keys": 0,
+        "frames": 676,
+        "generation": 1,
+        "held_keys": 0,
+        "instructions": 289,
+        "memory_bytes": 46344,
+        "peak_memory_bytes": 46344,
+        "result": "2 0C:CD:B4:D0:0C:26 public",
+        "state": "active"
+      },
+      "step": 4
+    }
+  ],
+  "cleanup_readback": "TV6|0C:CD:B4:D0:0C:26|public|1;0C:CD:B4:D0:0C:26,public;",
+  "limits": [
+    "Previous 306042 BLE timeout and stale HID state cause remains unresolved.",
+    "Two short input runs passed at both timeout values; no timeout fix is established.",
+    "The TV connection was inspected from Ditoo only; no TV ADB or TV playback observation."
+  ],
+  "validation": {
+    "native": "full 32-bit ASan/UBSan suite passed",
+    "rust": [
+      61,
+      5,
+      2
+    ],
+    "strict_production_clippy": "passed",
+    "python_tests": 30,
+    "lua_files": 20,
+    "reproducibility": "two isolated builds matched all four maintained profiles"
+  },
+  "captures": "Raw JSONL and Bluetooth captures remain ignored in firmware/runs/306043-radio.",
+  "final_tv_connection": {
+    "serial_watch_seconds": 60,
+    "snapshot_count": 12,
+    "first_snapshot": {
+      "advertising_active": 0,
+      "advertising_allowed": 0,
+      "advertising_pending": 128,
+      "advertising_requested": 1,
+      "data_hex": "0001008000020100",
+      "event": 1,
+      "hid_handle": 1,
+      "hid_state": 2,
+      "identity_pending": 0,
+      "kind": 7,
+      "layer": "ble_radio",
+      "ms": 729696,
+      "name": "snapshot",
+      "sequence": 119
+    },
+    "last_snapshot": {
+      "advertising_active": 0,
+      "advertising_allowed": 0,
+      "advertising_pending": 128,
+      "advertising_requested": 1,
+      "data_hex": "0001008000020100",
+      "event": 1,
+      "hid_handle": 1,
+      "hid_state": 2,
+      "identity_pending": 0,
+      "kind": 7,
+      "layer": "ble_radio",
+      "ms": 786397,
+      "name": "snapshot",
+      "sequence": 130
+    },
+    "disconnect_events": 0,
+    "after_serial_reconnect": {
+      "abi": 2,
+      "callbacks": 3714,
+      "dropped_keys": 0,
+      "frames": 1238,
+      "generation": 23,
+      "held_keys": 0,
+      "instructions": 289,
+      "memory_bytes": 45960,
+      "peak_memory_bytes": 45960,
+      "result": "2 0C:CD:B4:D0:0C:26 public",
+      "state": "active"
+    },
+    "running_app_status": {
+      "abi": 2,
+      "callbacks": 3700,
+      "dropped_keys": 0,
+      "frames": 1233,
+      "generation": 23,
+      "held_keys": 0,
+      "instructions": 137,
+      "memory_bytes": 45808,
+      "peak_memory_bytes": 45808,
+      "result": "MEDIA: GoogleTV5136",
+      "state": "active"
+    },
+    "temporary_laptop_bond_removed_from_ditoo": true,
+    "temporary_laptop_device_removed_from_bluez": true,
+    "saved_tv_target_enabled": true,
+    "saved_startup_app": "examples/lua/tv-keyboard.lua",
+    "tv_adb_used": false
+  }
+}

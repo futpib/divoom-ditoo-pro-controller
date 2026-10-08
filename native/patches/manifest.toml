@@ -28,7 +28,7 @@ patches = [
 ]
 
 [profiles.app]
-version = 306042
+version = 306043
 source_patches = ["lua/0001-bounded-runtime.patch", "lua/0002-resident-app.patch", "lua/0003-binary32-parser.patch", "lua/0004-bounded-format.patch"]
 patches = [
     "command_dispatch",
@@ -791,6 +791,41 @@ original = '''
     addi333 $r0, $r6, 3
     addi $r1, $r1, 0x4b9
     jal stock_reverse_address
+'''
+
+[[guards]]
+site = "stock_le_adv_allowed_guard"
+profiles = ["app"]
+original_size = 12
+purpose = "Pin the native peripheral-limit result exposed by radio snapshots."
+original = '''
+    lbi $r1, [$r0 + 0x4ff]
+    slts $r6, $r6, $r1
+    sbi $r6, [$r0 + 0x4e7]
+'''
+
+[[guards]]
+site = "stock_le_adv_active_guard"
+profiles = ["app"]
+original_size = 10
+purpose = "Pin the native advertising-enable state exposed by radio snapshots."
+original = '''
+    lbi333 $r2, [$r6 + 3]
+    movi55 $r0, 0
+    slt45 $r0, $r2
+    sbi $r15, [$r1 + 0x4e5]
+'''
+
+[[guards]]
+site = "stock_le_adv_requested_guard"
+profiles = ["app"]
+original_size = 12
+purpose = "Pin the requested advertising state exposed by radio snapshots."
+original = '''
+    movi55 $r1, 0
+    slt45 $r1, $r0
+    lwi.gp $r1, [ + -28232]
+    sbi $r15, [$r1 + 0x4e6]
 '''
 
 [[guards]]

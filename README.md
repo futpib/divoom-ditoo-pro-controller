@@ -60,11 +60,12 @@ divoom-ditoo-pro-controller --transport usb --usb-port 1-6 lua start examples/lu
 No Bluetooth connection is needed. See [USB control](docs/usb-control.md) for
 installation, permissions, transport limits and verification.
 
-Experimental firmware 306042 retains Classic serial control in BLE remote mode.
+Experimental firmware 306042+ retains Classic serial control in BLE remote mode.
 Use `--transport rfcomm --device CLASSIC_ADDRESS`; the TV keeps its separate
 BLE remote identity. See [concurrent Bluetooth control](docs/bluetooth-serial-control.md)
-for the firmware policy and hardware verification status. Sustained simultaneous
-HID input is not yet verified; the laptop stress test exposed a BLE timeout.
+for the firmware policy and hardware verification status. On 306043, real Linux
+key delivery passed while serial control stayed connected. The earlier 306042
+timeout remains unexplained; long-term reliability is still unverified.
 
 ## Find your device
 

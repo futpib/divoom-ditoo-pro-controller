@@ -269,11 +269,11 @@ static const char *perform_job(void) {
             if ((status.state==1 || status.state==2) && !memcmp(status.peer,peripheral.data,6) &&
                     (!status.transport || status.address_type==peripheral.data[6])) return NULL;
             if (status.state && (status.state!=4 || memcmp(status.peer,peripheral.data,6)))
-                return "disconnect the previous keyboard peer first";
+                return "disconnect the previous peer first";
             if (stock_avrcp_state() || stock_a2dp_state())
                 for (unsigned i=0;i<6;++i)
                     if (stock_bt_manager[0xe0+i]!=peripheral.data[i])
-                        return "disconnect the previous Bluetooth peer first";
+                        return "disconnect the previous peer first";
             if (stock_free_heap()<16384) return "insufficient native heap";
             unsigned now=stock_ticks();
             if (peripheral.slot==HID_CONNECT && !status.transport) {
@@ -283,7 +283,7 @@ static const char *perform_job(void) {
                 ++peripheral.bt_attempts;peripheral.bt_last_attempt=now;
             }
         } else if (peripheral.slot==HID_FORGET) {
-            if (status.state || stock_avrcp_state() || stock_a2dp_state()) return "disconnect Bluetooth profiles before forgetting a bond";
+            if (status.state || stock_avrcp_state() || stock_a2dp_state()) return "disconnect before forgetting a bond";
             if (peripheral.writes>=64) return "64 saved changes per boot exceeded";
             if (peripheral.writes && (unsigned)(stock_ticks()-peripheral.last_write)<1000)
                 return "saved settings rate limited";

@@ -3,6 +3,7 @@
 #include <string.h>
 #include "bluetooth-trace.h"
 #include "bluetooth-hid.h"
+#include "bluetooth-hogp.h"
 #include "bluetooth-advertising.h"
 extern unsigned stock_ticks(void), runtime_irq_save(void);
 extern void runtime_irq_restore(unsigned);
@@ -29,13 +30,14 @@ void runtime_bt_trace_service(void) {
 
 void runtime_bt_trace(unsigned kind,unsigned event,const void *data,unsigned length) {
     if (length>12 || (length && !data)) return;
-    struct trace_event row={.ms=stock_ticks(),.kind=kind,.event=event,.length=length};
-    if (length) memcpy(row.data,data,length);
     unsigned irq=runtime_irq_save();
     if(!history) { runtime_irq_restore(irq);return; }
     /* Restart the cursor at the practically unreachable 2^32-event boundary. */
     if (++sequence==0) { retained=0;sequence=1; }
-    row.sequence=sequence;history[(sequence-1)%CAPACITY]=row;
+    struct trace_event *row=&history[(sequence-1)%CAPACITY];
+    memset(row,0,sizeof *row);row->sequence=sequence;row->ms=stock_ticks();
+    row->kind=kind;row->event=event;row->length=length;
+    if(length) memcpy(row->data,data,length);
     if(retained<CAPACITY) ++retained;
     runtime_irq_restore(irq);
 }
@@ -78,7 +80,7 @@ void runtime_bt_trace_stack(unsigned event,const unsigned char *params) {
 void runtime_bt_trace_read(unsigned context,const unsigned char *data,unsigned length) {
     unsigned char reply[16+6*sizeof(struct trace_event)]={'D','B','T','R',1,0,0,CAPACITY};
     uint32_t after=0,latest,oldest;unsigned count=0;
-    if(length!=13 && (length!=14 || data[11]>1)) reply[5]=1;
+    if(length!=13 && (length!=14 || data[11]>2)) reply[5]=1;
     else memcpy(&after,data+7,4);
     unsigned stop=length==14 && !data[11];
     struct trace_event *allocated=NULL;
@@ -92,6 +94,7 @@ void runtime_bt_trace_read(unsigned context,const unsigned char *data,unsigned l
         else {
             if(!history) { history=allocated;allocated=NULL;retained=0; }
             seen=stock_ticks();
+            if(length==14 && data[11]==2) runtime_hogp_trace();
         }
     }
     if(!retained && sequence==UINT32_MAX) sequence=0;

@@ -1,11 +1,13 @@
 # Classic control alongside the BLE remote
 
-Experimental firmware 306042 keeps the native Serial Port Profile (SPP/RFCOMM) available in
+Experimental firmware 306042 and 306043 keep the native Serial Port Profile (SPP/RFCOMM) available in
 `keyboard.mode('ble-remote')` and `keyboard.mode('keyboard')`. The TV remote app
 selects its existing BLE mode; no additional Lua setting or TV pairing is needed.
-The intended arrangement is TV → BLE HID and computer → Classic SPP. Basic
-simultaneous reads pass, but sustained HID input is not yet verified: the laptop
-stress test lost BLE and exposed stale connection state on the Ditoo.
+The arrangement is TV → BLE HID and computer → Classic SPP. Firmware 306043
+passed real Linux keyboard input while serial control stayed connected, at
+both 420 ms and 5000 ms supervision timeouts. The earlier 306042 timeout and
+stale-state failure below remains unexplained; these successful short tests do
+not establish long-term reliability.
 
 Use the device's **Classic address**, not the random BLE remote identity:
 
@@ -86,6 +88,38 @@ That evidence predates this particular serial-plus-remote policy.
 
 ## Verification status
 
+The [306043 report](../firmware/radio-trace-evidence/verification.json) records
+the reboot follow-up and the new read-only radio snapshots. Radio policy is
+unchanged from 306042. The TV reconnected automatically after flashing while
+serial firmware reads, Lua status/messages, and trace reads succeeded.
+
+Two runs of the real TV app exercised 27 key callbacks each: media actions,
+navigation, Space, layout switches, ignored hold/release events, and local menu
+isolation. Linux received exactly 14 presses and 14 releases per run. Native
+send/release counters agreed, with zero HID errors. Input nodes were grabbed to
+keep keys out of the desktop. These were injected Lua key callbacks, not physical
+button presses or observed TV playback. The BLE interval stayed 45 ms; one run
+used a 5000 ms supervision timeout and the other explicitly restored 420 ms.
+Both passed, so the timeout change is not an established fix. The host capture
+recorded intentional remote disconnects when cleanup switched back to the TV.
+
+Reproduce that controlled parameter change on an already connected test host:
+
+```sh
+sudo python3 scripts/ble-connection-interval.py D1:21:81:DD:B8:9B \
+  --milliseconds 45 --supervision-ms 420
+```
+
+The helper accepts 100–32000 ms in multiples of 10, checks the connection is
+already established, and verifies the acknowledged interval and timeout.
+This changes only the current laptop connection; it does not configure the TV.
+
+All 43 runtime checks passed again on 306043 over serial. The saved TV app and
+TV bond were preserved. Temporary laptop pairing state is cleaned up after the
+tests. No TV ADB session was opened.
+
+### Earlier 306042 evidence
+
 306042 was flashed over RFCOMM and read back after reboot. The compact
 [hardware report](../firmware/serial-control-evidence/verification.json) separates
 passing checks from the unresolved input failure. Build metadata intentionally
@@ -130,9 +164,10 @@ keeps its deterministic `offline-built; hardware-unverified` label.
 - Package, bootloader and application CRCs and stock ABI guards validate.
   The package is 2,031,559 bytes, 57 bytes below the Bluetooth staging limit.
 
-Remaining acceptance requires actual input on a test host while serial remains
-open, BLE survival across serial reconnects, clean restart and TV reconnect
-checks. Successful serial commands alone do not establish remote operation.
+Those originally pending input, serial reconnect and restart checks have the
+306043 follow-up above. Long-term reliability and the cause of the earlier
+timeout remain open. Successful serial commands alone do not establish remote
+operation.
 
 Reproduce local checks with:
 

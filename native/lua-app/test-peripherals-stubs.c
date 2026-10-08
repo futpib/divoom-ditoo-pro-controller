@@ -97,6 +97,7 @@ void runtime_hid_command(unsigned op,unsigned value,const unsigned char *data,un
 static struct hid_status fake_hid_status;
 static struct hid_profile fake_profile;
 static unsigned fake_profile_valid;
+void runtime_hogp_trace(void) {}
 unsigned runtime_hogp_profile_equal(const struct hid_profile *p) {
     return fake_profile_valid && !memcmp(&fake_profile,p,sizeof *p);
 }

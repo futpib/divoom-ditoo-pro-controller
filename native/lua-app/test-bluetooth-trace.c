@@ -10,6 +10,12 @@ unsigned stock_free_heap(void) { return 100000; }
 static unsigned char response[160];
 static unsigned response_size;
 static unsigned preserve;
+static unsigned snapshots;
+void runtime_hogp_trace(void) {
+    assert(irq_disabled);++snapshots;
+    const unsigned char p[8]={0,1,1,7,2,4,255,255};
+    runtime_bt_trace(7,1,p,sizeof p);
+}
 unsigned runtime_hid_preserve_link(unsigned caller) { (void)caller;return preserve; }
 unsigned stock_ticks(void) { return clock_ms; }
 unsigned runtime_irq_save(void) { unsigned was=irq_disabled;irq_disabled=1;return !was; }
@@ -82,5 +88,12 @@ int main(void) {
     read_after(0);assert(!response[6] && history && allocated==1);
     unsigned char stop[14]={0};runtime_bt_trace_read(7,stop,sizeof stop);
     assert(!response[5] && !history && !allocated);
+    unsigned char snapshot[14]={0};snapshot[11]=2;
+    memcpy(snapshot+7,&sequence,4);
+    runtime_bt_trace_read(7,snapshot,sizeof snapshot);
+    assert(snapshots==1 && response[6]==1 && response[24]==7 && response[26]==8);
+    snapshot[11]=3;runtime_bt_trace_read(7,snapshot,sizeof snapshot);
+    assert(response[5]==1 && snapshots==1);
+    runtime_bt_trace_read(7,stop,sizeof stop);assert(!allocated);
     puts("Bluetooth trace framing, redaction, overwrite and cursor tests passed");
 }

@@ -622,6 +622,16 @@ void runtime_hogp_service(unsigned epoch) {
 void runtime_hogp_status(struct hid_status *s) {
     if (ble) *s=ble->status;else memset(s,0,sizeof *s);
 }
+void runtime_hogp_trace(void) {
+    /* Called with interrupts masked by the trace reader. No pointers or keys
+     * leave the device; these flags distinguish unfinished radio setup. */
+    unsigned char p[8]={0},*h=stock_hci_stack;
+    unsigned handle=ble ? ble->handle : 0xffff;
+    p[4]=ble ? ble->identity_pending : 0;p[5]=ble ? ble->status.state : 0;
+    p[6]=handle;p[7]=handle>>8;
+    if(h) memcpy(p,h+0x4e5,4);
+    runtime_bt_trace(7,1,p,sizeof p);
+}
 
 unsigned runtime_hogp_control_notify(unsigned connection,unsigned attribute,const void *data,unsigned n) {
     if (!stock_hci_stack) return 2;

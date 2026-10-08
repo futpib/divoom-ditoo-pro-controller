@@ -1,5 +1,15 @@
 # Firmware for hardware family 306
 
+Current experimental `306043-lua.MVA` adds read-only BLE radio snapshots to
+`bluetooth trace` so failed advertising can be distinguished from application
+waiting state. It preserves the 306042 radio policy and runtime limits; it is
+not a coexistence fix. The 2,031,551-byte image fits Bluetooth staging with 65
+bytes remaining. Real Linux key delivery passed with simultaneous serial control
+at both tested supervision timeouts, all 43 runtime checks passed, and the TV
+reconnected. The earlier timeout remains unexplained. See
+[device-side diagnostics](../docs/bluetooth-trace.md) and the
+[306043 hardware report](radio-trace-evidence/verification.json).
+
 Experimental `306042-lua.MVA` retains Classic SPP control in remote modes, keeps Classic
 connectable without discoverability in BLE remote mode, and separately blocks
 incoming/outgoing hands-free RFCOMM channels. It preserves the existing BLE
