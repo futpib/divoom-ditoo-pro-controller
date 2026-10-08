@@ -17,7 +17,7 @@ class ManifestTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        for name in ['src/firmware.rs', 'src/lua.rs', 'src/usb_firmware.rs',
+        for name in ['src/firmware.rs', 'src/lua.rs', 'src/usb_firmware.rs', 'src/bluetooth_trace.rs',
                      'scripts/check-lua-app-device.py', 'scripts/backup-lua-storage.py',
                      'scripts/build-reflash-probe.py', 'firmware/306007.MVA',
                      'firmware/306019-lua.MVA', 'firmware/306019-lua.json']:
@@ -85,6 +85,8 @@ class ManifestTests(unittest.TestCase):
         self.assertIn('TEST_RUNTIME_VERSION',restore)
         self.assertIn(f'validate_target({version+1}, VERSION, false, true).is_err()', after['src/firmware.rs'])
         self.assertIn('TEST_RUNTIME_VERSION',after['src/lua.rs'].split('if !matches!',1)[1])
+        self.assertIn(f'306024..={version}', after['src/bluetooth_trace.rs'])
+        self.assertIn(f'306024 through {version}', after['src/bluetooth_trace.rs'])
         saved_error = 'Saved apps require firmware {STANDALONE_VERSION} or later; no program sent'
         self.assertIn(saved_error, after['src/lua.rs'])
         self.assertEqual(after['src/lua.rs'].count('{TEST_RUNTIME_VERSION}; no program sent'), 1)

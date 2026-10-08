@@ -147,6 +147,15 @@ def plan(root, image, meta, register=None, builder=None):
     if constant not in lua[lua.index('if !matches!'):lua.index('if installed == VERSION')]:
         raise ValueError('Lua firmware allowlist is missing registered version')
     after['src/lua.rs'] = lua
+    if version >= 306024:
+        trace = read('src/bluetooth_trace.rs')
+        match = re.search(r'306024\.\.=([0-9]+)', trace)
+        if not match:
+            raise ValueError('missing Bluetooth trace firmware boundary')
+        highest = max(version, int(match[1]))
+        trace = trace[:match.start(1)]+str(highest)+trace[match.end(1):]
+        trace = re.sub(r'306024 through [0-9]+', f'306024 through {highest}', trace)
+        after['src/bluetooth_trace.rs'] = trace
     usb = read('src/usb_firmware.rs')
     row = f'      ("{image.name}", {meta["application_bytes"]:_}, {meta["blocks"]}),'
     pattern = rf'      \("{re.escape(image.name)}", ([\d_]+), ([\d_]+)\),'
