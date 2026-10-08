@@ -192,21 +192,38 @@ fn parse_frames(buffer: &mut Vec<u8>) -> Result<Vec<Response>, Box<dyn Error + S
 pub(crate) struct DeviceLease {
   device: bluer::Device,
   owned: bool,
-  le_only: bool,
+  bearer: Bearer,
 }
 
 #[derive(Clone, Copy)]
-enum LeOperation {
+enum Bearer {
+  Classic,
+  Le,
+}
+
+#[derive(Clone, Copy)]
+enum BearerOperation {
   Connected,
   Connect,
   Disconnect,
 }
 
+fn missing_bearer(error: &dbus::Error) -> bool {
+  matches!(error.name(), Some(
+    "org.freedesktop.DBus.Error.UnknownMethod"
+      | "org.freedesktop.DBus.Error.UnknownInterface"
+      | "org.freedesktop.DBus.Error.UnknownProperty"
+      | "org.freedesktop.DBus.Error.UnknownObject"
+  )) || (error.name() == Some("org.freedesktop.DBus.Error.InvalidArgs")
+    && error.message().is_some_and(|s| s.starts_with("No such interface 'org.bluez.Bearer.")))
+}
+
 // bluer does not yet expose BlueZ's per-bearer API. Keep blocking D-Bus work
 // off the async executor; each call owns and closes its system-bus connection.
-async fn le_bearer(
+async fn bearer_operation(
   device: &bluer::Device,
-  operation: LeOperation,
+  bearer: Bearer,
+  operation: BearerOperation,
 ) -> Result<Option<bool>, Box<dyn Error>> {
   let path = format!(
     "/org/bluez/{}/dev_{}",
@@ -217,11 +234,14 @@ async fn le_bearer(
     use dbus::blocking::stdintf::org_freedesktop_dbus::Properties;
     let connection = dbus::blocking::Connection::new_system()?;
     let proxy = connection.with_proxy("org.bluez", path, Duration::from_secs(10));
-    let interface = "org.bluez.Bearer.LE1";
+    let interface = match bearer {
+      Bearer::Classic => "org.bluez.Bearer.BREDR1",
+      Bearer::Le => "org.bluez.Bearer.LE1",
+    };
     match operation {
-      LeOperation::Connected => proxy.get(interface, "Connected"),
-      LeOperation::Connect | LeOperation::Disconnect => {
-        let method = if matches!(operation, LeOperation::Connect) {
+      BearerOperation::Connected => proxy.get(interface, "Connected"),
+      BearerOperation::Connect | BearerOperation::Disconnect => {
+        let method = if matches!(operation, BearerOperation::Connect) {
           "Connect"
         } else {
           "Disconnect"
@@ -234,57 +254,54 @@ async fn le_bearer(
   .await?;
   match result {
     Ok(value) => Ok(Some(value)),
-    Err(error)
-      if matches!(
-        error.name(),
-        Some(
-          "org.freedesktop.DBus.Error.UnknownMethod"
-            | "org.freedesktop.DBus.Error.UnknownInterface"
-            | "org.freedesktop.DBus.Error.UnknownProperty"
-        )
-      ) =>
-    {
-      Ok(None)
-    }
+    Err(error) if missing_bearer(&error) => Ok(None),
     Err(error) => Err(error.into()),
   }
 }
 
-async fn disconnect_lease(device: &bluer::Device, le_only: bool) -> Result<(), Box<dyn Error>> {
-  if le_only {
-    if le_bearer(device, LeOperation::Disconnect).await?.is_some() {
-      return Ok(());
-    }
-    if device.class().await?.is_some() {
-      // Older BlueZ can connect LE explicitly but cannot disconnect only LE.
-      // Retain that connection rather than tear down another classic profile.
-      log::debug!("Leaving BLE connected: BlueZ lacks per-bearer disconnect");
-      return Ok(());
-    }
+async fn disconnect_lease(device: &bluer::Device, bearer: Bearer) -> Result<(), Box<dyn Error>> {
+  if bearer_operation(device, bearer, BearerOperation::Disconnect).await?.is_some() {
+    return Ok(());
+  }
+  if matches!(bearer, Bearer::Classic) || device.class().await?.is_some() {
+    // Closing the RFCOMM stream releases our profile. Older BlueZ cannot
+    // disconnect just its bearer without also terminating a live BLE link.
+    log::debug!("Leaving Bluetooth ACL connected: BlueZ lacks per-bearer disconnect");
+    return Ok(());
   }
   device.disconnect().await?;
   Ok(())
 }
 
 impl DeviceLease {
-  pub async fn new(device: bluer::Device) -> Result<Self, Box<dyn Error>> {
-    let owned = !device.is_connected().await?;
+  pub async fn new_classic(device: bluer::Device) -> Result<Self, Box<dyn Error>> {
+    let connected = match bearer_operation(&device, Bearer::Classic, BearerOperation::Connected).await? {
+      Some(connected) => connected,
+      None => match device.is_connected().await {
+        Ok(connected) => connected,
+        Err(error) if error.kind == bluer::ErrorKind::NotFound => false,
+        Err(error) if matches!(&error.kind,
+          bluer::ErrorKind::Internal(bluer::InternalErrorKind::DBus(name))
+          if name == "org.freedesktop.DBus.Error.UnknownObject") => false,
+        Err(error) => return Err(error.into()),
+      },
+    };
     Ok(Self {
       device,
-      owned,
-      le_only: false,
+      owned: !connected,
+      bearer: Bearer::Classic,
     })
   }
 
   async fn new_ble(device: bluer::Device) -> Result<Self, Box<dyn Error>> {
-    let connected = match le_bearer(&device, LeOperation::Connected).await? {
+    let connected = match bearer_operation(&device, Bearer::Le, BearerOperation::Connected).await? {
       Some(connected) => connected,
       None => device.is_connected().await?,
     };
     Ok(Self {
       device,
       owned: !connected,
-      le_only: true,
+      bearer: Bearer::Le,
     })
   }
 
@@ -293,7 +310,7 @@ impl DeviceLease {
       self.owned = false;
       tokio::time::timeout(
         Duration::from_secs(12),
-        disconnect_lease(&self.device, self.le_only),
+        disconnect_lease(&self.device, self.bearer),
       )
       .await??;
     }
@@ -305,10 +322,10 @@ impl Drop for DeviceLease {
   fn drop(&mut self) {
     if self.owned {
       let device = self.device.clone();
-      let le_only = self.le_only;
+      let bearer = self.bearer;
       if let Ok(runtime) = tokio::runtime::Handle::try_current() {
         runtime.spawn(async move {
-          let _ = disconnect_lease(&device, le_only).await;
+          let _ = disconnect_lease(&device, bearer).await;
         });
       }
     }
@@ -336,9 +353,9 @@ async fn connect_ble_bearer(
   adapter: &bluer::Adapter,
   device: &bluer::Device,
 ) -> Result<(), Box<dyn Error>> {
-  if let Some(connected) = le_bearer(device, LeOperation::Connected).await? {
+  if let Some(connected) = bearer_operation(device, Bearer::Le, BearerOperation::Connected).await? {
     if !connected {
-      le_bearer(device, LeOperation::Connect).await?;
+      bearer_operation(device, Bearer::Le, BearerOperation::Connect).await?;
     }
     while !device.is_services_resolved().await? {
       tokio::time::sleep(Duration::from_millis(50)).await;
@@ -611,6 +628,21 @@ impl BleConnection {
 #[cfg(test)]
 mod tests {
   use super::*;
+  #[test]
+  fn absent_classic_bearer_on_ble_only_cached_device() {
+    let absent = dbus::Error::new_custom(
+      "org.freedesktop.DBus.Error.InvalidArgs",
+      "No such interface 'org.bluez.Bearer.BREDR1'",
+    );
+    assert!(missing_bearer(&absent));
+    for (name, message) in [
+      ("org.freedesktop.DBus.Error.InvalidArgs", "Invalid connection parameters"),
+      ("org.freedesktop.DBus.Error.AccessDenied", "Permission denied"),
+      ("org.freedesktop.DBus.Error.NoReply", "Timed out"),
+    ] {
+      assert!(!missing_bearer(&dbus::Error::new_custom(name, message)));
+    }
+  }
   #[test]
   fn captured_brightness_packet() -> Result<(), Box<dyn Error>> {
     assert_eq!(

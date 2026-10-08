@@ -191,30 +191,51 @@ impl ClassicConnection {
       role: Some(bluer::rfcomm::Role::Client),
       require_authentication: Some(false),
       require_authorization: Some(false),
-      auto_connect: Some(true),
+      auto_connect: Some(false),
       ..Default::default()
     };
 
     let mut profile_handle = session.register_profile(profile).await?;
     let device = adapter.device(mac_address)?;
-    let lease = transport::DeviceLease::new(device.clone()).await?;
+    let lease = transport::DeviceLease::new_classic(device.clone()).await?;
 
-    if !device.is_connected().await? {
-      debug!("Device not connected, connecting...");
-      device.connect().await?;
-    }
-
-    match device.connect_profile(&spp_uuid).await {
-      Ok(()) => debug!("connect_profile succeeded"),
-      Err(e) => debug!("connect_profile: {} (waiting for profile handle)", e),
-    }
-
-    let stream = loop {
-      let req = profile_handle.next().await.ok_or("ProfileHandle stream closed")?;
-      if req.device() == mac_address {
-        break req.accept()?;
+    // ConnectProfile selects BR/EDR and resolves SDP even with only a cached
+    // BLE device. Generic Connect may choose BLE or connect audio profiles.
+    let connect = async {
+      match device.connect_profile(&spp_uuid).await {
+        Err(error) if error.kind == bluer::ErrorKind::NotFound => {
+          // A non-discoverable peer may have expired from BlueZ's device cache.
+          // Bootstrap that explicit Classic address, then request our profile.
+          adapter.connect_device(mac_address, bluer::AddressType::BrEdr).await?;
+          device.connect_profile(&spp_uuid).await
+        }
+        result => result,
       }
     };
+    tokio::pin!(connect);
+    let mut completed = false;
+
+    // BlueZ waits for our NewConnection reply before completing ConnectProfile.
+    // Accept the stream while that call is pending, not after it returns.
+    let stream = loop {
+      tokio::select! {
+        result = &mut connect, if !completed => {
+          completed = true;
+          if let Err(error) = result {
+            debug!("connect_profile: {error} (waiting for profile handle)");
+          }
+        }
+        request = profile_handle.next() => {
+          let req = request.ok_or("ProfileHandle stream closed")?;
+          if req.device() == mac_address {
+            break req.accept()?;
+          }
+        }
+      }
+    };
+    if !completed {
+      connect.await?;
+    }
 
     info!("Connected via SDP profile");
     let (reader, writer) = stream.into_split();
