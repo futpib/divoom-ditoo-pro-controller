@@ -285,29 +285,39 @@ static void test_tv_keyboard(void) {
         for(unsigned e=3;e<=5;++e) { runtime_adc_result(e<<16|keys[i]);tv_ticks(1); }
         assert(tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==before);
     }
-    /* Sun selects a layout locally, once per press. Navigation uses the same
+    clock_ms+=600;tv_key(7);assert(tv_last==HID_CONSUMER && tv_value==0x30);
+    /* M selects a layout locally, once per press. Navigation uses the same
      * advertised descriptor; queued input must not leak across a layout change. */
     unsigned before=tv_ops[HID_KEY]+tv_ops[HID_CONSUMER];
-    tv_key(7);assert(strstr(app.result,"NAV:"));
-    for(unsigned e=3;e<=5;++e) { runtime_adc_result(e<<16|7);tv_ticks(1); }
+    tv_key(0);assert(strstr(app.result,"NAV:"));
+    for(unsigned e=3;e<=5;++e) { runtime_adc_result(e<<16|0);tv_ticks(1); }
     assert(strstr(app.result,"NAV:") && tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==before);
     const unsigned navigation[]={40,44,82,81,80,79};
     for(unsigned i=0;i<6;++i) {
         clock_ms+=600;tv_key(keys[i]);assert(tv_last==HID_KEY && tv_value==navigation[i]);
     }
+    clock_ms+=600;tv_key(7);assert(tv_last==HID_CONSUMER && tv_value==0x30);
+    before=tv_ops[HID_CONSUMER];
+    for(unsigned e=3;e<=5;++e) { runtime_adc_result(e<<16|7);tv_ticks(1); }
+    assert(tv_ops[HID_CONSUMER]==before);
     before=tv_ops[HID_KEY]+tv_ops[HID_CONSUMER];
+    tv_key(0);assert(!strcmp(app.result,"DEVICES: REMOTE"));
+    tv_key(4);assert(strstr(app.result,"SAVED DEVICE:"));
+    tv_key(0);assert(strstr(app.result,"MEDIA:"));
+    tv_key(0);assert(strstr(app.result,"NAV:"));
     tv_key(0);tv_key(7);tv_key(1);tv_key(9);tv_key(3);tv_key(2);tv_key(10);
-    tv_ticks(30);assert(strstr(app.result,"NAV:") && tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==before);
+    tv_ticks(30);assert(strstr(app.result,"MEDIA:") && tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==before);
+    tv_key(0);
     fake_hid_status.state=4;tv_ticks(1);tv_key(10);
     before=tv_ops[HID_KEY]+tv_ops[HID_CONSUMER];
     fake_hid_status.state=2;tv_ticks(50);
     assert(tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==before+1 && tv_value==44);
-    fake_hid_status.state=4;tv_ticks(1);tv_key(10);tv_key(7);
+    fake_hid_status.state=4;tv_ticks(1);tv_key(10);tv_key(0);tv_key(0);
     before=tv_ops[HID_KEY]+tv_ops[HID_CONSUMER];fake_hid_status.state=2;tv_ticks(50);
     assert(strstr(app.result,"MEDIA:") && tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==before);
     tv_message("space");assert(tv_last==HID_KEY && tv_value==44);
     unsigned reports=tv_ops[HID_KEY]+tv_ops[HID_CONSUMER];
-    tv_key(0);assert(!strcmp(app.result,"DEVICES: REMOTE"));
+    tv_key(0);tv_key(0);assert(!strcmp(app.result,"DEVICES: REMOTE"));
     tv_key(2);assert(!strcmp(app.result,"BACK: REMOTE"));
     tv_key(3);tv_key(4);assert(strstr(app.result,"01:01:01:01:01:01 PUBLIC"));
     /* All sixteen native bonds, including address type, remain selectable. */
@@ -323,7 +333,7 @@ static void test_tv_keyboard(void) {
     tv_key(4);fake_hid_status.state=2;tv_ticks(8);assert(tv_last==HID_CONSUMER && tv_value==0xcd);
     tv_ticks(50);assert(strstr(app.result,"MEDIA: 02:02:02:02:02:02 RANDOM"));
     /* Opening a menu discards a deferred action. A late connection does too. */
-    fake_hid_status.state=4;tv_ticks(1);tv_key(10);tv_key(0);
+    fake_hid_status.state=4;tv_ticks(1);tv_key(10);tv_key(0);tv_key(0);
     unsigned sent=tv_ops[HID_KEY]+tv_ops[HID_CONSUMER];fake_hid_status.state=2;tv_ticks(50);
     assert(tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==sent);tv_key(0);
     fake_hid_status.state=4;tv_ticks(1);tv_key(10);tv_ticks(150);fake_hid_status.state=2;tv_ticks(50);
@@ -332,9 +342,11 @@ static void test_tv_keyboard(void) {
     unsigned listens=tv_ops[HID_LISTEN];tv_key(4);tv_ticks(200);assert(tv_ops[HID_LISTEN]==listens);
     tv_stop();load(source,1);tv_ticks(200);assert(strstr(app.result,"DISCONNECTED:") && tv_ops[HID_LISTEN]==listens);
     /* Pairing is separate from deletion. Expiry is persistent and explicit. */
-    tv_key(0);tv_key(3);tv_key(4);tv_ticks(100);
+    tv_key(0);tv_key(0);tv_key(3);tv_key(4);tv_ticks(100);
     assert(strstr(app.result,"READY TO PAIR: SELECT DITOO BLE REMOTE"));tv_frame(5);
     assert(tv_ops[HID_PAIR] && !tv_ops[HID_FORGET]);
+    tv_key(0);assert(!strcmp(app.result,"DEVICES: REMOTE"));
+    tv_key(0);assert(strstr(app.result,"READY TO PAIR:"));
     fake_hid_status.state=1;memset(fake_hid_status.peer,20,6);tv_ticks(1);assert(strstr(app.result,"PAIRING:"));
     fake_hid_status.pairing=0;fake_hid_status.state=4;tv_ticks(200);
     assert(strstr(app.result,"PAIRING TIMED OUT"));tv_frame(6);
@@ -345,10 +357,10 @@ static void test_tv_keyboard(void) {
     memset(fake_hid_status.peer,3,6);fake_hid_status.address_type=0;tv_ticks(100);
     assert(strstr(app.result,"MEDIA: 03:03:03:03:03:03 PUBLIC"));
     /* Forget selects exactly one typed bond and reconnects the other selection. */
-    tv_key(0);tv_key(4);tv_key(4);tv_key(3);tv_key(4);tv_key(3);tv_key(4);tv_ticks(100);
+    tv_key(0);tv_key(0);tv_key(4);tv_key(4);tv_key(3);tv_key(4);tv_key(3);tv_key(4);tv_ticks(100);
     assert(tv_ops[HID_FORGET]==1 && !fake_le_bonds[0][7] && fake_le_bonds[2][7]);
     tv_key(0);tv_ticks(100);assert(strstr(app.result,"WAITING FOR DEVICE: 03:03:03:03:03:03 PUBLIC"));
-    for(unsigned i=0;i<20;++i) { tv_key(0);tv_key(4);tv_ticks(10);tv_key(0); }
+    for(unsigned i=0;i<20;++i) { tv_key(0);tv_key(0);tv_key(4);tv_ticks(10);tv_key(0); }
     printf("Android-style remote: source %u, Lua peak %u, reserved %u, native free %u\n",(unsigned)n,app.peak,app.reserved,stock_free_heap());
     assert(app.peak<=MEMORY_LIMIT && stock_free_heap()>=STOCK_HEAP_RESERVE);
     assert(tv_ops[HID_KEY]+tv_ops[HID_CONSUMER]==reports+1);
@@ -361,7 +373,7 @@ static void test_tv_keyboard(void) {
     }
     load(source,1);tv_ticks(100);fake_hid_status.state=2;tv_ticks(20);
     assert(strstr(app.result,names[2]));
-    tv_key(0);tv_key(4);
+    tv_key(0);tv_key(0);tv_key(4);
     for(unsigned i=0;i<16;++i) { assert(strstr(app.result,names[i]));tv_key(3);tv_ticks(20); }
     assert(strstr(app.result,"BACK: DEVICES"));tv_key(3);tv_key(4);tv_key(3);tv_key(4);
     assert(strstr(app.result,"CANCEL: FORGET ") && strstr(app.result,names[0]));
@@ -374,7 +386,7 @@ static void test_tv_keyboard(void) {
     tv_key(4);tv_ticks(100);assert(fake_hid_status.pairing && tv_ops[HID_FORGET]==1);
     tv_stop();stock_config_context=NULL;saved.settings_size=0;track_heap=0;free_heap=100000;
     fake_hid_status=(struct hid_status){0};bt_queued.op=0;
-    puts("Remote UX: media/navigation layouts, Space, typed devices, default-cancel forgetting, pairing without deletion, persistent disconnect/timeout, deferred inputs and 16-bond memory passed");
+    puts("Remote UX: M layout/menu cycle, Sun Power, Space, typed devices, default-cancel forgetting, pairing without deletion, persistent disconnect/timeout, deferred inputs and 16-bond memory passed");
 }
 
 static void test_keyboard_lifecycle(void) {

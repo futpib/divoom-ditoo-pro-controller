@@ -383,9 +383,9 @@ memory limit. Upgrade, then reinstall the saved app. The remote has
 Devices → Connect / Disconnect / Forget and a separate Pair new device action.
 It starts after power-on and remembers the selected host and disconnected state. Fixed controls follow the printed
 keys: lever for Play/Pause, +/− for TV volume, arrows for seeking/navigation,
-M for menus and source for Mute. The ☀ sun key switches between **Media** and
-**Nav** layouts. Nav uses the lever for Enter, +/− for Up/Down, and source for
-Space; arrows and M keep their functions. It starts in Media after every app
+source for Mute and ☀ Sun for TV Power. **M** cycles **Media → Nav → Menu → Media**.
+Nav uses the lever for Enter, +/− for Up/Down, and source for Space; arrows and
+Sun keep their functions. It starts in Media after every app
 restart. There is no button setup
 or on-screen keybinding guide. Pairing and connection states appear on the
 screen; only the Ditoo and TV are needed after installation.

@@ -32,8 +32,9 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
 3. For the first BLE pairing, disconnect the old **DitooPro-Audio** accessory
    and open **Pair accessory**. Classic and BLE bonds are separate; switching
    profiles requires one new pairing. Later BLE app upgrades reuse that bond.
-4. On the Ditoo, use **M → Pair new device → lever**. With no selected device,
-   the app opens directly on Pair new device. Wait for **Ready to pair**, then
+4. On the Ditoo, press **M** until the menu opens, then select
+   **Pair new device → lever**. With no selected device, the app opens directly
+   on Pair new device. Wait for **Ready to pair**, then
    select **Ditoo BLE Remote** on the TV. Accept a confirmation if shown; the
    tested Android TV completed pairing without a separate confirmation dialog.
    A blue bar shows the two-minute window. Pairing preserves existing bonds.
@@ -48,17 +49,19 @@ divoom-ditoo-pro-controller --transport usb lua install examples/lua/tv-keyboard
 | 3 | − | TV volume down | Down arrow | 9 |
 | 4 | ← | Left arrow (seek or navigate) | Left arrow | 2 |
 | 5 | → | Right arrow (seek or navigate) | Right arrow | 3 |
-| 6 | M | Open/close local menu | Open/close local menu | 0 |
-| 7 | ☀ Sun key (top-right) | Switch to Nav | Switch to Media | 7 |
+| 6 | M | Switch to Nav | Open local menu | 0 |
+| 7 | ☀ Sun key (top-right) | TV Power/standby | TV Power/standby | 7 |
 | 8 | Audio-source button (beside lever base) | Mute/unmute | Space | 10 |
 
-Tap Sun, then Source to send Space. Sun toggles a layout; no simultaneous key
+**M** cycles **Media → Nav → Menu → Media**; pressing it from any menu page
+returns to Media. Tap M, then Source from Media to send Space. No simultaneous key
 presses are needed. The connected idle screen always shows **Media** or **Nav**;
 brief action feedback returns to that layout name. The app starts in Media on
 every restart. Layout changes stay in RAM, do not write flash, and cancel any
-queued action. The local M menu has the same controls in both layouts and
-preserves the layout when closed. Sun is inactive while pairing or changing
-the connection. These bindings use the existing HID profile, so this app update
+queued action. Source/Back also returns from the cycle's root menu to Media.
+During pairing or a connection operation, M opens the menu directly.
+Sun is inactive inside menus, while pairing or changing the connection.
+These bindings use the existing HID profile, so this app update
 requires neither a firmware flash nor re-pairing.
 
 The fixed IDs come from the [stock firmware key tables](stock-ux.md#physical-key-ids).
@@ -82,8 +85,9 @@ in effect after restarting the app or device, until Connect or Pair new device.
 
 ## Menu and recovery
 
-**M** opens/closes the local menu. **←/→** browse with wraparound, the **lever**
-selects, and **Source** goes back one level. Volume and Sun are inactive in menus.
+Press **M** twice from Media or once from Nav to open the local menu; press it
+again from any menu page to return to Media. **←/→** browse with wraparound,
+the **lever** selects, and **Source** goes back one level. Volume and Sun are inactive in menus.
 Menu and confirmation keys never send remote input. Long labels scroll in full
 rather than being silently truncated to four characters. There are no keybinding
 prompts.
@@ -244,8 +248,8 @@ The current app requires **306039** and declares its BLE HID capabilities using
 appearance and wake permission are Lua data. See [Lua HID configuration](lua-hid.md)
 for numeric input, bounded holds, repetition and compatibility rules.
 
-The `power` developer message sends Consumer Power (`0x0030`) with brief `PWR`
-feedback; it has no physical binding in the two-layout app. `space` sends Space
+The Sun key in either layout and the `power` developer message send Consumer
+Power (`0x0030`) with brief `PWR` feedback. `space` sends Space
 in either layout. These messages select actions independently of the layout.
 The Ditoo's own power control is unchanged. The app keeps its non-alphabetic
 remote descriptor and disables speaker profiles.

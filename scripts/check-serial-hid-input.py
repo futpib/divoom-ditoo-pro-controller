@@ -105,21 +105,27 @@ try:
         steps = [{'op':'start','file':str(tmp/'save.lua')}, {'op':'wait','result':'SAVED'},
                  {'op':'start','file':str(tmp/'app.lua')}, {'op':'wait','result_contains':'MEDIA:'},
                  {'op':'sleep','ms':1000}]
-        for physical, code in [(4,164),(10,113),(1,115),(9,114),(2,105),(3,106)]:
+        for physical, code in [(4,164),(10,113),(1,115),(9,114),(2,105),(3,106),(7,116)]:
             key(steps, physical, code)
-        key(steps, 7)
+        key(steps, 0)
         steps.append({'op':'wait','result_contains':'NAV:'})
         for kind in [2,3,4,5]:
-            key(steps, 7, kind=kind)
-        for physical, code in [(4,28),(10,57),(1,103),(9,108),(2,105),(3,106)]:
+            key(steps, 0, kind=kind)
+        for physical, code in [(4,28),(10,57),(1,103),(9,108),(2,105),(3,106),(7,116)]:
             key(steps, physical, code)
         key(steps, 0)
         steps.append({'op':'wait','result_contains':'DEVICES:'})
         for physical in [7,1,9,3,2,10]:
             key(steps, physical)
+        steps.append({'op':'wait','result_contains':'MEDIA:'})
+        key(steps, 0)
         steps.append({'op':'wait','result_contains':'NAV:'})
         key(steps, 10, 57)
-        key(steps, 7)
+        key(steps, 0)
+        steps.append({'op':'wait','result_contains':'DEVICES:'})
+        key(steps, 4)
+        steps.append({'op':'wait','result_contains':'SAVED DEVICE:'})
+        key(steps, 0)
         steps.append({'op':'wait','result_contains':'MEDIA:'})
         key(steps, 10, 113)
         steps.append({'op':'eval','source':"local b=keyboard.status();return b.state..';'..tostring(b.encrypted)..';'..(b.peer or '-')..';'..b.sent..';'..b.released..';'..b.errors"})

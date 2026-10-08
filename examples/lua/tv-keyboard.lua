@@ -289,10 +289,14 @@ return {
       return
     end
     if role == 4 then
+      key, icon = nil, nil
       if page then
-        page = nil
-      else
+        page, nav = nil, false
+      elseif nav or flow or pair or b.pairing or (not peer and not b.connected) then
+        nav = false
         open('root')
+      else
+        nav = true
       end
     elseif page then
       if role == 7 or role == 8 then
@@ -311,10 +315,6 @@ return {
     elseif not peer and not b.connected then
       open('root')
       pos = 2
-    elseif role == 3 then
-      if not flow and not pair and not b.pairing then
-        nav, key, icon = not nav, nil, nil
-      end
     else
       press(nav and navigation[role] or role)
     end
