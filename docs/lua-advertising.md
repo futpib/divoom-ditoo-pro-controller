@@ -23,11 +23,42 @@ submitting, giving a BLE uploader time to disconnect. USB control can remain
 connected. Installing this example persistently is unnecessary; use `lua start`.
 An existing TV/HID connection also causes `busy`; the example does not close it.
 
-The experimental [TV wake app](../examples/lua/tv-wake.lua) uses the TV address
-saved by `tv-keyboard.lua` and `wake.xiaomi_rc(address)`. Start it temporarily with `lua start`; after twelve
-seconds it sends one three-second connectable burst. `SENT` means local completion,
-not confirmation that the TV woke. M returns to the native menu. It does not
-change the saved remote app or its pairing.
+The [TV wake app](../examples/lua/tv-wake.lua) constructs the Xiaomi
+APK wake service UUID in Lua with `wake.xiaomi_app(address)`. It does not send
+anything on startup. Sun or the `wake` message uses the public TV address saved
+by `tv-keyboard.lua`; `wake ADDRESS [ADDRESS ...]` accepts up to six distinct
+public TV Bluetooth addresses. These are target parameters, not firmware constants.
+All targets are validated before sending. Duplicate addresses are sent once.
+
+```sh
+# DITOO_ADDRESS is your device's Classic Bluetooth address.
+# TV_ADDRESS is the TV's Bluetooth address, not its Wi-Fi or Ethernet address.
+divoom-ditoo-pro-controller --transport rfcomm --device "$DITOO_ADDRESS" lua start examples/lua/tv-wake.lua
+divoom-ditoo-pro-controller --transport rfcomm --device "$DITOO_ADDRESS" lua send "wake $TV_ADDRESS"
+```
+
+Each request waits twelve seconds, allowing a BLE uploader to disconnect, then
+sends one three-second nonconnectable burst per target at 100 ms intervals.
+Classic serial control can stay connected. `cancel` cancels the current burst
+and remaining targets; M exits to the native menu. A busy BLE connection causes
+failure without disconnecting that host. `WAKE SENT` reports local completion,
+not a TV acknowledgement. This temporary app preserves saved source, settings
+and bonds. Restart `tv-keyboard.lua` with `lua start` to resume its callbacks.
+The ordinary remote's Sun binding remains HID Power.
+
+This packet woke the physical MiTV-MOEU0 / Android 14 TV in one controlled trial
+on Ditoo firmware 306043: a laptop capture received the expected payload, the
+TV reported `bt-gpio` wake before the fallback alarm, and the owner confirmed
+the screen was on. Other TV models and repeated-wake reliability remain untested.
+
+The matching MiTV-MOEU0 Android 14 driver has a separate APK wake filter at
+index `0x1b`: a full 128-bit service UUID match, without a sender-address filter.
+The UUID bytes are `00 01 02 01 05 03 ff 00 01`, the six target address bytes in
+reverse order, then `00`. Flags `02 01 06` and complete service-UUID AD framing
+`11 07` produce a 21-byte advertisement. The same algorithm accepts different
+TV addresses and does not require pairing with each target to construct or
+transmit the packet. Acceptance by a TV still depends on its standby firmware.
+See [driver and hardware evidence](../firmware/xiaomi-app-wake-evidence/README.md).
 
 The host-bundled [`wake.xiaomi_rc(address)`](../lua/wake.lua) helper reproduces
 the 31-byte advertisement captured from the stock Xiaomi RC while the user
@@ -37,7 +68,8 @@ the end of the target TV address in reverse order. A later stock-remote burst
 used `03 ff 00 00` instead. See the [capture](../firmware/lua-advertising-evidence/stock-remote-capture.json).
 The Ditoo retains its own source address and uses a 100 ms interval; this
 reproduces the payload, not the stock remote's identity or exact radio timing.
-Whether another TV uses the same format or accepts Ditoo's identity is unknown.
+The matching Xiaomi driver requires an allowlisted public sender address for
+this RC filter. Reproducing the payload with Ditoo's identity does not satisfy it.
 The user reported that this replay left the TV asleep, despite the laptop
 receiving the expected payload and the app completing successfully.
 
@@ -48,8 +80,8 @@ company bytes `46 00`, one masked byte, the target TV address in HCI byte order,
 four masked bytes, and `43 52 4B 54 4D` (`CRKTM`). Flags `02 01 06` precede the
 manufacturer AD structure. This is a best guess: `woble_setting.bin` or
 `wake_on_ble.conf` can replace that driver's default, and the Xiaomi's actual
-filter remains unknown. That candidate was transmitted successfully but did
-not wake this TV. No generic HID Power event is sent by this example.
+filter differs from this legacy manufacturer filter. That candidate was transmitted
+successfully but did not wake this TV. No generic HID Power event is sent by this example.
 
 | # | Field | Accepted value |
 | --- | --- | --- |

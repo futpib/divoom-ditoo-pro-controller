@@ -141,8 +141,10 @@ The developer messages `toggle`/`play_pause`, `mute`, `power`, `space`, `volume_
 the existing Divoom BLE control service remain available. Firmware 306042 also
 retains [experimental Classic serial control](bluetooth-serial-control.md), intended
 for a computer to use the Classic address while the TV occupies the BLE remote
-connection. Basic simultaneous reads passed; sustained HID input exposed a BLE
-timeout and is not yet verified.
+connection. Firmware 306043 has passed short Linux input tests alongside serial
+control. A later real-TV check read connected HID state and delivered Power
+through the remote app over serial; see the [wake investigation](../firmware/xiaomi-app-wake-evidence/README.md).
+The earlier 306042 timeout remains unexplained; long-term reliability is unproven.
 Concurrent control and HID on one laptop BLE connection are covered by the HOGP
 test; two simultaneous BLE hosts are not supported by the current controller
 connection allocator.

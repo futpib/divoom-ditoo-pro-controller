@@ -132,6 +132,7 @@ static void tick(void) { clock_ms += FRAME_MS; service(); }
 
 #include "test-peripherals.c"
 #include "test-advertising.c"
+#include "test-wake.c"
 #include "test-persistence.c"
 #include "test-menu.c"
 #include "test-allocator.c"
@@ -290,9 +291,10 @@ int main(void) {
     test_peripherals();
     test_keyboard_bonds();
     test_tv_keyboard();
-    const char *bundles[]={"ui-test","bundle-test","tree-test"};
-    const char *results[]={"UI helpers passed","Bundle execution passed","Tree shaking passed"};
-    for(unsigned i=0;i<3;++i) {
+    test_wake();
+    const char *bundles[]={"ui-test","bundle-test","tree-test","wake-test"};
+    const char *results[]={"UI helpers passed","Bundle execution passed","Tree shaking passed","Wake packets passed"};
+    for(unsigned i=0;i<4;++i) {
         char path[128],source[8193];snprintf(path,sizeof path,"target/lua-app/runtime/%s.bundle.lua",bundles[i]);
         FILE *f=fopen(path,"rb");assert(f);size_t n=fread(source,1,sizeof source-1,f);
         assert(!ferror(f) && feof(f));fclose(f);source[n]=0;check(source,DONE,results[i]);

@@ -374,7 +374,12 @@ behavior. Numeric input and bounded hold durations avoid new firmware patches
 for each remote action. Friendly aliases and the remote preset live in `lua/hid.lua`.
 Firmware **306040** adds [bounded BLE advertising](docs/lua-advertising.md).
 Lua supplies advertising/scan-response bytes and timing; native deadlines restore
-the previous advertiser even after a Lua failure. TV wake packets remain unverified.
+the previous advertiser even after a Lua failure. The separate
+[Lua wake app](docs/lua-advertising.md) woke a MiTV-MOEU0 running Android 14
+in a controlled test on Ditoo firmware 306043. It builds a Xiaomi service UUID
+from the selected TV address, without adding TV-specific firmware code.
+The ordinary remote's Sun button still sends HID Power; wake advertising is
+currently a separate app. See the [hardware evidence](firmware/xiaomi-app-wake-evidence/README.md).
 
 Install `examples/lua/tv-keyboard.lua` with `lua install` for the BLE remote.
 Classic HID and AVRCP remain available to other scripts.

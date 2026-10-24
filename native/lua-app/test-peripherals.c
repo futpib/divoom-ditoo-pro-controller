@@ -229,6 +229,7 @@ static void tv_frame(unsigned stage) {
     assert(fwrite(app.frame,1,FRAME_BYTES,f)==FRAME_BYTES);fclose(f);
 }
 static unsigned tv_ops[32],tv_value,tv_last;
+static void adv_pump(void);
 static void tv_ticks(unsigned n) {
     for(unsigned i=0;i<n;++i) {
         tick();runtime_native_service();
@@ -248,6 +249,7 @@ static void tv_ticks(unsigned n) {
             }
             bt_queued.op=0;
         }
+        if(bt_queued.op==BT_ADVERTISE_COMMAND || runtime_advertising_busy()) adv_pump();
     }
 }
 static void tv_key(unsigned key) {

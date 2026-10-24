@@ -68,8 +68,8 @@ result.
 The stock Xiaomi RC was then captured during a user-confirmed successful wake.
 Its 31-byte payload and report counts are retained in
 [stock-remote-capture.json](stock-remote-capture.json). The
-[current candidate app](../../examples/lua/tv-wake.lua) replays that payload
-with `wake.xiaomi_rc`, using the same three-second, 100 ms burst settings.
+candidate app at that time replayed that payload with `wake.xiaomi_rc`, using
+the same three-second, 100 ms burst settings.
 The laptop received ten matching reports over 1.478 seconds, followed by 130
 ordinary HID reports. The app remained active with `SENT`, but the user again
 reported that the TV stayed asleep. This reproduces the payload, not the stock
@@ -88,3 +88,8 @@ guards passed on 306040, including infinite loops, OOM, full-size source upload,
 and subsequent recovery/version checks. Host safety coverage is listed above.
 The [harmless example](../../examples/lua/advertise.lua) still uses test bytes;
 both TV-specific payload helpers remain experiments, not working wake support.
+
+Follow-up: the [Xiaomi APK-filter investigation](../xiaomi-app-wake-evidence/README.md)
+identified a separate service-UUID format and verified one physical TV wake on
+306043. The current `tv-wake.lua` uses that format via `wake.xiaomi_app`; the
+two failed candidate trials above remain historical results.

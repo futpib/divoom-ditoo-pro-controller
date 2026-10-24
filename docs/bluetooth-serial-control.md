@@ -9,16 +9,23 @@ both 420 ms and 5000 ms supervision timeouts. The earlier 306042 timeout and
 stale-state failure below remains unexplained; these successful short tests do
 not establish long-term reliability.
 
+A later [physical-TV test](../firmware/xiaomi-app-wake-evidence/README.md)
+on 306043 delivered HID Power through the remote app while the laptop controlled
+it over Classic serial. After the Lua wake trial, the remote reconnected to the
+TV and answered laptop status requests on the same arrangement.
+
 Use the device's **Classic address**, not the random BLE remote identity:
 
 ```sh
-divoom-ditoo-pro-controller --transport rfcomm --device B1:21:81:DD:B8:9B firmware
-divoom-ditoo-pro-controller --transport rfcomm --device B1:21:81:DD:B8:9B lua status
-divoom-ditoo-pro-controller --transport rfcomm --device B1:21:81:DD:B8:9B lua install examples/lua/tv-keyboard.lua
+divoom-ditoo-pro-controller --transport rfcomm --device "$DITOO_ADDRESS" firmware
+divoom-ditoo-pro-controller --transport rfcomm --device "$DITOO_ADDRESS" lua status
+divoom-ditoo-pro-controller --transport rfcomm --device "$DITOO_ADDRESS" lua install examples/lua/tv-keyboard.lua
 ```
 
-These addresses identify the development unit. Its TV-facing BLE identity is
-`D1:21:81:DD:B8:9B`. Other devices have different addresses. The native Classic
+Set `DITOO_ADDRESS` to your device's Classic Bluetooth address. Discover it
+with the controller's `devices` command or your computer's Bluetooth settings
+before starting remote mode. The separate TV-facing BLE identity is not the
+address to use for serial control. The native Classic
 name remains DitooPro-Audio even when its speaker profiles are disabled.
 
 The CLI connects the SPP profile directly, which selects BR/EDR even when BlueZ

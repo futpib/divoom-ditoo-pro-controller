@@ -14,6 +14,7 @@ spec.loader.exec_module(assets)
 (source.parent.parent/'stock-images.rgb').write_bytes(b''.join(f['pixels'] for f in assets.frames(assets.stock_code())))
 # Use the same host bundler as uploads; the firmware still accepts one text chunk.
 for name, entry in [('tv-keyboard','examples/lua/tv-keyboard.lua'),
+                    ('tv-wake','examples/lua/tv-wake.lua'), ('wake-test','tests/lua/wake.lua'),
                     ('ui-test','tests/lua/ui.lua'), ('bundle-test','tests/lua/bundle.lua'),
                     ('tree-test','tests/lua/tree.lua')]:
     subprocess.run(['cargo','run','--locked','--quiet','--no-default-features','--',

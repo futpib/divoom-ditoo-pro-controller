@@ -1,0 +1,177 @@
+{
+  "status": "One controlled physical wake passed; other models and repeated-wake reliability untested.",
+  "firmware": "vendor_dlkm/lib/modules/btmtk_usb_unify.ko",
+  "sha256": "d87f5119441d605d745752f38e36b2411ea101071328da30d6c2c75941f40d8d",
+  "live_tv_address": "0C:CD:B4:D0:0C:26",
+  "live_rclist": "E8:55:40:98:7A:3D;",
+  "live_rclist_path": "/sys/class/stpbtfwlog/stpbtfwlog/rclist",
+  "rc_filter": {
+    "index": "0x1c",
+    "name_command": "01 57 fd 08 05 00 1c 4d 49 20 52 43",
+    "manufacturer_command": "01 57 fd 07 06 00 1c 00 01 00 ff",
+    "source_address_command": "01 57 fd 0a 02 00 1c 3d 7a 98 40 55 e8 00",
+    "parameters_command": "01 57 fd 0a 01 00 1c 31 00 30 00 01 80 00",
+    "required_features": "public source address AND MI RC local name AND manufacturer high byte 0x01"
+  },
+  "apk_filter": {
+    "index": "0x1b",
+    "service_uuid_command": "01 57 fd 23 03 00 1b 00 01 02 01 05 03 ff 00 01 26 0c d0 b4 cd 0c 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+    "parameters_command": "01 57 fd 0a 01 00 1b 04 00 00 00 01 80 00",
+    "required_features": "Service UUID only (feature mask 0x0004); no broadcaster-address filter",
+    "uuid": "000ccdb4-d00c-2601-00ff-030501020100",
+    "uuid_ad_byte_order": "00 01 02 01 05 03 ff 00 01 26 0c d0 b4 cd 0c 00",
+    "exact_mask": "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+    "candidate_advertisement": "02 01 06 11 07 00 01 02 01 05 03 ff 00 01 26 0c d0 b4 cd 0c 00"
+  },
+  "evidence_addresses": {
+    "rc_list_parse": "0xa844..0xaac4",
+    "target_insertion": "0xaeac..0xaef8",
+    "apcf_setup": ".text 0xd390..0xd680; diagnostic branches through 0xd888",
+    "wake_filter_indices_in_radio_off": "0xaacc .rodata command includes 06 40 1b 1c 1d 1e 1f",
+    "apk_log_strings": [
+      "APK filter end",
+      "cmd_apk_filter",
+      "uuid data error"
+    ]
+  },
+  "interpretation_source": "https://source.android.com/docs/core/connect/bluetooth/hci_requirements#advertising-packet-content-filter",
+  "candidate_ditoo_parameters": {
+    "type": "nonconnectable",
+    "interval_ms": 100,
+    "duration_ms": 3000,
+    "note": "Parameters used in physical trial; requires idle BLE bearer."
+  },
+  "ditoo_firmware": 306043,
+  "tv_build": "Xiaomi/ladybird/ladybird:14/UKN1.240806.017/V816.0.25.8.19.03.1.ULBMIXM:user/release-keys",
+  "clean_trial": {
+    "transport": "Laptop Classic RFCOMM control; Ditoo BLE advertising and TV HID",
+    "transmitter": "D1:21:81:DD:B8:9B",
+    "transmitter_address_type": "random static",
+    "hci_reports": 11,
+    "first_report_capture_seconds": 59.520954,
+    "last_report_capture_seconds": 61.627955,
+    "stock_remote_hci_reports": 697,
+    "stock_remote_manufacturer_fields": [
+      "03 ff 00 00"
+    ],
+    "user_observation": "it's on",
+    "suspend_success_before": 3,
+    "suspend_success_after": 4,
+    "wake_reason": "bt-gpio",
+    "wakefulness": "Awake",
+    "post_wake_tv_rtc": 1792849387,
+    "fallback_deadline_tv_rtc": 1792849415,
+    "fallback_alarm_cleared": true,
+    "first_trial": "Discarded: owner pressed stock remote Power.",
+    "limitations": [
+      "One controlled wake only",
+      "Previously paired transmitter; unpaired wake not physically tested",
+      "Laptop capture is not exhaustive radio coverage",
+      "Other TV models and firmware untested"
+    ]
+  },
+  "restoration": {
+    "running_app": "examples/lua/tv-keyboard.lua",
+    "startup_source_settings_and_bonds": "Not modified by this implementation/trial",
+    "coexistence": [
+      {
+        "op": "status",
+        "status": {
+          "abi": 2,
+          "callbacks": 608,
+          "dropped_keys": 0,
+          "frames": 203,
+          "generation": 32,
+          "held_keys": 0,
+          "instructions": 289,
+          "memory_bytes": 42032,
+          "peak_memory_bytes": 42032,
+          "result": "MEDIA: GoogleTV2511",
+          "state": "active"
+        },
+        "step": 1
+      },
+      {
+        "op": "send",
+        "status": {
+          "abi": 2,
+          "callbacks": 614,
+          "dropped_keys": 0,
+          "frames": 205,
+          "generation": 32,
+          "held_keys": 0,
+          "instructions": 289,
+          "memory_bytes": 42032,
+          "peak_memory_bytes": 42032,
+          "result": "MEDIA: GoogleTV2511",
+          "state": "active"
+        },
+        "step": 2
+      },
+      {
+        "ms": 500,
+        "op": "sleep",
+        "step": 3
+      },
+      {
+        "op": "receive",
+        "status": {
+          "abi": 2,
+          "callbacks": 630,
+          "dropped_keys": 0,
+          "frames": 210,
+          "generation": 32,
+          "held_keys": 0,
+          "instructions": 289,
+          "memory_bytes": 42184,
+          "peak_memory_bytes": 42184,
+          "result": "2 0C:CD:B4:D0:0C:26 public",
+          "state": "active"
+        },
+        "step": 4
+      },
+      {
+        "op": "status",
+        "status": {
+          "abi": 2,
+          "callbacks": 639,
+          "dropped_keys": 0,
+          "frames": 213,
+          "generation": 32,
+          "held_keys": 0,
+          "instructions": 289,
+          "memory_bytes": 42184,
+          "peak_memory_bytes": 42184,
+          "result": "MEDIA: GoogleTV2511",
+          "state": "active"
+        },
+        "step": 5
+      }
+    ],
+    "temporary_tv_probe": "Uninstalled",
+    "ordinary_sun_binding": "HID Power; separate wake app required"
+  },
+  "host_validation": {
+    "runtime": "python3 scripts/test-lua-app-runtime.py: passed full native suite with controller/HID doubles",
+    "lua": "bash scripts/check-lua.sh: passed",
+    "firmware_flashed": false
+  },
+  "local_artifacts": [
+    {
+      "path": "firmware/runs/xiaomi-app-wake/clean-trial.btsnoop",
+      "sha256": "1b82dcf83dd2897ba4b37db100c10122e12601c2d1002867786be16312a43c82"
+    },
+    {
+      "path": "firmware/runs/xiaomi-app-wake/clean-trial.jsonl",
+      "sha256": "756195af19b051ce4f45782a12e4531ed06c675f590a734ecbf45963972ebe8f"
+    },
+    {
+      "path": "firmware/runs/xiaomi-app-wake/clean-tv-after.txt",
+      "sha256": "9fa3767bf8d262d71e35d9b1351ab77dcd675da632a2551cc73ed813f9230957"
+    },
+    {
+      "path": "firmware/runs/xiaomi-app-wake/clean-coexistence-after.jsonl",
+      "sha256": "763fff1bb4fc5c041c36bbab2feec8e3f627d07d14cec9837b9c27b35e3bee7f"
+    }
+  ]
+}
